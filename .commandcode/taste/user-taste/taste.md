@@ -1,0 +1,22 @@
+# User Taste
+
+- Works on Windows; projects live on the Desktop (e.g. `C:\Users\USER\Desktop\<project>`). Confidence: 0.85
+- Treats `template-management-app` (on Desktop) as the canonical reference project — explicitly wants new projects configured the same way as this template rather than from scratch. Confidence: 0.85
+- Standard project tooling: husky + commitlint + commitizen (cz) + lint-staged + prettier, configured at the repo root. Confidence: 0.8
+- Monorepo layout with `frontend/` and `backend/` folders; root package.json holds shared tooling and delegates to packages via `npm --prefix <pkg> run <script>`. Confidence: 0.7
+- Conventional Commits with gitmoji-style type emoji prefixes in the header (✨ feat, 🐛 fix, 📚 docs, etc.), enforced by commitlint with a custom parser preset plus commitizen interactive prompts. Confidence: 0.75
+- Husky hook setup: `commit-msg` (auto-prepend type emoji, then commitlint), `pre-commit` (lint-staged), `pre-push` (lint + format:check). Confidence: 0.75
+- Prettier: no semicolons, single quotes, trailing commas "all", printWidth 120, 2-space indent, LF line endings. Confidence: 0.7
+- ESLint flat config (`eslint.config.*`) per package; keep framework-appropriate configs (Vite vs Next) rather than copying blindly. Confidence: 0.6
+- User's shell has `NODE_ENV=production` set globally — npm silently skips devDependencies, so clear NODE_ENV before `npm install`. Confidence: 0.9
+- Prefers a single root-level `.gitignore` in monorepos that covers all packages (root, `frontend/`, `backend/`) using `**/` globs, rather than per-package gitignores; should also ignore build output, `*.tsbuildinfo`, `.env*` (except `.env.example`), and OS junk. Confidence: 0.6
+- Communicates in terse, fragmentary instructions and expects the agent to infer the full intent and complete the task with sensible defaults without needing clarification. Confidence: 0.7
+- Active project `school-flow-ai` (on Desktop): a School Management System with multi-role dashboards — admin, teacher, student, parent; React frontend. Backend stack pivoted from MERN (MongoDB/Express) to NestJS + PostgreSQL on Supabase. Confidence: 0.8
+- Backend framework preference: NestJS (TypeScript), replacing the original Express.js choice for `school-flow-ai`. Confidence: 0.9
+- Database preference: PostgreSQL hosted on Supabase, accessed through an ORM rather than a raw driver. Confidence: 0.85
+- Keeps project documentation in a `docs/` folder at the repo root, organized into per-package subfolders matching the monorepo layout (e.g. `docs/frontend/`, `docs/backend/`), and wants requirement docs (PRDs) structured feature-wise — one section per feature module rather than a flat spec. Confidence: 0.75
+- Adopted the "vibe coding" documentation convention (from kazi-rahamatullah.com blog): six mandatory markdown files per package — PRD.md, Architecture.md, Rules.md, Phases.md, Design.md, Memory.md — maintained in each docs subfolder; Rules.md includes explicit AI boundaries and Phases.md uses "Done when" criteria per phase. Confidence: 0.8
+- Shares external reference links (e.g. blog posts) and expects the agent to fetch and analyze them, then apply the referenced structure/methodology to the project. Confidence: 0.6
+- Wants a root-level `AGENTS.md` as the single entry point for AI agent sessions, kept in sync with the `docs/` structure — it links every docs file with its purpose, states core agent rules (minimal scope, phase order, no unapproved deps/commits, validation before done), cross-package contracts, and quick commands. Confidence: 0.75
+- Wants a `docs/CODE_REVIEWER.md` checklist that the agent applies to every diff before marking work done — sections for correctness, security (blocking), per-stack conventions (NestJS/Prisma backend, React/Tailwind frontend), performance, and scope hygiene, with severity-labeled findings (🔴 blocker / 🟡 should-fix / 🔵 nit). Confidence: 0.7
+- Commits and tracks `package-lock.json` in every package directory (root, `frontend/`, `backend/`) and ensures lock files are not gitignored — reproducible installs across the monorepo. Confidence: 0.85

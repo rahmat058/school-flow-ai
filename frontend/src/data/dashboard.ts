@@ -1,19 +1,5 @@
-import {
-  BarChart3,
-  FileText,
-  Folder,
-  LayoutDashboard,
-  Settings,
-  TrendingDown,
-  Users,
-  Wallet,
-} from 'lucide-react'
-import type {
-  ChartPoint,
-  NavItem,
-  StatMetric,
-  Transaction,
-} from '@/types/dashboard'
+import { BarChart3, FileText, Folder, LayoutDashboard, Settings, TrendingDown, Users, Wallet } from 'lucide-react'
+import type { ChartPoint, NavItem, StatMetric, Transaction } from '@/types/dashboard'
 
 export const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },

@@ -24,8 +24,7 @@ export function StatCard({ metric }: StatCardProps) {
         className={cn(
           'mb-4 inline-flex size-10 items-center justify-center rounded-lg',
           iconToneStyles[metric.iconTone],
-        )}
-      >
+        )}>
         <Icon className="size-[18px]" strokeWidth={1.75} />
       </div>
       <p className="text-[13px] text-ink-muted">{metric.label}</p>
@@ -37,8 +36,7 @@ export function StatCard({ metric }: StatCardProps) {
           className={cn(
             'inline-flex items-center gap-0.5 text-[13px] font-medium',
             isPositive ? 'text-success' : 'text-error',
-          )}
-        >
+          )}>
           <TrendIcon className="size-3.5" strokeWidth={2} />
           {metric.delta}
         </span>

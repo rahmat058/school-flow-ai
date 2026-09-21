@@ -12,8 +12,7 @@ export function OverviewHeader() {
           Welcome back, Alex.
         </h1>
         <p className="mt-3 text-[15px] text-ink-muted">
-          Your MRR has increased by{' '}
-          <span className="font-medium text-success">12.4%</span> this month.
+          Your MRR has increased by <span className="font-medium text-success">12.4%</span> this month.
         </p>
       </div>
 

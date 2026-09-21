@@ -1,13 +1,5 @@
 import { useMemo, useState } from 'react'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { cn } from '@/lib/cn'
 import { highlightedMonth, monthlyTrends, quarterlyTrends } from '@/data/dashboard'
 import type { ChartPeriod } from '@/types/dashboard'
@@ -26,14 +18,7 @@ interface TrendBarProps {
   highlightLabel: string
 }
 
-function TrendBar({
-  x = 0,
-  y = 0,
-  width = 0,
-  height = 0,
-  payload,
-  highlightLabel,
-}: TrendBarProps) {
+function TrendBar({ x = 0, y = 0, width = 0, height = 0, payload, highlightLabel }: TrendBarProps) {
   if (width <= 0 || height <= 0) return null
 
   return (
@@ -53,21 +38,15 @@ export function RevenueChart() {
   const data = period === 'monthly' ? monthlyTrends : quarterlyTrends
   const peakLabel = useMemo(() => {
     if (period === 'monthly') return highlightedMonth
-    return data.reduce((highest, point) =>
-      point.value > highest.value ? point : highest,
-    ).label
+    return data.reduce((highest, point) => (point.value > highest.value ? point : highest)).label
   }, [data, period])
 
   return (
     <article className="rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] lg:p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">
-            MRR Trends
-          </h2>
-          <p className="mt-1 text-[13px] text-ink-muted">
-            Revenue growth over the last 12 months
-          </p>
+          <h2 className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">MRR Trends</h2>
+          <p className="mt-1 text-[13px] text-ink-muted">Revenue growth over the last 12 months</p>
         </div>
 
         <div className="inline-flex rounded-lg bg-canvas p-1">
@@ -78,11 +57,8 @@ export function RevenueChart() {
               onClick={() => setPeriod(item.id)}
               className={cn(
                 'h-8 rounded-md px-3 text-[13px] font-medium transition-colors',
-                period === item.id
-                  ? 'bg-primary-soft text-primary'
-                  : 'text-ink-muted hover:text-ink',
-              )}
-            >
+                period === item.id ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:text-ink',
+              )}>
               {item.label}
             </button>
           ))}
@@ -92,11 +68,7 @@ export function RevenueChart() {
       <div className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barCategoryGap="28%">
-            <CartesianGrid
-              vertical={false}
-              stroke="#E8E8EC"
-              strokeDasharray="4 4"
-            />
+            <CartesianGrid vertical={false} stroke="#E8E8EC" strokeDasharray="4 4" />
             <XAxis
               dataKey="label"
               axisLine={false}
@@ -114,9 +86,7 @@ export function RevenueChart() {
                 return (
                   <div className="rounded-lg border border-line bg-surface px-3 py-2 text-[13px] shadow-lg">
                     <p className="text-ink-muted">{payload[0].payload.label}</p>
-                    <p className="font-medium text-ink">
-                      ${value.toLocaleString()}
-                    </p>
+                    <p className="font-medium text-ink">${value.toLocaleString()}</p>
                   </div>
                 )
               }}
@@ -126,9 +96,7 @@ export function RevenueChart() {
               maxBarSize={42}
               isAnimationActive={false}
               activeBar={false}
-              shape={(props) => (
-                <TrendBar {...props} highlightLabel={peakLabel} />
-              )}
+              shape={(props) => <TrendBar {...props} highlightLabel={peakLabel} />}
             />
           </BarChart>
         </ResponsiveContainer>

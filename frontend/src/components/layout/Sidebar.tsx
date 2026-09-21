@@ -23,12 +23,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-line bg-surface transition-transform duration-200 lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
-        )}
-      >
+        )}>
         <div className="px-6 pt-7 pb-8">
-          <p className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">
-            Curator Pro
-          </p>
+          <p className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">Curator Pro</p>
           <p className="mt-0.5 text-[13px] text-ink-subtle">SaaS Analytics</p>
         </div>
 
@@ -45,12 +42,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   cn(
                     'relative mx-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary-soft text-primary'
-                      : 'text-ink-muted hover:bg-canvas hover:text-ink',
+                    isActive ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-canvas hover:text-ink',
                   )
-                }
-              >
+                }>
                 {({ isActive }) => (
                   <>
                     <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
@@ -68,8 +62,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <div className="mt-auto space-y-5 px-4 pb-6 pt-4">
           <button
             type="button"
-            className="flex h-[38px] w-full items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary-hover text-[14px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-primary)]"
-          >
+            className="flex h-[38px] w-full items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary-hover text-[14px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-primary)]">
             Upgrade Plan
           </button>
 
@@ -80,9 +73,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className="size-9 rounded-full object-cover"
             />
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-ink">
-                Alex Rivera
-              </p>
+              <p className="truncate text-[14px] font-medium text-ink">Alex Rivera</p>
               <p className="text-[12px] text-ink-subtle">Pro Admin</p>
             </div>
           </div>

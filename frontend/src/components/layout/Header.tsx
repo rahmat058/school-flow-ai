@@ -13,8 +13,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           type="button"
           onClick={onMenuClick}
           className="inline-flex size-9 items-center justify-center rounded-md text-ink-muted hover:bg-canvas hover:text-ink lg:hidden"
-          aria-label="Open navigation"
-        >
+          aria-label="Open navigation">
           <Menu className="size-5" />
         </button>
 
@@ -36,22 +35,18 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           type="button"
           className="inline-flex size-9 items-center justify-center rounded-md text-ink-muted hover:bg-canvas hover:text-ink"
           aria-label="Notifications"
-          title="Notifications"
-        >
+          title="Notifications">
           <Bell className="size-[18px]" strokeWidth={1.75} />
         </button>
         <button
           type="button"
           className="inline-flex size-9 items-center justify-center rounded-md text-ink-muted hover:bg-canvas hover:text-ink"
           aria-label="Help"
-          title="Help"
-        >
+          title="Help">
           <CircleHelp className="size-[18px]" strokeWidth={1.75} />
         </button>
         <span className="mx-2 hidden h-6 w-px bg-line sm:block" />
-        <p className="hidden text-[15px] font-medium text-primary sm:block">
-          {title}
-        </p>
+        <p className="hidden text-[15px] font-medium text-primary sm:block">{title}</p>
       </div>
     </header>
   )

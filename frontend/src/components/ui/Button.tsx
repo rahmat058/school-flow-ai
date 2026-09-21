@@ -11,10 +11,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary:
-    'bg-primary text-white hover:bg-primary-hover hover:shadow-[var(--shadow-primary)]',
-  secondary:
-    'bg-transparent text-ink border border-line hover:bg-canvas',
+  primary: 'bg-primary text-white hover:bg-primary-hover hover:shadow-[var(--shadow-primary)]',
+  secondary: 'bg-transparent text-ink border border-line hover:bg-canvas',
   ghost: 'bg-transparent text-ink-muted hover:text-ink hover:bg-canvas',
 }
 
@@ -41,8 +39,7 @@ export function Button({
         sizes[size],
         className,
       )}
-      {...props}
-    >
+      {...props}>
       {children}
     </button>
   )
