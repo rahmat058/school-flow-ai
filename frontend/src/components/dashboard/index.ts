@@ -1,0 +1,6 @@
+export { InsightsCard } from '@/components/dashboard/InsightsCard'
+export { OverviewHeader } from '@/components/dashboard/OverviewHeader'
+export { RevenueChart } from '@/components/dashboard/RevenueChart'
+export { StatCard } from '@/components/dashboard/StatCard'
+export { StatGrid } from '@/components/dashboard/StatGrid'
+export { TransactionsTable } from '@/components/dashboard/TransactionsTable'
