@@ -42,14 +42,14 @@ export function RevenueChart() {
   }, [data, period])
 
   return (
-    <article className="rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] lg:p-6">
+    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)] lg:p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">MRR Trends</h2>
-          <p className="mt-1 text-[13px] text-ink-muted">Revenue growth over the last 12 months</p>
+          <h2 className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">MRR Trends</h2>
+          <p className="text-ink-muted mt-1 text-[13px]">Revenue growth over the last 12 months</p>
         </div>
 
-        <div className="inline-flex rounded-lg bg-canvas p-1">
+        <div className="bg-canvas inline-flex rounded-lg p-1">
           {periods.map((item) => (
             <button
               key={item.id}
@@ -84,9 +84,9 @@ export function RevenueChart() {
                 const value = Number(payload[0].value)
 
                 return (
-                  <div className="rounded-lg border border-line bg-surface px-3 py-2 text-[13px] shadow-lg">
+                  <div className="border-line bg-surface rounded-lg border px-3 py-2 text-[13px] shadow-lg">
                     <p className="text-ink-muted">{payload[0].payload.label}</p>
-                    <p className="font-medium text-ink">${value.toLocaleString()}</p>
+                    <p className="text-ink font-medium">${value.toLocaleString()}</p>
                   </div>
                 )
               }}

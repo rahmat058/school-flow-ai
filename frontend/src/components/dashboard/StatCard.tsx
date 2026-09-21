@@ -19,7 +19,7 @@ export function StatCard({ metric }: StatCardProps) {
   const TrendIcon = isPositive ? ArrowUpRight : ArrowDownRight
 
   return (
-    <article className="rounded-xl border border-line bg-surface p-5 shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]">
+    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]">
       <div
         className={cn(
           'mb-4 inline-flex size-10 items-center justify-center rounded-lg',
@@ -27,9 +27,9 @@ export function StatCard({ metric }: StatCardProps) {
         )}>
         <Icon className="size-[18px]" strokeWidth={1.75} />
       </div>
-      <p className="text-[13px] text-ink-muted">{metric.label}</p>
+      <p className="text-ink-muted text-[13px]">{metric.label}</p>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <p className="font-display text-[28px] leading-none font-semibold tracking-[-0.03em] text-ink">
+        <p className="font-display text-ink text-[28px] leading-none font-semibold tracking-[-0.03em]">
           {metric.value}
         </p>
         <span

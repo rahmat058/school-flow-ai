@@ -10,7 +10,7 @@ export function AppShell() {
   const current = navItems.find((item) => (item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)))
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="bg-canvas flex min-h-screen">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header title={current?.label ?? 'Dashboard'} onMenuClick={() => setSidebarOpen(true)} />

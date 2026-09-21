@@ -5,14 +5,14 @@ export function OverviewHeader() {
   return (
     <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <p className="font-display text-[11px] font-medium tracking-[0.16em] text-primary uppercase">
+        <p className="font-display text-primary text-[11px] font-medium tracking-[0.16em] uppercase">
           Executive Overview
         </p>
-        <h1 className="mt-2 font-display text-[32px] leading-none font-semibold tracking-[-0.03em] text-ink">
+        <h1 className="font-display text-ink mt-2 text-[32px] leading-none font-semibold tracking-[-0.03em]">
           Welcome back, Alex.
         </h1>
-        <p className="mt-3 text-[15px] text-ink-muted">
-          Your MRR has increased by <span className="font-medium text-success">12.4%</span> this month.
+        <p className="text-ink-muted mt-3 text-[15px]">
+          Your MRR has increased by <span className="text-success font-medium">12.4%</span> this month.
         </p>
       </div>
 

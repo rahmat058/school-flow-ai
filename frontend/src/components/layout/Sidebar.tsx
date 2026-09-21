@@ -12,7 +12,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     <>
       <div
         className={cn(
-          'fixed inset-0 z-30 bg-ink/20 backdrop-blur-[2px] transition-opacity lg:hidden',
+          'bg-ink/20 fixed inset-0 z-30 backdrop-blur-[2px] transition-opacity lg:hidden',
           open ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         onClick={onClose}
@@ -21,12 +21,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-line bg-surface transition-transform duration-200 lg:static lg:translate-x-0',
+          'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r transition-transform duration-200 lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}>
         <div className="px-6 pt-7 pb-8">
-          <p className="font-display text-[20px] font-semibold tracking-[-0.03em] text-ink">Curator Pro</p>
-          <p className="mt-0.5 text-[13px] text-ink-subtle">SaaS Analytics</p>
+          <p className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">Curator Pro</p>
+          <p className="text-ink-subtle mt-0.5 text-[13px]">SaaS Analytics</p>
         </div>
 
         <nav className="flex-1 space-y-1" aria-label="Primary">
@@ -50,7 +50,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                     <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
                     <span>{item.label}</span>
                     {isActive ? (
-                      <span className="absolute inset-y-1.5 -right-3 w-[3px] rounded-l-full bg-primary" />
+                      <span className="bg-primary absolute inset-y-1.5 -right-3 w-[3px] rounded-l-full" />
                     ) : null}
                   </>
                 )}
@@ -59,10 +59,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
         </nav>
 
-        <div className="mt-auto space-y-5 px-4 pb-6 pt-4">
+        <div className="mt-auto space-y-5 px-4 pt-4 pb-6">
           <button
             type="button"
-            className="flex h-[38px] w-full items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary-hover text-[14px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-primary)]">
+            className="from-primary to-primary-hover flex h-[38px] w-full items-center justify-center rounded-md bg-gradient-to-r text-[14px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-primary)]">
             Upgrade Plan
           </button>
 
@@ -73,8 +73,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className="size-9 rounded-full object-cover"
             />
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-ink">Alex Rivera</p>
-              <p className="text-[12px] text-ink-subtle">Pro Admin</p>
+              <p className="text-ink truncate text-[14px] font-medium">Alex Rivera</p>
+              <p className="text-ink-subtle text-[12px]">Pro Admin</p>
             </div>
           </div>
         </div>

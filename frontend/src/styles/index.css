@@ -44,9 +44,9 @@
     margin: 0;
     background: var(--color-canvas);
     color: var(--color-ink);
-    font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.5;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -55,9 +55,9 @@
   h2,
   h3,
   h4 {
+    color: var(--color-ink);
     font-family: var(--font-display);
     letter-spacing: -0.03em;
-    color: var(--color-ink);
   }
 
   button,
