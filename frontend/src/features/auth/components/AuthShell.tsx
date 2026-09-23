@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { BRAND } from '@/lib/brand'
 import { env } from '@/lib/env'
 import { activeSchool } from '@/data/school'
-import { demoAccounts } from '@/data/users'
+import { classes } from '@/data/classes'
+import { users } from '@/data/users'
 
 interface AuthShellProps {
   title: string
@@ -11,56 +12,82 @@ interface AuthShellProps {
   footer?: ReactNode
 }
 
-/** Shared frame for the public auth screens: flat bordered card on the canvas, per Design.md. */
+/**
+ * Frame for the public auth screens: a brand panel on the left from `lg`, a single narrow form
+ * column on the right. The panel stays on surface/canvas tones — Design.md reserves indigo for
+ * interactive elements, so none of it is a decorative indigo fill.
+ */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="bg-canvas flex min-h-screen items-center justify-center py-10">
-      <div className="page-container">
-        <div className="mx-auto grid w-full max-w-5xl gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          {/* The brand gets its own row, so the card and the demo panel share a start line. */}
-          <div className="mx-auto w-full max-w-md lg:col-start-1 lg:row-start-1">
-            <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
-            <p className="text-ink-subtle mt-3 text-[12px]">
-              {activeSchool.name} · {activeSchool.settings.academicYear}
-            </p>
-          </div>
+    <div className="bg-canvas flex min-h-screen">
+      <BrandPanel />
 
-          <div className="mx-auto w-full max-w-md lg:col-start-1 lg:row-start-2">
-            <div className="border-line bg-surface rounded-xl border p-6">
-              <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
-              <p className="text-ink-muted mt-1 text-[13px]">{subtitle}</p>
-              <div className="mt-6">{children}</div>
-            </div>
+      <main className="flex flex-1 items-center justify-center py-10">
+        <div className="page-container">
+          <div className="mx-auto w-full max-w-md">
+            {/* The panel is desktop-only, so small screens keep the wordmark above the form. */}
+            <img src={BRAND.wordmark} alt={BRAND.name} className="mb-7 h-14 w-45 object-cover lg:hidden" />
+
+            <h1 className="font-display text-ink text-[26px] font-semibold tracking-[-0.03em]">{title}</h1>
+            <p className="text-ink-muted mt-1.5 text-[14px]">{subtitle}</p>
+
+            <div className="mt-6">{children}</div>
 
             {footer ? <div className="text-ink-muted mt-5 text-center text-[13px]">{footer}</div> : null}
-          </div>
 
-          {env.enableMocks ? <DemoAccountsPanel /> : null}
+            {env.enableMocks ? (
+              <p className="border-line bg-surface text-ink-subtle mt-6 rounded-lg border px-3.5 py-3 text-[11.5px]">
+                <span className="text-ink font-medium">Demo mode</span> — the API is mocked. Sample password{' '}
+                <span className="font-mono">demo1234</span>, signup OTP <span className="font-mono">123456</span>.
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
 
-/** Demo-only affordance so the flows can be explored without a backend. */
-function DemoAccountsPanel() {
+/** The marketing half of the split layout — hidden below `lg`, where the form takes the full width. */
+function BrandPanel() {
+  const studentCount = users.filter((user) => user.role === 'STUDENT').length
+  const teacherCount = users.filter((user) => user.role === 'TEACHER').length
+
   return (
-    <aside className="border-line bg-surface hidden rounded-xl border p-5 lg:col-start-2 lg:row-start-2 lg:block lg:self-start">
-      <p className="text-ink text-[13px] font-medium">Demo accounts</p>
-      <p className="text-ink-muted mt-1 text-[12px]">
-        The API is mocked, so any of these work. Password is <span className="font-mono">demo1234</span>.
+    <aside className="border-line bg-surface hidden flex-col justify-between border-r p-10 lg:flex lg:w-96 xl:w-105">
+      <div>
+        <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
+        <p className="text-ink-subtle mt-3 text-[12px]">
+          {activeSchool.name} · {activeSchool.settings.academicYear}
+        </p>
+
+        <h2 className="font-display text-ink mt-12 text-[27px] leading-[1.15] font-semibold tracking-[-0.03em]">
+          Manage your school with confidence
+        </h2>
+        <p className="text-ink-muted mt-3 text-[14px] leading-relaxed">
+          A complete platform for administrators, teachers, students and parents — attendance, fees, homework, exams and
+          reports in one place.
+        </p>
+
+        <dl className="mt-9 grid grid-cols-3 gap-3">
+          <StatTile label="Students" value={studentCount} />
+          <StatTile label="Teachers" value={teacherCount} />
+          <StatTile label="Classes" value={classes.length} />
+        </dl>
+      </div>
+
+      <p className="text-ink-subtle text-[11px]">
+        © {new Date().getFullYear()} {BRAND.name} · Sample data
       </p>
-
-      <ul className="mt-4 space-y-3">
-        {demoAccounts.map((account) => (
-          <li key={account.userId} className="border-line border-t pt-3 first:border-t-0 first:pt-0">
-            <p className="text-ink-subtle text-[11px] tracking-[0.04em] uppercase">{account.label}</p>
-            <p className="text-ink mt-1 font-mono text-[12px] break-all">{account.email}</p>
-          </li>
-        ))}
-      </ul>
-
-      <p className="text-ink-subtle mt-4 text-[11px]">The signup OTP code is 123456.</p>
     </aside>
+  )
+}
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="border-line bg-canvas rounded-lg border px-3 py-2.5">
+      <dt className="text-ink-subtle text-[11px]">{label}</dt>
+      <dd className="font-display text-ink mt-0.5 text-[20px] font-semibold tracking-[-0.02em]">{value}</dd>
+    </div>
   )
 }

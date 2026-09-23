@@ -6,13 +6,13 @@ import { paths } from '@/routes/paths'
 export function LoginPage() {
   return (
     <AuthShell
-      title="Sign in"
-      subtitle="Use your school account to reach your dashboard."
+      title="Welcome back"
+      subtitle="Select your role and sign in to your dashboard."
       footer={
         <>
           New school?{' '}
           <Link to={paths.signup} className="text-primary font-medium">
-            Create an account
+            Register school
           </Link>
         </>
       }>

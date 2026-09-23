@@ -16,6 +16,7 @@
 - Password fields use `PasswordInput` (masked by default, eye toggle in `Input`'s `trailing` slot) — never `type="password"` on a bare `Input`; `Input`'s `trailing` slot is the place for any other end-of-field adornment
 - Brand artwork comes from `src/lib/brand.ts` (`public/` assets) — never hardcode a logo path, and keep the collapsed rail's mark and the auth wordmark distinct
 - Wrap main content in the `page-container` utility (`src/styles/index.css`) — never re-declare `mx-auto max-w-* px-*` in a page or section
+- The login role picker is a portal choice, never an authorisation: the authenticated account's role decides what opens, and a mismatch is surfaced in a toast rather than silently accepted
 - Interactive hover is `hover:bg-primary-soft` + `hover:text-primary`, everywhere (buttons, nav, icon buttons, menu/option highlights) — don't introduce another hover treatment; table rows take the tint only (data, not controls), solid fills darken, and destructive items keep the error tint
 - Import environment values from `src/lib/env.ts`; route strings from `src/routes/paths.ts`; nav items from `src/lib/navigation.ts` — no inline `import.meta.env` or path strings
 - Feature `api.ts` modules are the only callers of `src/services/apiClient.ts`; every request goes through it so the mock adapter, JWT attach and error envelope apply consistently
