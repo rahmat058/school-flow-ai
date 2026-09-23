@@ -1,7 +1,6 @@
 <div align="center">
   <h1>School Flow AI</h1>
-  <p>Multi-role **School Management System** — Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, an AI assistant, real-time chat, and reports.
-</p>
+  <p>Multi-role **School Management System** — Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, an AI assistant, real-time chat, and reports</p>
 </div>
 
 <div>
