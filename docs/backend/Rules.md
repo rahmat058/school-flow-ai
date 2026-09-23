@@ -4,8 +4,8 @@
 
 - NestJS conventions: one module per domain, controllers thin, services hold business logic
 - DTO + `class-validator` for every request body/query — no untyped `req.body` access
-- Prisma for all DB access through the global `PrismaService`; transactions via `$transaction` for multi-write operations (registration, payment confirmation, result publishing)
-- Prisma enums for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
+- Supabase client for all DB access through the global `database/` module; multi-write operations (registration, payment confirmation, result publishing) run in a database transaction (Supabase RPC)
+- Postgres enums (or CHECK constraints) for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
 - `@Roles()` + `RolesGuard` on role-restricted routes; tenant scope (`schoolId`) applied in every query
 - Response envelope + error envelope via global interceptor/filter — services throw `HttpException` subclasses, never shape responses manually
 - `@nestjs/throttler` on auth/OTP/AI endpoints
@@ -14,8 +14,8 @@
 ## Avoid
 
 - Business logic in controllers or guards
-- Calling Prisma from outside services (no Prisma in gateways except via injected services)
-- Raw SQL except for heavy report aggregations — and then only parameterized `$queryRaw`
+- Calling the DB client from outside services (no direct Supabase calls in gateways or controllers — go through injected services)
+- Raw SQL except for heavy report aggregations — and then only parameterized queries (RPC/`sql` template)
 - Returning entities with sensitive fields (`passwordHash`, OTP codes) — strip via serializer/select
 - New npm packages without approval
 - Editing modules outside the requested scope
@@ -27,6 +27,6 @@
 - Follow `docs/backend/Phases.md` — complete one phase before starting the next
 - Never commit unless asked
 - Do not install packages without explicit approval
-- Every schema change = a new Prisma migration, never `db push` to shared environments
+- Every schema change = a new Supabase migration in `supabase/migrations`, never direct edits to a shared database
 - Match existing module conventions before introducing new patterns
 - Minimize diff size — smallest correct change wins

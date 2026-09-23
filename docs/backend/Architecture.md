@@ -2,20 +2,20 @@
 
 ## App flow
 
-React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → tenant scope) → services (business logic) → Prisma → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis.
+React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis.
 
-Layers: **Controller → Service → PrismaService → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
+Layers: **Controller → Service → Supabase client → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
 ## Folder structure
 
 ```
 backend/
-├── prisma/
-│   └── schema.prisma         # Single source of truth for the DB
+├── supabase/
+│   └── migrations/             # SQL migrations — source of truth for the DB schema
 ├── src/
 │   ├── main.ts               # Bootstrap: prefix, pipes, filters, helmet, CORS
 │   ├── app.module.ts
-│   ├── prisma/               # PrismaModule + PrismaService (global)
+│   ├── database/             # Supabase client module (global injectable service)
 │   ├── common/               # guards, decorators, filters, interceptors, pipes
 │   │   ├── guards/           # jwt-auth, roles, tenant
 │   │   ├── decorators/       # @Roles, @CurrentUser, @SchoolId
@@ -32,7 +32,7 @@ backend/
 │   ├── exams/                # exams, results, report cards
 │   ├── chat/                 # gateway + conversations + messages
 │   ├── notices/              # notices + events
-│   ├── ai/                   # 7 AI assistant features
+│   ├── ai/                   # 8 AI assistant features
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
 │   └── mail/                 # mailer + handlebars templates
@@ -44,8 +44,8 @@ backend/
 
 ## Tech stack
 
-- **NestJS 10+ (TypeScript)** — modular framework with DI
-- **Prisma + PostgreSQL (Supabase)** — ORM and database; Supabase Pooler for runtime, direct URL for migrations
+- **NestJS 12 (TypeScript)** — modular framework with DI
+- **Supabase** — PostgreSQL database and data access (`@supabase/supabase-js`); service-role key on the server only; schema managed via Supabase migrations
 - **Passport.js + JWT** — access (15m) + refresh (7d) auth
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe

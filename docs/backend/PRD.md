@@ -4,34 +4,36 @@
 
 ### 1.1 Purpose
 
-Build the complete backend for a multi-role School Management System using **NestJS, PostgreSQL (Supabase), and Prisma ORM**, serving a React.js frontend. The backend powers Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, AI assistance, real-time chat, reports, and role-based security.
+Build the complete backend for a multi-role School Management System using **NestJS and Supabase (PostgreSQL)**, serving a React.js frontend. The backend powers Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, AI assistance, real-time chat, reports, and role-based security.
+
+> Feature scope is aligned with the complete school-management feature set: school registration with OTP, dashboard analytics, student/teacher/parent management, class & subject management, school settings, attendance (daily/bulk/monthly/analytics), fee management (structures, collection, pending, history, reports, concessions), homework with submissions, timetables, tests & exams with report cards, study materials (PDFs, notes, worksheets, previous-year papers), real-time chat between permitted role pairs, notices & events, an 8-feature AI assistant, reports with CSV export, JWT/bcrypt security, and automated emails.
 
 ### 1.2 Tech Stack
 
-| Layer        | Technology                                 |
-| ------------ | ------------------------------------------ |
-| Runtime      | Node.js + TypeScript                       |
-| Framework    | NestJS (modular architecture)              |
-| Database     | PostgreSQL via Supabase                    |
-| ORM          | Supabase                                   |
-| Real-Time    | Socket.io (NestJS WebSocket Gateways)      |
-| Auth         | JWT (Passport.js) + bcrypt                 |
-| File Storage | Cloudinary (or Supabase Storage)           |
-| Email        | Nodemailer (SMTP)                          |
-| Payments     | Stripe & SSLComerze                        |
-| AI           | LLM API (e.g., OpenAI/Gemini)              |
-| Validation   | class-validator + class-transformer (DTOs) |
-| Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule         |
-| Deployment   | Render (API), Supabase (DB), Cloudinary    |
+| Layer        | Technology                                                              |
+| ------------ | ----------------------------------------------------------------------- |
+| Runtime      | Node.js + TypeScript                                                    |
+| Framework    | NestJS (modular architecture)                                           |
+| Database     | PostgreSQL via Supabase                                                 |
+| Data access  | Supabase (`@supabase/supabase-js`), service-role key on the server only |
+| Real-Time    | Socket.io (NestJS WebSocket Gateways)                                   |
+| Auth         | JWT (Passport.js) + bcrypt                                              |
+| File Storage | Cloudinary (or Supabase Storage)                                        |
+| Email        | Nodemailer (SMTP)                                                       |
+| Payments     | Razorpay                                                                |
+| AI           | LLM API (e.g., OpenAI/Gemini)                                           |
+| Validation   | class-validator + class-transformer (DTOs)                              |
+| Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                      |
+| Deployment   | Render (API), Supabase (DB), Cloudinary                                 |
 
 ### 1.3 Architecture
 
 - **NestJS modular structure**: one module per domain (`auth/`, `schools/`, `users/`, `attendance/`, `fees/`, `homework/`, `timetables/`, `exams/`, `chat/`, `notices/`, `ai/`, `materials/`, `reports/`), each with `*.module.ts`, `*.controller.ts`, `*.service.ts`, and `dto/`
-- Global `PrismaService` (single injectable client) in a shared `prisma/` module
+- Global Supabase client (single injectable service) in a shared `database/` module — all DB access goes through it
 - RESTful APIs versioned via `app.setGlobalPrefix('api/v1')` or NestJS URI versioning
 - Multi-tenant: every table carries a `schoolId` foreign key; a global tenant guard scopes all queries
 - Socket.io via NestJS `@WebSocketGateway()` on the same HTTP server
-- Role-Based Access Control (RBAC): `ADMIN | TEACHER | STUDENT | PARENT` as a Prisma enum, enforced with `@Roles()` decorator + `RolesGuard`
+- Role-Based Access Control (RBAC): `ADMIN | TEACHER | STUDENT | PARENT` as a Postgres enum, enforced with `@Roles()` decorator + `RolesGuard`
 
 ### 1.4 Non-Functional Requirements
 
@@ -40,7 +42,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 - DTO validation on all request bodies via global `ValidationPipe` (`whitelist: true`, `transform: true`)
 - Global exception filter with consistent error shape
 - Rate limiting on auth endpoints (OTP, login) via `@nestjs/throttler`
-- Helmet, CORS whitelist, Prisma parameterized queries (SQL-injection safe by default)
+- Helmet, CORS whitelist, parameterized queries via the Supabase client (SQL-injection safe by default)
 
 ---
 
@@ -66,9 +68,9 @@ Build the complete backend for a multi-role School Management System using **Nes
 
 ---
 
-## 3. Data Models (Prisma Schema — PostgreSQL)
+## 3. Data Models (PostgreSQL — Supabase)
 
-All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `updatedAt` unless noted. Key enums: `Role`, `AttendanceStatus`, `PaymentStatus`, `ExamType`, `MaterialType`.
+All tables live in the Supabase project (`supabase/` migrations are the source of truth). All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `updatedAt` unless noted. Key enums: `Role`, `AttendanceStatus`, `PaymentStatus`, `ExamType`, `MaterialType`.
 
 - **School** — name, address, contact, logo, subscriptionStatus, settings (JSONB), slug
 - **User** — email (unique), passwordHash, role (enum), schoolId, isVerified
@@ -116,7 +118,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 - 6-digit OTP (bcrypt-hashed in `Otp` table), 10-minute expiry, max 5 attempts, resend cooldown 60s
 - Email verification via Nodemailer before admin login is allowed
 - Unique school slug auto-generated
-- Registration runs in a Prisma `$transaction` (school + admin user + OTP)
+- Registration runs in a database transaction (school + admin user + OTP)
 
 ### 4.2 Authentication & RBAC (`AuthModule`)
 
@@ -161,7 +163,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 
 **Endpoints**
 
-- `POST /api/v1/attendance` — daily/bulk mark (array of records, `createMany` with `skipDuplicates` or upsert)
+- `POST /api/v1/attendance` — daily/bulk mark (array of records, batch upsert)
 - `GET /api/v1/attendance?classId=&date=` — daily register
 - `GET /api/v1/attendance/monthly?classId=&month=`
 - `GET /api/v1/attendance/student/:id` — individual history
@@ -170,7 +172,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 **Behavior**
 
 - Unique (classId, studentId, date) constraint prevents duplicates
-- Monthly %, streaks, and class analytics via Prisma `groupBy` aggregations / raw SQL views
+- Monthly %, streaks, and class analytics via SQL aggregations (Supabase RPC) / views
 - Socket.io event `attendance:marked` notifies parents in real time
 
 ### 4.6 Fee Management (`FeesModule`)
@@ -178,7 +180,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 **Endpoints**
 
 - `CRUD /api/v1/fees/structures`
-- `POST /api/v1/fees/invoices/generate` — bulk invoice generation per class (transactional `createMany`)
+- `POST /api/v1/fees/invoices/generate` — bulk invoice generation per class (transactional batch insert)
 - `POST /api/v1/fees/payments/razorpay-order` — create order
 - `POST /api/v1/fees/payments/verify` — signature verification (Razorpay webhook-safe)
 - `POST /api/v1/fees/payments/manual` — admin records cash/cheque payment
@@ -189,7 +191,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 
 **Behavior**
 
-- Atomic payment confirmation in a Prisma `$transaction` (payment + invoice status + receipt number sequence)
+- Atomic payment confirmation in a database transaction (payment + invoice status + receipt number sequence)
 - `POST /api/v1/webhooks/razorpay` for payment events
 - AI fee-reminder text generator (see §4.12)
 
@@ -268,7 +270,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 
 **Endpoints**
 
-- `POST /api/v1/ai/chat` — school insights chat (admin): queries DB aggregates via Prisma, answers via LLM
+- `POST /api/v1/ai/chat` — school insights chat (admin): queries DB aggregates via Supabase RPC, answers via LLM
 - `POST /api/v1/ai/report-comment` — report card comment generator
 - `POST /api/v1/ai/fee-reminder` — fee reminder message generator
 - `POST /api/v1/ai/notice` — notice drafting
@@ -302,7 +304,7 @@ All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `update
 
 **Behavior**
 
-- Aggregations via Prisma `groupBy`/`aggregate` and PostgreSQL materialized views for heavy reports
+- Aggregations via SQL (`group by`/aggregate through Supabase RPC) and PostgreSQL materialized views for heavy reports
 - CSV streaming export for large datasets
 
 ### 4.15 Email Notifications (`MailModule` — Nodemailer)
@@ -348,7 +350,7 @@ Triggered emails:
 - Protected APIs reject cross-school access
 - Rate limiting (`@nestjs/throttler`): 5/min on OTP & login, 100/min general
 - DTO validation (`class-validator`, global `ValidationPipe` with `whitelist: true`)
-- Prisma parameterized queries (SQL-injection safe)
+- Parameterized queries via the Supabase client (SQL-injection safe)
 - Cloudinary signed uploads; file type/size validation (PDFs, images ≤ 10MB)
 - Razorpay signature verification on all payment confirmations and webhooks
 - No sensitive data (passwords, OTPs) in logs or responses (`ClassSerializerInterceptor` to strip fields)
@@ -360,16 +362,21 @@ Triggered emails:
 ```bash
 cd backend
 npm install
-npx prisma migrate dev
+cp .env.example .env   # fill in Supabase keys, JWT secrets, etc.
 npm run start:dev
 ```
+
+Apply the database schema to your Supabase project first: run the migrations in
+`supabase/migrations` (Supabase SQL editor or CLI), or push with
+`supabase db push`.
 
 **Environment variables (.env)**
 
 ```
 PORT=5000
-DATABASE_URL=postgresql://postgres:[password]@db.[project].supabase.co:5432/postgres
-DIRECT_URL=                # Supabase direct connection (for Prisma migrations)
+SUPABASE_URL=https://[project].supabase.co
+SUPABASE_ANON_KEY=           # public key — never used server-side for privileged queries
+SUPABASE_SERVICE_ROLE_KEY=   # server-only; bypasses RLS — never expose to the client
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
 CLOUDINARY_CLOUD_NAME=
@@ -391,12 +398,12 @@ CLIENT_URL=
 
 ```
 backend/
-├── prisma/
-│   └── schema.prisma
+├── supabase/
+│   └── migrations/         # SQL migrations — source of truth for the DB schema
 ├── src/
 │   ├── main.ts
 │   ├── app.module.ts
-│   ├── prisma/             # PrismaModule + PrismaService
+│   ├── database/           # Supabase client module (global injectable service)
 │   ├── common/             # guards, decorators, filters, interceptors, pipes
 │   ├── auth/               # strategies, guards, dto
 │   ├── schools/
@@ -422,7 +429,7 @@ backend/
 ## 8. Deployment
 
 - **API:** Render (Node service, `npm run build && npm run start:prod`, auto-deploy from repo)
-- **DB:** Supabase PostgreSQL (connection pooling via Supabase Pooler `DATABASE_URL`, direct URL for Prisma migrations)
+- **DB:** Supabase PostgreSQL (schema managed via Supabase migrations; the backend connects with the service-role key)
 - **Files:** Cloudinary or Supabase Storage
 - Health check endpoint `GET /api/v1/health`
 - Graceful shutdown (`app.enableShutdownHooks()`); Socket.io sticky sessions + Redis adapter for multi-instance deploys

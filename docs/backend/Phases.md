@@ -2,7 +2,7 @@
 
 ## Phase 1: Foundation & Auth
 
-- [ ] NestJS scaffold, Prisma + Supabase connection, base schema (School, User, profiles, Otp)
+- [ ] NestJS scaffold, Supabase client module (`database/`) + base schema migration (`supabase/migrations`: School, User, profiles, Otp)
 - [ ] Global pipes, filters, interceptors, helmet, CORS, throttler
 - [ ] School registration + OTP verification + resend
 - [ ] JWT login/refresh/logout, forgot/reset password, `JwtAuthGuard` + `RolesGuard` + tenant guard
@@ -38,7 +38,7 @@
 
 - [ ] Notices & events CRUD with audience targeting + broadcasts
 - [ ] Chat gateway: JWT handshake, conversations, messages, read receipts, allowed-pair enforcement
-- [ ] AI module: 7 endpoints with prompt templates, rate limits, history storage
+- [ ] AI module: 8 features with prompt templates, rate limits, history storage
 
 **Done when:** permitted role pairs chat in real time and all AI features return output.
 
