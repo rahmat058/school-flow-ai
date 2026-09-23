@@ -40,6 +40,7 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 - **Badges/chips:** pill shape, 12px text; semantic colors for status (success/warning/error).
 - **Tables:** stacked rows, 1px dividers, 12×16 cell padding, row hover uses the shared `bg-primary-soft` tint
 - **Hover (interactive):** `bg-primary-soft` + `text-primary` is _the_ hover treatment — buttons (secondary/ghost), nav items, icon buttons, pagination, accordion triggers, menu items and select-option highlights all use it. Table rows take the tint only (their text stays ink — they are data, not controls). Solid fills darken instead (`primary-hover` / `error/90`), and destructive menu items keep the error tint.
+- **Auth screens:** two columns from `lg` — the form column (max 448px) plus a 320px auxiliary panel; the brand sits in its own grid row above both, so the card and the panel start on the same line
 - **Nav:** sidebar 240px, collapsing to a 76px icon rail on desktop and sliding in as a drawer on mobile; header 64px (72px on desktop) with backdrop-blur; the sidebar is viewport-pinned, so only the main column scrolls
 - **Currency:** amounts are stored as integer minor units and displayed in **USD** (`$1,500.00`) — see `src/lib/format.ts`
 - **Focus:** 3px indigo ring `0 0 0 3px rgba(99,102,241,0.12)`.

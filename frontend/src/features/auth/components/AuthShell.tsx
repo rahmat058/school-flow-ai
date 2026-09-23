@@ -16,15 +16,16 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   return (
     <div className="bg-canvas flex min-h-screen items-center justify-center py-10">
       <div className="page-container">
-        <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="mx-auto w-full max-w-md">
-            <div className="mb-6">
-              <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
-              <p className="text-ink-subtle mt-3 text-[12px]">
-                {activeSchool.name} · {activeSchool.settings.academicYear}
-              </p>
-            </div>
+        <div className="mx-auto grid w-full max-w-5xl gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          {/* The brand gets its own row, so the card and the demo panel share a start line. */}
+          <div className="mx-auto w-full max-w-md lg:col-start-1 lg:row-start-1">
+            <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
+            <p className="text-ink-subtle mt-3 text-[12px]">
+              {activeSchool.name} · {activeSchool.settings.academicYear}
+            </p>
+          </div>
 
+          <div className="mx-auto w-full max-w-md lg:col-start-1 lg:row-start-2">
             <div className="border-line bg-surface rounded-xl border p-6">
               <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
               <p className="text-ink-muted mt-1 text-[13px]">{subtitle}</p>
@@ -44,7 +45,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 /** Demo-only affordance so the flows can be explored without a backend. */
 function DemoAccountsPanel() {
   return (
-    <aside className="border-line bg-surface hidden rounded-xl border p-5 lg:block lg:self-start">
+    <aside className="border-line bg-surface hidden rounded-xl border p-5 lg:col-start-2 lg:row-start-2 lg:block lg:self-start">
       <p className="text-ink text-[13px] font-medium">Demo accounts</p>
       <p className="text-ink-muted mt-1 text-[12px]">
         The API is mocked, so any of these work. Password is <span className="font-mono">demo1234</span>.
