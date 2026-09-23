@@ -3,17 +3,32 @@ import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
 import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
 import type { ClassOption } from '@/types/academic'
-import type { FeeCollectionSummary, FeeInvoiceListItem, InvoiceStatus } from '@/types/fees'
+import type { FeeCollectionSummary, FeeInvoice, FeeInvoiceListItem, InvoiceStatus } from '@/types/fees'
 import type { Notice } from '@/types/communication'
-import type { Guardian, StudentListItem, Student, Teacher, Gender } from '@/types/people'
-import { SCHOOL_DOMAIN, SCHOOL_ID, schoolEmail } from '@/data/seed'
+import type {
+  Guardian,
+  StudentAttendance,
+  StudentDocument,
+  StudentFees,
+  StudentListItem,
+  StudentMarkRow,
+  StudentProfile,
+  StudentResults,
+  Student,
+  Teacher,
+  Gender,
+} from '@/types/people'
+import { SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes } from '@/data/classes'
-import { teachers } from '@/data/teachers'
+import { findTeacher, teachers } from '@/data/teachers'
+import { examResults, examSubjects, exams, gradeForPercentage, maxMarks } from '@/data/exams'
+import { findSubject } from '@/data/subjects'
+import { feeInvoices, feePayments, feeStructures } from '@/data/fees'
+import { formatDate } from '@/lib/format'
 import { students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
-import { feeInvoices } from '@/data/fees'
 import { notices } from '@/data/notices'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
@@ -182,12 +197,15 @@ function studentListItems(): StudentListItem[] {
 
     const register = attendance.filter((record) => record.studentId === student.id)
     const present = register.filter((record) => record.status === 'PRESENT' || record.status === 'LATE').length
-    const pendingPaise = feeInvoices
-      .filter((invoice) => invoice.studentId === student.id)
-      .reduce(
-        (total, invoice) => total + Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0),
-        0,
-      )
+    const invoices = feeInvoices.filter((invoice) => invoice.studentId === student.id)
+    const outstanding = (invoice: FeeInvoice) =>
+      Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0)
+    const duePaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
+    const today = dateOffset(0)
+    // A balance past its due date is overdue even when the stored status has not caught up.
+    const isOverdue = invoices.some(
+      (invoice) => invoice.status === 'OVERDUE' || (invoice.dueDate < today && outstanding(invoice) > 0),
+    )
 
     return {
       ...student,
@@ -195,15 +213,170 @@ function studentListItems(): StudentListItem[] {
       guardian: guardian
         ? {
             name: `${guardian.firstName} ${guardian.lastName}`.trim(),
+            relation: primaryLink?.relation ?? null,
             email: guardian.email,
             phone: guardian.phone,
             address: guardian.address,
           }
         : null,
       attendancePercentage: register.length === 0 ? 0 : Math.round((present / register.length) * 100),
-      feeStanding: pendingPaise > 0 ? 'PENDING' : 'PAID',
+      feeStanding: isOverdue ? 'OVERDUE' : duePaise > 0 ? 'UNPAID' : 'PAID',
     }
   })
+}
+
+// ---------------------------------------------------------------------------------------------
+// profile payloads — each one is what one tab renders, computed here rather than in the view
+// ---------------------------------------------------------------------------------------------
+
+function studentProfile(id: string): StudentProfile | undefined {
+  const row = studentListItems().find((item) => item.id === id)
+  if (!row) return undefined
+
+  const classRoom = classes.find((item) => item.id === row.classId)
+  const teacher = findTeacher(classRoom?.classTeacherId ?? null)
+  const days = [...new Set(attendance.filter((record) => record.studentId === id).map((r) => r.attendanceDate))].sort()
+
+  function isIn(day: string): boolean {
+    const record = attendance.find((item) => item.studentId === id && item.attendanceDate === day)
+    return record?.status === 'PRESENT' || record?.status === 'LATE'
+  }
+
+  // Streak: present days counted back from the most recent register day.
+  let streakDays = 0
+  for (const day of [...days].reverse()) {
+    if (!isIn(day)) break
+    streakDays += 1
+  }
+
+  const daysPresent = days.filter(isIn).length
+
+  return {
+    ...row,
+    classTeacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : null,
+    streakDays,
+    daysPresent,
+    daysAbsent: days.length - daysPresent,
+  }
+}
+
+function studentAttendance(id: string): StudentAttendance | undefined {
+  const records = attendance.filter((record) => record.studentId === id)
+  if (records.length === 0) return undefined
+
+  const byMonth = new Map<string, { month: string; present: number; absent: number; late: number; total: number }>()
+  for (const record of records) {
+    const date = new Date(record.attendanceDate)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const month = byMonth.get(key) ?? {
+      month: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      present: 0,
+      absent: 0,
+      late: 0,
+      total: 0,
+    }
+
+    if (record.status === 'PRESENT') month.present += 1
+    else if (record.status === 'LATE') month.late += 1
+    else month.absent += 1
+    month.total += 1
+    byMonth.set(key, month)
+  }
+
+  const months = [...byMonth.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([, month]) => ({ ...month, rate: rateOf(month.present + month.late, month.total) }))
+
+  const present = records.filter((record) => record.status === 'PRESENT').length
+  const late = records.filter((record) => record.status === 'LATE').length
+
+  return {
+    totals: {
+      total: records.length,
+      present,
+      // Present and late are both "in", so both count towards the rate (as the roster does).
+      absent: records.length - present - late,
+      late,
+      rate: rateOf(present + late, records.length),
+    },
+    months,
+  }
+}
+
+function rateOf(attended: number, total: number): number {
+  return total === 0 ? 0 : Math.round((attended / total) * 100)
+}
+
+function studentMarks(id: string): StudentMarkRow[] {
+  return examResults
+    .filter((result) => result.studentId === id)
+    .flatMap((result) => {
+      const exam = exams.find((item) => item.id === result.examId)
+      const subject = findSubject(result.subjectId)
+      if (!exam || !subject) return []
+
+      const paper = examSubjects.find((item) => item.examId === exam.id && item.subjectId === subject.id)
+      const total = paper?.maxMarks ?? maxMarks
+      const percentage = Number(((result.obtainedMarks / total) * 100).toFixed(1))
+
+      return [
+        {
+          id: result.id,
+          examName: exam.name,
+          examType: exam.type,
+          subjectName: subject.name,
+          date: paper?.examDate ?? exam.startDate,
+          marks: result.obtainedMarks,
+          total,
+          percentage,
+          grade: gradeForPercentage(percentage),
+          result: percentage >= 40 ? ('PASS' as const) : ('FAIL' as const),
+          isPublished: exam.isPublished,
+        },
+      ]
+    })
+    .sort((left, right) => right.date.localeCompare(left.date))
+}
+
+function studentResults(id: string): StudentResults {
+  const rows = studentMarks(id)
+  const average =
+    rows.length === 0 ? 0 : Number((rows.reduce((total, row) => total + row.percentage, 0) / rows.length).toFixed(1))
+
+  return {
+    summary: {
+      passed: rows.filter((row) => row.result === 'PASS').length,
+      failed: rows.filter((row) => row.result === 'FAIL').length,
+      average,
+    },
+    rows,
+  }
+}
+
+function studentFees(id: string): StudentFees {
+  const rows = feeInvoices
+    .filter((invoice) => invoice.studentId === id)
+    .map((invoice) => {
+      const payment = feePayments.find((item) => item.invoiceId === invoice.id)
+      const structure = feeStructures.find((item) => item.id === invoice.feeStructureId)
+
+      return {
+        id: invoice.id,
+        // Invoices carry no title or period of their own yet — see the note in PRD §4.6.
+        title: structure ? `${structure.name} · due ${formatDate(invoice.dueDate, 'dd MMM yyyy')}` : 'Fee invoice',
+        amountPaise: invoice.amountPaise,
+        paidPaise: invoice.paidPaise,
+        paidAt: payment?.paidAt ?? null,
+        method: payment?.method ?? null,
+        status: invoice.status,
+      }
+    })
+    .sort((left, right) => left.id.localeCompare(right.id))
+
+  const paidPaise = rows.reduce((total, row) => total + row.paidPaise, 0)
+  const duePaise = rows.reduce((total, row) => total + Math.max(row.amountPaise - row.paidPaise, 0), 0)
+
+  return { summary: { paidPaise, duePaise, totalPaise: paidPaise + duePaise }, rows }
 }
 
 /** A roll number is unique within its class — the roster cannot show 5A twice. */
@@ -527,6 +700,22 @@ const routes: Route[] = [
         return fail(400, 'STUDENT_INVALID', 'Choose a class for the student', ['classId'])
       }
 
+      // The enrolment form requires every field, so the API does too.
+      if (!body.dateOfBirth) return fail(400, 'STUDENT_INVALID', 'Date of birth is required', ['dateOfBirth'])
+      if (!body.gender) return fail(400, 'STUDENT_INVALID', 'Gender is required', ['gender'])
+      if (!guardian?.name.trim()) {
+        return fail(400, 'STUDENT_INVALID', 'Guardian name is required', ['guardian.name'])
+      }
+      if (!guardian.email?.trim()) {
+        return fail(400, 'STUDENT_INVALID', 'Guardian email is required', ['guardian.email'])
+      }
+      if (!guardian.phone?.trim()) {
+        return fail(400, 'STUDENT_INVALID', 'Guardian phone is required', ['guardian.phone'])
+      }
+      if (!guardian.address?.trim()) {
+        return fail(400, 'STUDENT_INVALID', 'Guardian address is required', ['guardian.address'])
+      }
+
       // Roll numbers are unique per class; leaving it blank takes the next free slot.
       const nextRoll =
         Math.max(0, ...students.filter((item) => item.classId === classId).map((item) => item.rollNo)) + 1
@@ -624,6 +813,55 @@ const routes: Route[] = [
       student.status = 'INACTIVE'
       return ok({ deleted: true })
     },
+  },
+  {
+    method: 'GET',
+    path: '/students/:id',
+    handler: ({ params }) => {
+      const profile = studentProfile(String(params.id))
+      return profile ? ok(profile) : fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/students/:id/documents',
+    // No upload flow exists yet, so this is honestly empty and the tab renders its empty state.
+    handler: ({ params }) =>
+      students.some((item) => item.id === params.id)
+        ? ok<StudentDocument[]>([])
+        : fail(404, 'STUDENT_NOT_FOUND', 'Student not found'),
+  },
+  {
+    method: 'GET',
+    path: '/attendance/student/:id',
+    handler: ({ params }) => {
+      if (!students.some((item) => item.id === params.id)) {
+        return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+      }
+
+      const summary = studentAttendance(String(params.id))
+
+      return ok<StudentAttendance>(
+        summary ?? { totals: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, months: [] },
+      )
+    },
+  },
+  {
+    method: 'GET',
+    path: '/results/student/:id',
+    handler: ({ params }) => {
+      if (!students.some((item) => item.id === params.id)) {
+        return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+      }
+
+      // A student with no papers yet gets an empty result set, not a 404.
+      return ok<StudentResults>(studentResults(String(params.id)))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/history/:id',
+    handler: ({ params }) => ok<StudentFees>(studentFees(String(params.id))),
   },
   {
     method: 'GET',

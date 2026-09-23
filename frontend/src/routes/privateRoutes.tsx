@@ -3,7 +3,14 @@ import { AppShell } from '@/components/layout/AppShell'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { ProtectedRoute } from '@/routes/guards/ProtectedRoute'
 import { RoleGuard } from '@/routes/guards/RoleGuard'
-import { DashboardPage, InvoicesPage, NotFoundPage, NoticesPage, StudentsPage } from '@/routes/lazyPages'
+import {
+  DashboardPage,
+  InvoicesPage,
+  NotFoundPage,
+  NoticesPage,
+  StudentProfilePage,
+  StudentsPage,
+} from '@/routes/lazyPages'
 import { childPath, paths } from '@/routes/paths'
 
 /**
@@ -70,6 +77,11 @@ export const privateRoutes: RouteObject[] = [
           {
             element: <RoleGuard allow={['ADMIN', 'TEACHER']} />,
             children: [{ path: childPath(paths.students), element: <StudentsPage /> }],
+          },
+          {
+            // Guardians may open their own child's profile, so parents are allowed here.
+            element: <RoleGuard allow={['ADMIN', 'TEACHER', 'PARENT']} />,
+            children: [{ path: childPath(paths.studentDetail), element: <StudentProfilePage /> }],
           },
           {
             element: <RoleGuard allow={['ADMIN', 'PARENT']} />,

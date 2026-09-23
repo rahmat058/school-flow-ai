@@ -2,7 +2,16 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { get, patch, post, remove } from '@/services/apiClient'
 import type { Paginated } from '@/types/api'
 import type { ClassOption } from '@/types/academic'
-import type { FeeStanding, StudentInput, StudentListItem } from '@/types/people'
+import type {
+  FeeStanding,
+  StudentAttendance,
+  StudentDocument,
+  StudentFees,
+  StudentInput,
+  StudentListItem,
+  StudentProfile,
+  StudentResults,
+} from '@/types/people'
 
 export interface StudentListQuery {
   page: number
@@ -16,6 +25,11 @@ export const studentKeys = {
   all: ['students'] as const,
   list: (query: StudentListQuery) => [...studentKeys.all, 'list', query] as const,
   classes: () => [...studentKeys.all, 'classes'] as const,
+  profile: (id: string) => [...studentKeys.all, 'profile', id] as const,
+  attendance: (id: string) => [...studentKeys.all, 'attendance', id] as const,
+  results: (id: string) => [...studentKeys.all, 'results', id] as const,
+  fees: (id: string) => [...studentKeys.all, 'fees', id] as const,
+  documents: (id: string) => [...studentKeys.all, 'documents', id] as const,
 }
 
 export function useStudents(query: StudentListQuery) {
@@ -68,4 +82,45 @@ export function useUpdateStudent() {
 
 export function useDeleteStudent() {
   return useRosterMutation(async (id: string) => (await remove<{ deleted: boolean }>(`/students/${id}`)).data)
+}
+
+/** One hook per tab, so each panel loads only what it shows. */
+export function useStudentProfile(id: string) {
+  return useQuery({
+    queryKey: studentKeys.profile(id),
+    queryFn: async () => (await get<StudentProfile>(`/students/${id}`)).data,
+    enabled: id.length > 0,
+  })
+}
+
+export function useStudentAttendance(id: string) {
+  return useQuery({
+    queryKey: studentKeys.attendance(id),
+    queryFn: async () => (await get<StudentAttendance>(`/attendance/student/${id}`)).data,
+    enabled: id.length > 0,
+  })
+}
+
+export function useStudentResults(id: string) {
+  return useQuery({
+    queryKey: studentKeys.results(id),
+    queryFn: async () => (await get<StudentResults>(`/results/student/${id}`)).data,
+    enabled: id.length > 0,
+  })
+}
+
+export function useStudentFees(id: string) {
+  return useQuery({
+    queryKey: studentKeys.fees(id),
+    queryFn: async () => (await get<StudentFees>(`/fees/history/${id}`)).data,
+    enabled: id.length > 0,
+  })
+}
+
+export function useStudentDocuments(id: string) {
+  return useQuery({
+    queryKey: studentKeys.documents(id),
+    queryFn: async () => (await get<StudentDocument[]>(`/students/${id}/documents`)).data,
+    enabled: id.length > 0,
+  })
 }

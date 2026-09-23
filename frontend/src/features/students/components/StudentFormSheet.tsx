@@ -40,6 +40,8 @@ const GENDER_OPTIONS = [
   { value: 'OTHER', label: 'Other' },
 ]
 
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
+
 /**
  * Create and edit share one form: the sheet is keyed on the target student, so it mounts with that
  * student's values and never carries a previous edit across.
@@ -175,21 +177,28 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
             label="Roll no."
             type="number"
             min={1}
-            placeholder="Next free"
-            hint="Leave blank for the next free number in the class."
+            placeholder="1"
+            hint="Unique within the class."
             error={errors.rollNo?.message}
             {...register('rollNo', {
-              validate: (value) => !value.trim() || Number(value) > 0 || 'Roll number must be at least 1',
+              required: 'Roll number is required',
+              validate: (value) => Number(value) > 0 || 'Roll number must be at least 1',
             })}
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Date of birth" type="date" error={errors.dateOfBirth?.message} {...register('dateOfBirth')} />
+          <Input
+            label="Date of birth"
+            type="date"
+            error={errors.dateOfBirth?.message}
+            {...register('dateOfBirth', { required: 'Date of birth is required' })}
+          />
 
           <Controller
             control={control}
             name="gender"
+            rules={{ required: 'Choose a gender' }}
             render={({ field }) => (
               <Select
                 label="Gender"
@@ -205,18 +214,45 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
         <div className="border-line space-y-4 border-t pt-5">
           <div>
             <h3 className="text-ink text-[14px] font-medium">Guardian</h3>
-            <p className="text-ink-muted mt-0.5 text-[12px]">
-              The primary contact for this student. Leave the name blank to record none.
-            </p>
+            <p className="text-ink-muted mt-0.5 text-[12px]">The primary contact for this student.</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Parent name" placeholder="Rahim Khan" {...register('guardianName')} />
-            <Input label="Phone" type="tel" placeholder="+8801XXXXXXXXX" {...register('guardianPhone')} />
+            <Input
+              label="Parent name"
+              placeholder="Rahim Khan"
+              error={errors.guardianName?.message}
+              {...register('guardianName', { required: 'Parent name is required' })}
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              placeholder="+8801XXXXXXXXX"
+              error={errors.guardianPhone?.message}
+              {...register('guardianPhone', {
+                required: 'Phone is required',
+                minLength: { value: 6, message: 'Enter a full phone number' },
+              })}
+            />
           </div>
 
-          <Input label="Email" type="email" placeholder="parent@example.com" {...register('guardianEmail')} />
-          <Textarea label="Address" rows={2} placeholder="House, road, area" {...register('guardianAddress')} />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="parent@example.com"
+            error={errors.guardianEmail?.message}
+            {...register('guardianEmail', {
+              required: 'Email is required',
+              pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
+            })}
+          />
+          <Textarea
+            label="Address"
+            rows={2}
+            placeholder="House, road, area"
+            error={errors.guardianAddress?.message}
+            {...register('guardianAddress', { required: 'Address is required' })}
+          />
         </div>
       </form>
     </Sheet>

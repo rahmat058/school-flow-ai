@@ -1,13 +1,14 @@
 import { cn } from '@/lib/cn'
 import { humanizeEnum } from '@/lib/format'
-import type { RecordStatus } from '@/types/people'
+import type { RecordStatus, FeeStanding } from '@/types/people'
 import type { InvoiceStatus, PaymentStatus } from '@/types/fees'
 
-type BadgeStatus = InvoiceStatus | PaymentStatus | RecordStatus
+type BadgeStatus = InvoiceStatus | PaymentStatus | RecordStatus | FeeStanding
 
 const statusStyles: Record<BadgeStatus, string> = {
   PAID: 'bg-success-soft text-success',
   PENDING: 'bg-warning-soft text-warning',
+  UNPAID: 'bg-warning-soft text-warning',
   PARTIAL: 'bg-primary-soft text-primary',
   OVERDUE: 'bg-error-soft text-error',
   FAILED: 'bg-error-soft text-error',

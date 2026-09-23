@@ -22,6 +22,9 @@ export const ResetPasswordPage = lazy(async () => ({
 // private
 export const DashboardPage = lazy(async () => ({ default: (await import('@/pages/DashboardPage')).DashboardPage }))
 export const StudentsPage = lazy(async () => ({ default: (await import('@/pages/admin/StudentsPage')).StudentsPage }))
+export const StudentProfilePage = lazy(async () => ({
+  default: (await import('@/pages/admin/StudentProfilePage')).StudentProfilePage,
+}))
 export const InvoicesPage = lazy(async () => ({ default: (await import('@/pages/admin/InvoicesPage')).InvoicesPage }))
 export const NoticesPage = lazy(async () => ({ default: (await import('@/pages/NoticesPage')).NoticesPage }))
 export const NotFoundPage = lazy(async () => ({ default: (await import('@/pages/NotFoundPage')).NotFoundPage }))

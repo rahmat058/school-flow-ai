@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Eye, MoreHorizontal, Pencil, Plus, Search, Trash2, Users } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Avatar } from '@/components/ui/Avatar'
@@ -14,8 +15,8 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useDeleteStudent, useStudents } from '@/features/students/api'
+import { studentProfilePath } from '@/routes/paths'
 import { StudentFormSheet } from '@/features/students/components/StudentFormSheet'
-import { StudentDetailSheet } from '@/features/students/components/StudentDetailSheet'
 import type { FeeStanding, StudentListItem } from '@/types/people'
 
 const PAGE_SIZE = 10
@@ -32,8 +33,8 @@ export function StudentsPage() {
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<StudentListItem | null>(null)
-  const [viewing, setViewing] = useState<StudentListItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<StudentListItem | null>(null)
+  const navigate = useNavigate()
 
   // Debounced so typing does not fire a request per keystroke (setState happens in the timer cb).
   useEffect(() => {
@@ -64,7 +65,8 @@ export function StudentsPage() {
   const feeSelectOptions = [
     { value: '', label: 'All fee status' },
     { value: 'PAID', label: 'Paid' },
-    { value: 'PENDING', label: 'Pending' },
+    { value: 'UNPAID', label: 'Unpaid' },
+    { value: 'OVERDUE', label: 'Overdue' },
   ]
 
   function openCreate() {
@@ -152,7 +154,7 @@ export function StudentsPage() {
             triggerLabel={`Actions for ${row.firstName} ${row.lastName}`}
             trigger={<MoreHorizontal className="size-4" strokeWidth={1.75} />}
             items={[
-              { id: 'view', label: 'View', icon: Eye, onSelect: () => setViewing(row) },
+              { id: 'view', label: 'View', icon: Eye, onSelect: () => navigate(studentProfilePath(row.id)) },
               { id: 'edit', label: 'Edit', icon: Pencil, onSelect: () => openEdit(row) },
               {
                 id: 'delete',
@@ -215,7 +217,9 @@ export function StudentsPage() {
           className="max-w-[200px]"
           options={feeSelectOptions}
           value={feeStanding}
-          onValueChange={(value) => setFeeStanding(value === 'PAID' || value === 'PENDING' ? value : '')}
+          onValueChange={(value) =>
+            setFeeStanding(value === 'PAID' || value === 'UNPAID' || value === 'OVERDUE' ? value : '')
+          }
           aria-label="Filter by fee status"
         />
       </div>
@@ -241,17 +245,6 @@ export function StudentsPage() {
         open={formOpen}
         student={editing}
         onClose={() => setFormOpen(false)}
-      />
-
-      <StudentDetailSheet
-        open={viewing !== null}
-        student={viewing}
-        onClose={() => setViewing(null)}
-        onEdit={() => {
-          const target = viewing
-          setViewing(null)
-          if (target) openEdit(target)
-        }}
       />
 
       <ConfirmDialog

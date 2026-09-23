@@ -13,6 +13,8 @@ export const paths = {
   // private
   dashboard: '/',
   students: '/students',
+  /** Pattern for a student's profile; build links with `studentProfilePath()`. */
+  studentDetail: '/students/:id',
   attendance: '/attendance',
   fees: '/fees',
   homework: '/homework',
@@ -32,4 +34,9 @@ export type AppPath = (typeof paths)[keyof typeof paths]
 /** `/students` → `students`, for `<RouteObject>` children of a pathless layout route. */
 export function childPath(path: string): string {
   return path.replace(/^\//, '')
+}
+
+/** `/students/std_1` — the profile route for one student. */
+export function studentProfilePath(id: string): string {
+  return paths.studentDetail.replace(':id', id)
 }

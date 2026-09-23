@@ -159,7 +159,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
 - [ ] `POST /api/v1/students` — create + admission number + email credentials; takes the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating `(admin)`
 - [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list) `(admin)`
-- [ ] `GET /api/v1/students/:id` — profile `(admin, parent of child)`
+- [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak `(admin, parent of child)`
+- [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist `(admin, teacher, parent of child)`
 - [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in `(admin)`
 - [ ] `DELETE /api/v1/students/:id` — soft delete `(admin)`
 - [ ] `POST /api/v1/parents` — create + email credentials `(admin)`
