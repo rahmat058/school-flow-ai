@@ -5,6 +5,7 @@ import { Lock, Mail } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
@@ -67,9 +68,8 @@ export function LoginForm() {
         })}
       />
 
-      <Input
+      <PasswordInput
         label="Password"
-        type="password"
         icon={Lock}
         autoComplete="current-password"
         placeholder="••••••••"

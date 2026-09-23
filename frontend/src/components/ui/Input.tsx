@@ -1,17 +1,19 @@
 import { cn } from '@/lib/cn'
 import { useId } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import type { ComponentPropsWithRef } from 'react'
+import type { ComponentPropsWithRef, ReactNode } from 'react'
 
 /** `ComponentPropsWithRef` (not `InputHTMLAttributes`) so react-hook-form's `register()` ref flows through. */
-interface InputProps extends ComponentPropsWithRef<'input'> {
+export interface InputProps extends ComponentPropsWithRef<'input'> {
   label?: string
   hint?: string
   error?: string
   icon?: LucideIcon
+  /** Rendered at the trailing edge of the field — e.g. a password visibility toggle. */
+  trailing?: ReactNode
 }
 
-export function Input({ label, hint, error, icon: Icon, id, className, disabled, ...props }: InputProps) {
+export function Input({ label, hint, error, icon: Icon, trailing, id, className, disabled, ...props }: InputProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId
   const messageId = `${inputId}-message`
@@ -43,11 +45,14 @@ export function Input({ label, hint, error, icon: Icon, id, className, disabled,
             'focus:border-primary focus:ring-primary/12 focus:ring-[3px]',
             'disabled:bg-canvas disabled:text-ink-subtle disabled:cursor-not-allowed',
             Icon && 'pl-10',
+            trailing && 'pr-11',
             error && 'border-error focus:border-error focus:ring-error/12',
             className,
           )}
           {...props}
         />
+
+        {trailing ? <span className="absolute top-1/2 right-1.5 -translate-y-1/2">{trailing}</span> : null}
       </div>
 
       {error ? (

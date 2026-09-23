@@ -13,6 +13,7 @@
 - Zustand for client-only state (auth/session, school context) only — never as a cache for API responses
 - `react-hook-form` for all form state and validation — `register()` on the `components/ui` inputs, `Controller` for Select/Checkbox/Radio/Switch, `formState.isSubmitting` for the submit button, and `setError('root.serverError')` for API failures
 - UI input primitives must accept a `ref` (`ComponentPropsWithRef`) so `register()` can focus the first invalid field
+- Password fields use `PasswordInput` (masked by default, eye toggle in `Input`'s `trailing` slot) — never `type="password"` on a bare `Input`; `Input`'s `trailing` slot is the place for any other end-of-field adornment
 - Brand artwork comes from `src/lib/brand.ts` (`public/` assets) — never hardcode a logo path, and keep the collapsed rail's mark and the auth wordmark distinct
 - Wrap main content in the `page-container` utility (`src/styles/index.css`) — never re-declare `mx-auto max-w-* px-*` in a page or section
 - Import environment values from `src/lib/env.ts`; route strings from `src/routes/paths.ts`; nav items from `src/lib/navigation.ts` — no inline `import.meta.env` or path strings

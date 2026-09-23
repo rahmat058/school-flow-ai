@@ -5,6 +5,7 @@ import { Building2, Lock, Mail, MapPin, Phone, User } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
@@ -137,9 +138,8 @@ export function SignupForm() {
           error={errors.email?.message}
           {...register('email', EMAIL_RULES)}
         />
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           icon={Lock}
           hint={`At least ${MIN_PASSWORD} characters.`}
           error={errors.password?.message}

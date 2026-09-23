@@ -19,12 +19,6 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6">
-              {/*
-              `school-flow.png` is a 2172×724 canvas but its artwork only spans 1979×430 — roughly
-              40% of the file height is transparent padding, so sizing by height alone (h-10) renders
-              the wordmark at 24px. A box at the artwork's own 4.6:1 ratio with `object-cover` crops
-              that padding away and lets the logo fill the card.
-            */}
               <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
               <p className="text-ink-subtle mt-3 text-[12px]">
                 {activeSchool.name} · {activeSchool.settings.academicYear}

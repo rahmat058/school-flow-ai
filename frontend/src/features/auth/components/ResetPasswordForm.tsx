@@ -4,7 +4,7 @@ import type { SubmitHandler } from 'react-hook-form'
 import { Lock } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
@@ -68,9 +68,8 @@ export function ResetPasswordForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
-      <Input
+      <PasswordInput
         label="New password"
-        type="password"
         icon={Lock}
         autoComplete="new-password"
         hint={`At least ${MIN_PASSWORD} characters.`}
@@ -81,9 +80,8 @@ export function ResetPasswordForm() {
         })}
       />
 
-      <Input
+      <PasswordInput
         label="Confirm new password"
-        type="password"
         icon={Lock}
         autoComplete="new-password"
         error={errors.confirmPassword?.message}
