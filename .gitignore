@@ -1,6 +1,5 @@
 # root
 /node_modules
-docs/atlas-credentials.env
 .DS_Store
 *.log
 *.tsbuildinfo
