@@ -43,8 +43,8 @@ npm run dev
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
-npx prisma migrate dev
+cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT secrets, etc.
+npx supabase db push   # apply backend/supabase/migrations to your Supabase project
 npm run start:dev
 ```
 
@@ -61,9 +61,10 @@ money in paise.
    - **Backend:** `cd backend && npm run lint && npm run build`
 3. Keep the current phase in `Phases.md` complete before moving on, and don't
    advance to the next phase in the same PR.
-4. If your change touches the DB schema, add a Prisma migration; if it changes
-   the API contract, update `docs/backend/Design.md` and the matching frontend
-   `Memory.md`.
+4. If your change touches the DB schema, add a Supabase migration under
+   `backend/supabase/migrations` and update `docs/backend/Database.md`; if it
+   changes the API contract, update `docs/backend/Design.md` and the matching
+   frontend `Memory.md`.
 5. Update the relevant `Memory.md` (completed work, active file, decisions).
 
 ## Git hooks
@@ -113,12 +114,12 @@ After the hook, git stores:
 | `refactor` | 📦    | Internal change with no feature or fix                          |
 | `perf`     | 🚀    | Performance                                                     |
 | `test`     | 🚨    | Tests only                                                      |
-| `build`    | 🛠️    | Build system or dependency change (Vite, Nest, Prisma, npm)     |
+| `build`    | 🛠️    | Build system or dependency change (Vite, Nest, Supabase, npm)   |
 | `ci`       | ⚙️    | Hooks, Commitlint, lint-staged, GitHub Actions                  |
 | `chore`    | ♻️    | Maintenance that does not fit the types above                   |
 | `revert`   | 🗑️    | Revert a previous commit                                        |
 
-Suggested scopes: `frontend`, `backend`, `auth`, `api`, `prisma`, `ui`, `docs`.
+Suggested scopes: `frontend`, `backend`, `auth`, `api`, `db`, `ui`, `docs`.
 
 ### Community files (`docs`)
 
@@ -175,7 +176,7 @@ Type must be lowercase (`feat`, not `Feat`).
 - Branch from `main` (or the default branch).
 - Keep the change scoped: one concern per PR when you can.
 - Describe **why**, not only what files changed.
-- Do not commit `node_modules`, `dist`, `.env`, or generated Prisma artifacts.
+- Do not commit `node_modules`, `dist`, `.env`, or generated build artifacts.
 
 ## Project map
 
@@ -187,7 +188,7 @@ Type must be lowercase (`feat`, not `Feat`).
 | Feature modules (frontend)  | `frontend/src/features/`               |
 | API + socket clients        | `frontend/src/services/`               |
 | Backend entry + modules     | `backend/src/main.ts`, `app.module.ts` |
-| Database schema             | `backend/prisma/schema.prisma`         |
+| Database schema             | `backend/supabase/migrations/`         |
 | Shared guards/decorators    | `backend/src/common/`                  |
 | Product + architecture docs | `docs/frontend/`, `docs/backend/`      |
 

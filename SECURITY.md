@@ -1,7 +1,7 @@
 # Security Policy
 
 School Flow AI is a full-stack **school management system** — a React frontend
-(`frontend/`) and a NestJS + Prisma + PostgreSQL (Supabase) backend
+(`frontend/`) and a NestJS + PostgreSQL (Supabase) backend
 (`backend/`). It handles student, parent, and staff accounts plus attendance,
 homework, exam results, and fee/payment data, so security reports are taken
 seriously.

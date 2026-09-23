@@ -132,6 +132,7 @@ same internal layout:
 | [`../docs/backend/Rules.md`](../docs/backend/Rules.md)               | Constraints — use / avoid               |
 | [`../docs/backend/Phases.md`](../docs/backend/Phases.md)             | Delivery order                          |
 | [`../docs/backend/Design.md`](../docs/backend/Design.md)             | API contract (envelopes, naming, paise) |
+| [`../docs/backend/Database.md`](../docs/backend/Database.md)         | ERD — tables, enums, constraints        |
 | [`../docs/backend/Memory.md`](../docs/backend/Memory.md)             | Session state                           |
 
 Full repo workflow: [`../AGENTS.md`](../AGENTS.md). Client side:

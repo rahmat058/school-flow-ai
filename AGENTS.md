@@ -3,7 +3,7 @@
 Multi-role School Management System: **Admin, Teacher, Student, Parent** dashboards with attendance, fees, homework, exams, AI assistant, real-time chat, and reports.
 
 - **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS 4 + Recharts (`frontend/`)
-- **Backend:** NestJS + Prisma + PostgreSQL (Supabase) (`backend/`)
+- **Backend:** NestJS + PostgreSQL via Supabase (`backend/`)
 
 ## Read before any work
 
@@ -17,6 +17,7 @@ Every session starts by reading the docs for the side you're touching. These fil
 | `docs/frontend/Phases.md` / `docs/backend/Phases.md`             | **Delivery order** — one phase at a time           |
 | `docs/frontend/Design.md` / `docs/backend/Design.md`             | **Visual language** (UI tokens / API contract)     |
 | `docs/frontend/Memory.md` / `docs/backend/Memory.md`             | **Session state** — done, in-progress, decisions   |
+| `docs/backend/Database.md`                                       | **ERD** — backend tables, enums, constraints       |
 | `docs/CODE_REVIEWER.md`                                          | Review checklist — apply before finishing any task |
 
 ## Core rules
@@ -43,6 +44,6 @@ cd frontend && npm run dev        # dev server
 npm run lint && npm run typecheck # validate
 
 # backend
-cd backend && npm install && npx prisma migrate dev
+cd backend && npm install && npx supabase db push
 npm run start:dev                 # dev server
 ```
