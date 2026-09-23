@@ -1,9 +1,9 @@
+import { cn } from '@/lib/cn'
+import { MoreVertical } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import type { LucideIcon } from 'lucide-react'
-import { MoreVertical } from 'lucide-react'
-import { cn } from '@/lib/cn'
 
 export interface DropdownItemConfig {
   id: string

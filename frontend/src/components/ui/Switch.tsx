@@ -1,7 +1,7 @@
+import { cn } from '@/lib/cn'
 import { useId } from 'react'
 import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { cn } from '@/lib/cn'
 import { useControllableState } from '@/hooks/useControllableState'
 
 type SwitchSize = 'sm' | 'md'

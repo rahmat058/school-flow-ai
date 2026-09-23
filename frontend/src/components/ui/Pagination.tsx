@@ -1,7 +1,7 @@
+import { cn } from '@/lib/cn'
 import { useId } from 'react'
 import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/cn'
 
 const navButtonStyles =
   'text-ink-muted hover:bg-canvas hover:text-ink inline-flex size-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40'

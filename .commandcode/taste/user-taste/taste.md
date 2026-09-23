@@ -41,7 +41,8 @@
 - Frontend date utilities: **date-fns** for date formatting and academic-calendar helpers. Confidence: 0.9
 - Frontend PDF generation: **@react-pdf/renderer** for exporting report cards and invoices. Confidence: 0.85
 - Prefers UI components hand-rolled from raw HTML + Tailwind + React — explicitly **no third-party component library** (no Radix, Headless UI, shadcn, etc.); primitives are built in-house. Confidence: 0.85
-- Wants reusable UI components centralized under `components/ui/` (tab, select, radio, checkbox, card, modal, table, data-table, etc.). Confidence: 0.7
+- Wants reusable UI components centralized under `components/ui/` (tab, select, radio, checkbox, card, modal, table, data-table, toast, etc.). Confidence: 0.7
+- Expects status feedback in the UI to come as the full semantic tone set — `success` / `warning` / `error` / `info` — exposed as first-class variants on primitives (as with Alert and Toast) and mapped onto the design tokens' soft/strong palette rather than ad-hoc colors. Confidence: 0.55
 - Wants design-system components to follow the project's own style guide (Design.md — color tokens, border radii, type scale, focus treatment) rather than generic/default styling. Confidence: 0.6
 - Wants database schema documentation as a markdown file in `docs/backend/` (e.g. `Database.md`) written feature-wise to mirror the PRD's feature sections, with **mermaid** diagrams for the visuals (ERD per feature module) rather than a single flat diagram or plain table listing. Confidence: 0.75
 - SQL/Supabase schema naming: prefers `snake_case` plural table and column names (Postgres/Supabase idiom, no quoted identifiers in raw SQL), with the service layer mapping to the camelCase JSON the API contract (Design.md) mandates — chosen over matching the PRD's PascalCase/camelCase Prisma-style model names. Confidence: 0.7

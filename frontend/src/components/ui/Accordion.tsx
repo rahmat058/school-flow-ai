@@ -1,8 +1,8 @@
-import { useId, useState } from 'react'
-import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import type { ReactNode } from 'react'
+import { useId, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 
 export interface AccordionItemConfig {
   id: string

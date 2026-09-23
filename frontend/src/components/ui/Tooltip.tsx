@@ -1,7 +1,7 @@
-import { useId, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
 import { cn } from '@/lib/cn'
+import type { ReactNode } from 'react'
+import { useId, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 
 type TooltipSide = 'top' | 'bottom' | 'left' | 'right'
 
@@ -64,7 +64,7 @@ export function Tooltip({ content, children, side = 'top', delay = 150, classNam
               animate={{ opacity: 1, x: 0, y: 0 }}
               exit={{ opacity: 0, ...enterOffset[side] }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="bg-ink text-surface block w-max max-w-[220px] rounded-md px-2.5 py-1.5 text-[12px] shadow-[var(--shadow-hover)]">
+              className="bg-ink text-surface block w-max max-w-55 rounded-md px-2.5 py-1.5 text-[12px] shadow-(--shadow-hover)">
               {content}
             </motion.span>
           </span>

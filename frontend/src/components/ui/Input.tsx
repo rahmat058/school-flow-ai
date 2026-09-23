@@ -1,7 +1,7 @@
-import { useId } from 'react'
-import type { InputHTMLAttributes } from 'react'
-import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useId } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import type { InputHTMLAttributes } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string

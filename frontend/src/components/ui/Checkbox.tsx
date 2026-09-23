@@ -1,8 +1,8 @@
 import { useId } from 'react'
-import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { Check } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import type { ReactNode } from 'react'
+import { Check } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useControllableState } from '@/hooks/useControllableState'
 
 interface CheckboxProps {

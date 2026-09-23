@@ -1,6 +1,6 @@
+import { cn } from '@/lib/cn'
 import { useState } from 'react'
 import { motion } from 'motion/react'
-import { cn } from '@/lib/cn'
 
 type AvatarSize = 'sm' | 'md' | 'lg'
 

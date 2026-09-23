@@ -1,5 +1,5 @@
-import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
+import type { HTMLAttributes } from 'react'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   interactive?: boolean
@@ -10,7 +10,7 @@ export function Card({ interactive = false, className, ...props }: CardProps) {
     <div
       className={cn(
         'border-line bg-surface rounded-xl border',
-        interactive && 'transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]',
+        interactive && 'transition duration-200 hover:-translate-y-0.5 hover:shadow-(--shadow-hover)',
         className,
       )}
       {...props}

@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { Inbox } from 'lucide-react'
 import { motion } from 'motion/react'
-import { cn } from '@/lib/cn'
+import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 
 interface EmptyStateProps {
   title: string

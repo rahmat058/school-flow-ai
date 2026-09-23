@@ -52,10 +52,10 @@ export function Toast({ title, description, tone = 'info', icon, onDismiss }: To
   return (
     <div
       className={cn(
-        'pointer-events-auto flex w-full gap-3 rounded-lg border p-4 shadow-[var(--shadow-hover)]',
+        'pointer-events-auto flex w-full gap-3 rounded-lg border p-4 shadow-(--shadow-hover)',
         container,
       )}>
-      <Icon className={cn('mt-px size-[18px] shrink-0', iconColor)} strokeWidth={1.75} />
+      <Icon className={cn('mt-px size-4.5 shrink-0', iconColor)} strokeWidth={1.75} />
 
       <div className="min-w-0 flex-1">
         <p className="text-ink text-[14px] font-medium">{title}</p>

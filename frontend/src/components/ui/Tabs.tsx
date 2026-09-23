@@ -1,8 +1,8 @@
-import { createContext, useContext, useId, useRef } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
-import { motion } from 'motion/react'
 import { cn } from '@/lib/cn'
+import { motion } from 'motion/react'
+import { createContext, useContext, useId, useRef } from 'react'
 import { useControllableState } from '@/hooks/useControllableState'
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 
 interface TabsContextValue {
   value: string

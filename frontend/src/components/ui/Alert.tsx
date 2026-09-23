@@ -1,8 +1,8 @@
+import { cn } from '@/lib/cn'
+import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
-import { motion } from 'motion/react'
-import { cn } from '@/lib/cn'
 
 type AlertTone = 'info' | 'success' | 'warning' | 'error'
 

@@ -1,8 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import type { KeyboardEvent } from 'react'
+import { Check, ChevronDown } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 export interface SelectOption {
   value: string

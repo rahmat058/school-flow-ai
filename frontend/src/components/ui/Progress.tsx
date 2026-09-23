@@ -1,5 +1,5 @@
-import { motion } from 'motion/react'
 import { cn } from '@/lib/cn'
+import { motion } from 'motion/react'
 
 type ProgressTone = 'primary' | 'success' | 'warning' | 'error'
 
