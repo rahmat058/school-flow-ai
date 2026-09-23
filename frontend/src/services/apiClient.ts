@@ -1,9 +1,9 @@
+import { env } from '@/lib/env'
 import axios, { AxiosError } from 'axios'
 import type { AxiosInstance } from 'axios'
-import type { ApiEnvelope, ApiErrorBody, ApiErrorEnvelope, PaginationMeta } from '@/types/api'
-import { env } from '@/lib/env'
 import { getAccessToken, useAuthStore } from '@/store/auth'
 import { createMockAdapter } from '@/services/mockAdapter'
+import type { ApiEnvelope, ApiErrorBody, ApiErrorEnvelope, PaginationMeta } from '@/types/api'
 
 /**
  * Normalised API failure. Every rejection out of this client is an `ApiError`, so callers never deal

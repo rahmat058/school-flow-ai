@@ -5,11 +5,13 @@ import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
 import type { ClassOption } from '@/types/academic'
 import type { FeeCollectionSummary, FeeInvoiceListItem, InvoiceStatus } from '@/types/fees'
 import type { Notice } from '@/types/communication'
-import type { StudentListItem, Teacher } from '@/types/people'
+import type { Guardian, StudentListItem, Student, Teacher, Gender } from '@/types/people'
+import { SCHOOL_DOMAIN, SCHOOL_ID, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes } from '@/data/classes'
 import { teachers } from '@/data/teachers'
 import { students } from '@/data/students'
+import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { feeInvoices } from '@/data/fees'
 import { notices } from '@/data/notices'
@@ -167,18 +169,121 @@ function matches(needle: string, values: Array<string | null | undefined>): bool
   return values.some((value) => value?.toLowerCase().includes(needle))
 }
 
+/**
+ * Roster read model: the entity plus its class, primary guardian and the roll-ups the table shows.
+ * Attendance share and fee standing are computed here, the way the backend's list query would — not
+ * in the component — so the row arrives ready to render. Roll number is stored on the student.
+ */
 function studentListItems(): StudentListItem[] {
   return students.map((student) => {
     const classRoom = classes.find((item) => item.id === student.classId)
     const primaryLink = parentStudents.find((link) => link.studentId === student.id && link.isPrimary)
     const guardian = primaryLink ? parents.find((parent) => parent.id === primaryLink.parentId) : undefined
 
+    const register = attendance.filter((record) => record.studentId === student.id)
+    const present = register.filter((record) => record.status === 'PRESENT' || record.status === 'LATE').length
+    const pendingPaise = feeInvoices
+      .filter((invoice) => invoice.studentId === student.id)
+      .reduce(
+        (total, invoice) => total + Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0),
+        0,
+      )
+
     return {
       ...student,
       className: classRoom ? classLabel(classRoom) : 'Unassigned',
-      guardianName: guardian ? `${guardian.firstName} ${guardian.lastName}` : null,
+      guardian: guardian
+        ? {
+            name: `${guardian.firstName} ${guardian.lastName}`.trim(),
+            email: guardian.email,
+            phone: guardian.phone,
+            address: guardian.address,
+          }
+        : null,
+      attendancePercentage: register.length === 0 ? 0 : Math.round((present / register.length) * 100),
+      feeStanding: pendingPaise > 0 ? 'PENDING' : 'PAID',
     }
   })
+}
+
+/** A roll number is unique within its class — the roster cannot show 5A twice. */
+function rollTaken(classId: string, rollNo: number, exceptStudentId?: string): boolean {
+  return students.some(
+    (item) =>
+      item.classId === classId && item.rollNo === rollNo && item.id !== exceptStudentId && item.status === 'ACTIVE',
+  )
+}
+
+/**
+ * Links the student's primary guardian, creating the parent record when the name is new. Passing
+ * `undefined` leaves the current link alone; passing a blank name unlinks it.
+ */
+function upsertGuardian(student: Student, guardian: Guardian | null | undefined): void {
+  // `undefined` means the caller sent no guardian at all — leave the existing link alone.
+  if (guardian === undefined) return
+
+  const existingLink = parentStudents.find((link) => link.studentId === student.id && link.isPrimary)
+  const details = guardian?.name.trim() ? guardian : null
+
+  if (!details) {
+    if (existingLink) existingLink.isPrimary = false
+    return
+  }
+
+  const name = details.name.trim()
+  const [firstName, ...rest] = name.split(' ')
+  const lastName = rest.join(' ')
+
+  let parent = existingLink ? parents.find((item) => item.id === existingLink.parentId) : undefined
+  if (!parent && details.email) parent = parents.find((item) => item.email === details.email)
+
+  if (!parent) {
+    const index = parents.length + 1
+    parent = {
+      id: `par_${index}`,
+      schoolId: SCHOOL_ID,
+      userId: `usr_par_${index}`,
+      firstName,
+      lastName,
+      email: details.email,
+      address: details.address,
+      phone: details.phone,
+      occupation: null,
+      status: 'ACTIVE',
+    }
+
+    parents.push(parent)
+    users.push({
+      id: parent.userId,
+      email: details.email ?? schoolEmail(index, `parent.${SCHOOL_DOMAIN}`),
+      role: 'PARENT',
+      schoolId: SCHOOL_ID,
+      isVerified: true,
+      profileId: parent.id,
+      firstName,
+      lastName,
+      classId: null,
+    })
+  } else {
+    parent.firstName = firstName
+    parent.lastName = lastName
+    parent.email = details.email ?? parent.email
+    parent.phone = details.phone ?? parent.phone
+    parent.address = details.address ?? parent.address
+  }
+
+  if (existingLink) {
+    existingLink.parentId = parent.id
+  } else {
+    parentStudents.push({
+      id: `psl_${parent.id}_${student.id}`,
+      schoolId: SCHOOL_ID,
+      parentId: parent.id,
+      studentId: student.id,
+      relation: 'GUARDIAN',
+      isPrimary: true,
+    })
+  }
 }
 
 function invoiceListItems(): FeeInvoiceListItem[] {
@@ -383,16 +488,141 @@ const routes: Route[] = [
     handler: ({ params }) => {
       const term = searchTerm(params)
       const classId = params.classId ? String(params.classId) : ''
+      const feeStanding = params.feeStanding ? String(params.feeStanding) : ''
 
       const filtered = studentListItems()
+        // A soft-deleted student keeps their row but leaves the roster.
+        .filter((student) => student.status === 'ACTIVE')
         .filter((student) => (classId ? student.classId === classId : true))
+        .filter((student) => (feeStanding ? student.feeStanding === feeStanding : true))
         .filter((student) =>
-          matches(term, [student.firstName, student.lastName, student.admissionNo, student.guardianName]),
+          matches(term, [
+            student.firstName,
+            student.lastName,
+            student.admissionNo,
+            student.guardian?.name,
+            String(student.rollNo),
+          ]),
         )
-        .sort((left, right) => left.admissionNo.localeCompare(right.admissionNo))
+        // Class order, then roll — the way a register reads.
+        .sort((left, right) => left.className.localeCompare(right.className) || left.rollNo - right.rollNo)
 
       const { items, meta } = paginate(filtered, params)
       return ok(items, meta)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/students',
+    handler: ({ body }) => {
+      const firstName = String(body.firstName ?? '').trim()
+      const lastName = String(body.lastName ?? '').trim()
+      const classId = body.classId ? String(body.classId) : ''
+      const guardian = (body.guardian as Guardian | null) ?? null
+
+      if (!firstName || !lastName) {
+        return fail(400, 'STUDENT_INVALID', 'First and last name are required', ['firstName', 'lastName'])
+      }
+      if (!classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'STUDENT_INVALID', 'Choose a class for the student', ['classId'])
+      }
+
+      // Roll numbers are unique per class; leaving it blank takes the next free slot.
+      const nextRoll =
+        Math.max(0, ...students.filter((item) => item.classId === classId).map((item) => item.rollNo)) + 1
+      const rollNo =
+        body.rollNo === null || body.rollNo === undefined || body.rollNo === '' ? nextRoll : Number(body.rollNo)
+
+      if (!Number.isInteger(rollNo) || rollNo < 1) {
+        return fail(400, 'STUDENT_INVALID', 'Roll number must be a positive whole number', ['rollNo'])
+      }
+      if (rollTaken(classId, rollNo)) {
+        return fail(409, 'STUDENT_ROLL_TAKEN', `Roll ${rollNo} is already taken in that class`, ['rollNo'])
+      }
+
+      // Admission number and login are the server's job, exactly as the PRD describes.
+      const index = students.length + 1
+      const student: Student = {
+        id: `std_${index}`,
+        schoolId: SCHOOL_ID,
+        userId: `usr_std_${index}`,
+        admissionNo: `ADM-${index.toString().padStart(4, '0')}`,
+        firstName,
+        lastName,
+        dateOfBirth: body.dateOfBirth ? String(body.dateOfBirth) : null,
+        gender: (body.gender as Gender | undefined) ?? null,
+        classId,
+        rollNo,
+        status: 'ACTIVE',
+      }
+
+      students.push(student)
+      users.push({
+        id: student.userId,
+        email: schoolEmail(index, `student.${SCHOOL_DOMAIN}`),
+        role: 'STUDENT',
+        schoolId: SCHOOL_ID,
+        isVerified: true,
+        profileId: student.id,
+        firstName,
+        lastName,
+        classId,
+      })
+      upsertGuardian(student, guardian)
+
+      return created(studentListItems().find((row) => row.id === student.id))
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/students/:id',
+    handler: ({ params, body }) => {
+      const student = students.find((item) => item.id === params.id)
+      if (!student) return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+
+      if (body.firstName !== undefined) student.firstName = String(body.firstName).trim()
+      if (body.lastName !== undefined) student.lastName = String(body.lastName).trim()
+      if (body.classId !== undefined) student.classId = String(body.classId)
+      if (body.dateOfBirth !== undefined) student.dateOfBirth = body.dateOfBirth ? String(body.dateOfBirth) : null
+      if (body.gender !== undefined) student.gender = (body.gender as Gender | null) ?? null
+
+      // Checked against the class the student is in now, which may be the one just set above.
+      if (body.rollNo !== undefined) {
+        const rollNo = body.rollNo === null || body.rollNo === '' ? student.rollNo : Number(body.rollNo)
+
+        if (!Number.isInteger(rollNo) || rollNo < 1) {
+          return fail(400, 'STUDENT_INVALID', 'Roll number must be a positive whole number', ['rollNo'])
+        }
+        if (rollTaken(student.classId ?? '', rollNo, student.id)) {
+          return fail(409, 'STUDENT_ROLL_TAKEN', `Roll ${rollNo} is already taken in that class`, ['rollNo'])
+        }
+
+        student.rollNo = rollNo
+      }
+
+      if (body.guardian !== undefined) upsertGuardian(student, (body.guardian as Guardian | null) ?? null)
+
+      // The login record mirrors the profile name, so keep the two in step.
+      const user = users.find((item) => item.id === student.userId)
+      if (user) {
+        user.firstName = student.firstName
+        user.lastName = student.lastName
+        user.classId = student.classId
+      }
+
+      return ok(studentListItems().find((row) => row.id === student.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/students/:id',
+    handler: ({ params }) => {
+      const student = students.find((item) => item.id === params.id)
+      if (!student) return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+
+      // Soft delete (PRD §4.3): the row survives for history, the roster stops listing it.
+      student.status = 'INACTIVE'
+      return ok({ deleted: true })
     },
   },
   {
@@ -472,6 +702,35 @@ const PUBLIC_PATHS = new Set([
   '/schools/resend-otp',
 ])
 
+/**
+ * Matches a concrete path against the route table, filling `:param` segments — the same way NestJS
+ * routes `/students/:id`. Returns the captured values so handlers read them off `params`.
+ */
+function matchRoute(method: HttpMethod, path: string): { route: Route; pathParams: Record<string, string> } | null {
+  const segments = path.split('/')
+
+  for (const route of routes) {
+    if (route.method !== method) continue
+
+    const routeSegments = route.path.split('/')
+    if (routeSegments.length !== segments.length) continue
+
+    const pathParams: Record<string, string> = {}
+    const matched = routeSegments.every((segment, index) => {
+      if (segment.startsWith(':')) {
+        pathParams[segment.slice(1)] = decodeURIComponent(segments[index])
+        return true
+      }
+
+      return segment === segments[index]
+    })
+
+    if (matched) return { route, pathParams }
+  }
+
+  return null
+}
+
 function buildResponse(config: InternalAxiosRequestConfig, status: number, body: unknown): AxiosResponse {
   return {
     data: body,
@@ -497,7 +756,7 @@ export function createMockAdapter(): AxiosAdapter {
 
     await delayFor(path)
 
-    const route = routes.find((item) => item.method === method && item.path === path)
+    const route = matchRoute(method, path)
     if (!route) {
       throw buildError(config, fail(404, 'NOT_FOUND', `No mock route for ${method} ${path}`))
     }
@@ -507,7 +766,14 @@ export function createMockAdapter(): AxiosAdapter {
       throw buildError(config, fail(401, 'AUTH_UNAUTHENTICATED', 'Missing or invalid access token'))
     }
 
-    const result = route.handler({ method, path, body: parseBody(config), params, userId })
+    const result = route.route.handler({
+      method,
+      path,
+      body: parseBody(config),
+      // Path params win over query params of the same name.
+      params: { ...params, ...route.pathParams },
+      userId,
+    })
     if (result.status >= 400) throw buildError(config, result)
 
     return buildResponse(config, result.status, result.body)

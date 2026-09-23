@@ -1,5 +1,5 @@
 import type { Parent, ParentRelation, ParentStudentLink } from '@/types/people'
-import { SCHOOL_ID, personName } from '@/data/seed'
+import { SCHOOL_DOMAIN, SCHOOL_ID, personName, schoolEmail } from '@/data/seed'
 
 const OCCUPATIONS = [
   'Software engineer',
@@ -16,6 +16,21 @@ const OCCUPATIONS = [
   'Journalist',
 ]
 
+const STREETS = [
+  'House 12, Road 4, Dhanmondi',
+  'Flat 3B, Gulshan Avenue',
+  'House 27, Road 11, Banani',
+  'Flat 5A, Uttara Sector 7',
+  'House 9, Road 2, Mohammadpur',
+  'Flat 2C, Bashundhara R/A',
+  'House 44, Road 8, Mirpur',
+  'Flat 6D, Banasree',
+  'House 18, Road 5, Badda',
+  'Flat 1A, Wari',
+  'House 31, Road 3, Rampura',
+  'Flat 4B, Shyamoli',
+]
+
 /** Twelve guardians; each is linked to two children (`std_n` and `std_{n+12}`). */
 export const parents: Parent[] = Array.from({ length: 12 }, (_, offset) => {
   const index = offset + 1
@@ -27,7 +42,9 @@ export const parents: Parent[] = Array.from({ length: 12 }, (_, offset) => {
     userId: `usr_par_${index}`,
     firstName,
     lastName,
+    email: schoolEmail(index, `parent.${SCHOOL_DOMAIN}`),
     phone: `+88018${(22000000 + index * 251).toString().slice(0, 8)}`,
+    address: STREETS[offset],
     occupation: OCCUPATIONS[offset],
     status: 'ACTIVE',
   }

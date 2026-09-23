@@ -25,6 +25,8 @@ export const students: Student[] = Array.from({ length: STUDENT_COUNT }, (_, off
     dateOfBirth: dateOffset(-(365 * (10 + Math.floor((index - 1) / 8)) + 40 * index)),
     gender: genderFor(index),
     classId: CLASSES[Math.floor((index - 1) / 4)],
+    // Four students per class, so the roll number restarts with each class at 1.
+    rollNo: (offset % 4) + 1,
     status: 'ACTIVE',
   }
 })

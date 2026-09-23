@@ -344,30 +344,33 @@ erDiagram
 Student profile, 1:1 with `users`. `class_id` is the student's **current** class — the roster.
 `admission_no` comes from a per-school sequence.
 
-| Column          | Type            | Null | Key | Notes                    |
-| --------------- | --------------- | ---- | --- | ------------------------ |
-| `id`            | `uuid`          | no   | PK  |                          |
-| `school_id`     | `uuid`          | no   | FK  | → `schools.id`           |
-| `user_id`       | `uuid`          | no   | FK  | → `users.id`, 1:1        |
-| `class_id`      | `uuid`          | yes  | FK  | → `classes.id`, nullable |
-| `admission_no`  | `text`          | no   | UK  | per-school sequence      |
-| `first_name`    | `text`          | no   |     |                          |
-| `last_name`     | `text`          | no   |     |                          |
-| `date_of_birth` | `date`          | yes  |     |                          |
-| `gender`        | `gender`        | yes  |     |                          |
-| `status`        | `record_status` | no   |     | default `ACTIVE`         |
-| `created_at`    | `timestamptz`   | no   |     |                          |
-| `updated_at`    | `timestamptz`   | no   |     |                          |
-| `deleted_at`    | `timestamptz`   | yes  |     | soft delete              |
+| Column          | Type            | Null | Key | Notes                         |
+| --------------- | --------------- | ---- | --- | ----------------------------- |
+| `id`            | `uuid`          | no   | PK  |                               |
+| `school_id`     | `uuid`          | no   | FK  | → `schools.id`                |
+| `user_id`       | `uuid`          | no   | FK  | → `users.id`, 1:1             |
+| `class_id`      | `uuid`          | yes  | FK  | → `classes.id`, nullable      |
+| `admission_no`  | `text`          | no   | UK  | per-school sequence           |
+| `roll_no`       | `integer`       | no   | UK  | unique within the class (§14) |
+| `first_name`    | `text`          | no   |     |                               |
+| `last_name`     | `text`          | no   |     |                               |
+| `date_of_birth` | `date`          | yes  |     |                               |
+| `gender`        | `gender`        | yes  |     |                               |
+| `status`        | `record_status` | no   |     | default `ACTIVE`              |
+| `created_at`    | `timestamptz`   | no   |     |                               |
+| `updated_at`    | `timestamptz`   | no   |     |                               |
+| `deleted_at`    | `timestamptz`   | yes  |     | soft delete                   |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade),
 `class_id` → `classes.id` (set null) · `unique (user_id)`, `unique (school_id, admission_no)`.
 
 **Indexes** — `unique (user_id)`, `unique (school_id, admission_no)`, `(school_id, status)`,
-`(class_id)`.
+`(class_id)`, and `unique (class_id, roll_no) where deleted_at is null` — partial, so a removed
+student's roll number frees up without the old row blocking it.
 
 **Constraints** — `POST /classes/:id/assign-students` rewrites `class_id` for many students. Per-year
-enrollment history would need a join table — see §18.
+enrollment history would need a join table — see §18. A roll number must be unique within its class
+and at least 1; the API answers 409 `STUDENT_ROLL_TAKEN` rather than letting the index error surface.
 
 ```mermaid
 erDiagram
@@ -381,6 +384,7 @@ erDiagram
     uuid user_id FK
     uuid class_id FK
     text admission_no UK
+    integer roll_no UK
   }
 ```
 
@@ -388,7 +392,8 @@ erDiagram
 
 <!-- table: parents · module: UsersModule · prd: §4.3 · phase: 2 · tenant: yes · soft-delete: yes -->
 
-Parent/guardian profile, 1:1 with `users`. Linked to children through `parent_students`.
+Parent/guardian profile, 1:1 with `users`. Linked to children through `parent_students`. The guard's
+email is the linked `users.email` — the profile itself carries phone and address.
 
 | Column       | Type            | Null | Key | Notes             |
 | ------------ | --------------- | ---- | --- | ----------------- |
@@ -398,6 +403,7 @@ Parent/guardian profile, 1:1 with `users`. Linked to children through `parent_st
 | `first_name` | `text`          | no   |     |                   |
 | `last_name`  | `text`          | no   |     |                   |
 | `phone`      | `text`          | yes  |     |                   |
+| `address`    | `text`          | yes  |     |                   |
 | `occupation` | `text`          | yes  |     |                   |
 | `status`     | `record_status` | no   |     | default `ACTIVE`  |
 | `created_at` | `timestamptz`   | no   |     |                   |
@@ -1715,41 +1721,41 @@ Every index, by table. `unique (…)` marks constraint-backed indexes; the rest 
 on `school_id` (alone or leading a composite) are what the tenant guard relies on, so every tenant table
 has one.
 
-| Table                       | Indexes                                                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `schools`                   | `unique (slug)`, `(subscription_status)`                                                                                                         |
-| `users`                     | `unique (email)`, `(school_id, role)`                                                                                                            |
-| `otps`                      | `(email, purpose)`, `(expires_at)`, `(school_id)`                                                                                                |
-| `refresh_tokens`            | `unique (token_hash)`, `(user_id, expires_at)` — no `school_id` column; scopes through `users`                                                   |
-| `teachers`                  | `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`                                                                     |
-| `students`                  | `unique (user_id)`, `unique (school_id, admission_no)`, `(school_id, status)`, `(class_id)`                                                      |
-| `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                        |
-| `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                          |
-| `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                         |
-| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                |
-| `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)` |
-| `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                            |
-| `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                |
-| `study_materials`           | `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`                                                                                    |
-| `timetables`                | `unique (class_id, day, academic_year)`, `(school_id)`                                                                                           |
-| `periods`                   | `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)`                                                                                     |
-| `fee_structures`            | `unique (school_id, class_id, academic_year, name)`, `(class_id)`                                                                                |
-| `fee_heads`                 | `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`                                                                           |
-| `fee_invoices`              | `unique (school_id, receipt_no) where receipt_no is not null`, `(student_id, status)`, `(school_id, status, due_date)`, `(fee_structure_id)`     |
-| `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`            |
-| `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                   |
-| `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                |
-| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                              |
-| `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                    |
-| `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                               |
-| `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                           |
-| `conversations`             | `(school_id, last_message_at desc)`                                                                                                              |
-| `conversation_participants` | `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)`                                                                                  |
-| `messages`                  | `(conversation_id, created_at desc)`, `(school_id)`, `(sender_id)`                                                                               |
-| `notices`                   | `(school_id, published_at desc)`, `(published_by_id)`                                                                                            |
-| `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                 |
-| `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                     |
-| `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                             |
+| Table                       | Indexes                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schools`                   | `unique (slug)`, `(subscription_status)`                                                                                                           |
+| `users`                     | `unique (email)`, `(school_id, role)`                                                                                                              |
+| `otps`                      | `(email, purpose)`, `(expires_at)`, `(school_id)`                                                                                                  |
+| `refresh_tokens`            | `unique (token_hash)`, `(user_id, expires_at)` — no `school_id` column; scopes through `users`                                                     |
+| `teachers`                  | `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`                                                                       |
+| `students`                  | `unique (user_id)`, `unique (school_id, admission_no)`, `unique (class_id, roll_no) where deleted_at is null`, `(school_id, status)`, `(class_id)` |
+| `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                          |
+| `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                            |
+| `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                           |
+| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                  |
+| `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`   |
+| `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                              |
+| `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                  |
+| `study_materials`           | `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`                                                                                      |
+| `timetables`                | `unique (class_id, day, academic_year)`, `(school_id)`                                                                                             |
+| `periods`                   | `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)`                                                                                       |
+| `fee_structures`            | `unique (school_id, class_id, academic_year, name)`, `(class_id)`                                                                                  |
+| `fee_heads`                 | `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`                                                                             |
+| `fee_invoices`              | `unique (school_id, receipt_no) where receipt_no is not null`, `(student_id, status)`, `(school_id, status, due_date)`, `(fee_structure_id)`       |
+| `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`              |
+| `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                     |
+| `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                  |
+| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                                |
+| `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                      |
+| `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                                 |
+| `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                             |
+| `conversations`             | `(school_id, last_message_at desc)`                                                                                                                |
+| `conversation_participants` | `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)`                                                                                    |
+| `messages`                  | `(conversation_id, created_at desc)`, `(school_id)`, `(sender_id)`                                                                                 |
+| `notices`                   | `(school_id, published_at desc)`, `(published_by_id)`                                                                                              |
+| `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                   |
+| `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                       |
+| `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                               |
 
 ## 15. Table Inventory
 
