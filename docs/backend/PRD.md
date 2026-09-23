@@ -104,14 +104,18 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ## 4. Feature Modules
 
+Each module lists its endpoints as a **checklist — build one endpoint at a time**, controller route first, then service, DTO and guard. Build a module's list top to bottom: creation and reads unblock the frontend, aggregates and exports come last. `(public)` marks routes reachable without a session; every other route needs `JwtAuthGuard` + `RolesGuard` and the tenant scope in parentheses. Tick the item here, then its phase line in `Phases.md`. Tables each module touches are specified in `docs/backend/Database.md`.
+
 ### 4.1 School Registration & OTP Verification (`SchoolsModule`)
 
 **Endpoints**
 
-- `POST /api/v1/schools/register` — create school + admin user, trigger OTP
-- `POST /api/v1/schools/verify-otp` — validate OTP, activate account
-- `POST /api/v1/schools/resend-otp`
-- `GET/PUT /api/v1/schools/:id/settings` — school settings (academic year, grading scheme, fee heads, branding)
+- [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)`
+- [ ] `POST /api/v1/schools/verify-otp` — validate OTP, activate account `(public)`
+- [ ] `POST /api/v1/schools/resend-otp` — resend within the 60s cooldown `(public)`
+- [ ] `GET /api/v1/schools/current` — the caller's own school `(admin)` — the frontend already calls this
+- [ ] `GET /api/v1/schools/:id/settings` — academic year, grading scheme, fee heads, branding `(admin)`
+- [ ] `PUT /api/v1/schools/:id/settings` — update settings `(admin)`
 
 **Behavior**
 
@@ -124,11 +128,12 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 **Endpoints**
 
-- `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d)
-- `POST /api/v1/auth/refresh`
-- `POST /api/v1/auth/logout`
-- `POST /api/v1/auth/forgot-password` / `reset-password`
-- `GET /api/v1/auth/me`
+- [ ] `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d) `(public)`
+- [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)`
+- [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(authenticated)`
+- [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
+- [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)`
+- [ ] `GET /api/v1/auth/me` — current user + school + role `(authenticated)`
 
 **Behavior**
 
@@ -139,13 +144,26 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ### 4.3 User Management (`UsersModule` — Admin only)
 
-**Endpoints**
+**Endpoints** — build `/teachers` end to end first, then repeat the same five routes for `/students` and `/parents`
 
-- `POST /api/v1/teachers`, `POST /api/v1/students`, `POST /api/v1/parents`
-- `GET /api/v1/:role` — list with pagination, search, filters (class, status)
-- `GET/PUT/DELETE /api/v1/:role/:id` (soft delete via `deletedAt`)
-- `POST /api/v1/students/bulk-import` — CSV import (parsed + validated row-by-row, transaction per batch)
-- `POST /api/v1/parents/:id/link-student`
+- [ ] `POST /api/v1/teachers` — create + email credentials `(admin)`
+- [ ] `GET /api/v1/teachers` — paginated, search, filter by subject/status `(admin)`
+- [ ] `GET /api/v1/teachers/:id` `(admin)`
+- [ ] `PUT /api/v1/teachers/:id` `(admin)`
+- [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
+- [ ] `POST /api/v1/students` — create + admission number + email credentials `(admin)`
+- [ ] `GET /api/v1/students` — paginated, search, filter by class/status `(admin)`
+- [ ] `GET /api/v1/students/:id` `(admin)`
+- [ ] `PUT /api/v1/students/:id` `(admin)`
+- [ ] `DELETE /api/v1/students/:id` — soft delete `(admin)`
+- [ ] `POST /api/v1/parents` — create + email credentials `(admin)`
+- [ ] `GET /api/v1/parents` — paginated, search `(admin)`
+- [ ] `GET /api/v1/parents/:id` `(admin)`
+- [ ] `PUT /api/v1/parents/:id` `(admin)`
+- [ ] `DELETE /api/v1/parents/:id` — soft delete `(admin)`
+- [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch `(admin)`
+- [ ] `POST /api/v1/parents/:id/link-student` — link through `parent_students` `(admin)`
+- [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink `(admin)`
 
 **Behavior**
 
@@ -155,19 +173,30 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ### 4.4 Class & Subject Management (`ClassesModule`)
 
-- `CRUD /api/v1/classes` — grade/section, assign class teacher, student roster
-- `CRUD /api/v1/subjects` — assign subject to class + teacher
-- `POST /api/v1/classes/:id/assign-students`
+**Endpoints**
+
+- [ ] `POST /api/v1/classes` — grade/section `(admin)`
+- [ ] `GET /api/v1/classes` — list with student counts `(admin)`
+- [ ] `GET /api/v1/classes/:id` — class + roster `(admin, teacher)`
+- [ ] `PUT /api/v1/classes/:id` — including class-teacher assignment `(admin)`
+- [ ] `DELETE /api/v1/classes/:id` `(admin)`
+- [ ] `GET /api/v1/classes/:id/students` — roster `(admin, teacher)`
+- [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move `(admin)`
+- [ ] `POST /api/v1/subjects` — name, code, class, teacher `(admin)`
+- [ ] `GET /api/v1/subjects` — filter by class/teacher `(admin, teacher)`
+- [ ] `GET /api/v1/subjects/:id` `(admin, teacher)`
+- [ ] `PUT /api/v1/subjects/:id` `(admin)`
+- [ ] `DELETE /api/v1/subjects/:id` `(admin)`
 
 ### 4.5 Attendance Management (`AttendanceModule`)
 
 **Endpoints**
 
-- `POST /api/v1/attendance` — daily/bulk mark (array of records, batch upsert)
-- `GET /api/v1/attendance?classId=&date=` — daily register
-- `GET /api/v1/attendance/monthly?classId=&month=`
-- `GET /api/v1/attendance/student/:id` — individual history
-- `GET /api/v1/attendance/analytics?classId=` — trends, defaulters (<75%)
+- [ ] `POST /api/v1/attendance` — daily/bulk mark (array of records, batch upsert) `(admin, teacher)`
+- [ ] `GET /api/v1/attendance?classId=&date=` — daily register `(admin, teacher)`
+- [ ] `GET /api/v1/attendance/monthly?classId=&month=` — monthly summary `(admin, teacher)`
+- [ ] `GET /api/v1/attendance/student/:id` — individual history `(admin, teacher, student own, parent of child)`
+- [ ] `GET /api/v1/attendance/analytics?classId=` — trends and defaulters (<75%) `(admin, teacher)`
 
 **Behavior**
 
@@ -177,34 +206,49 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ### 4.6 Fee Management (`FeesModule`)
 
-**Endpoints**
+**Endpoints** — every money-writing route runs in a transaction; read Behavior below before starting one
 
-- `CRUD /api/v1/fees/structures`
-- `POST /api/v1/fees/invoices/generate` — bulk invoice generation per class (transactional batch insert)
-- `POST /api/v1/fees/payments/create-order` — create a payment order (provider chosen by country/method: Stripe or SSLCommerz)
-- `POST /api/v1/fees/payments/verify` — signature/IPN verification (provider webhook-safe)
-- `POST /api/v1/fees/payments/manual` — admin records cash/cheque payment
-- `GET /api/v1/fees/pending?classId=`
-- `GET /api/v1/fees/history/:studentId`
-- `CRUD /api/v1/fees/concessions` (admin approval flow)
-- `GET /api/v1/fees/reports?from=&to=` — collection reports + CSV export
+- [ ] `POST /api/v1/fees/structures` — structure with its heads `(admin)`
+- [ ] `GET /api/v1/fees/structures` — filter by class/academic year `(admin)`
+- [ ] `GET /api/v1/fees/structures/:id` `(admin)`
+- [ ] `PUT /api/v1/fees/structures/:id` `(admin)`
+- [ ] `DELETE /api/v1/fees/structures/:id` `(admin)`
+- [ ] `POST /api/v1/fees/invoices/generate` — bulk generation per class (transactional batch insert) `(admin)`
+- [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status `(admin)` — the frontend already calls this
+- [ ] `GET /api/v1/fees/invoices/:id` — invoice + its payments `(admin, parent of child)`
+- [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances `(admin)`
+- [ ] `GET /api/v1/fees/history/:studentId` — payment history `(admin, parent of child)`
+- [ ] `GET /api/v1/fees/summary` — collection totals for the dashboard `(admin)` — the frontend already calls this
+- [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz `(admin, parent)`
+- [ ] `POST /api/v1/fees/payments/verify` — signature/IPN verification, provider callback `(public)`
+- [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque payment `(admin)`
+- [ ] `POST /api/v1/webhooks/stripe` — Stripe events, signature verified `(public)`
+- [ ] `POST /api/v1/webhooks/sslcommerz` — SSLCommerz IPN, verified `(public)`
+- [ ] `POST /api/v1/fees/concessions` — record a concession request `(admin)`
+- [ ] `GET /api/v1/fees/concessions` — filter by status `(admin)`
+- [ ] `GET /api/v1/fees/concessions/:id` `(admin)`
+- [ ] `PUT /api/v1/fees/concessions/:id` — the approval decision `(admin)`
+- [ ] `DELETE /api/v1/fees/concessions/:id` `(admin)`
+- [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export `(admin)`
 
 **Behavior**
 
 - Atomic payment confirmation in a database transaction (payment + invoice status + receipt number sequence)
-- `POST /api/v1/webhooks/stripe` and `POST /api/v1/webhooks/sslcommerz` for payment events
+- Both webhook handlers verify the provider signature before touching an invoice (see §6)
 - AI fee-reminder text generator (see §4.12)
 
 ### 4.7 Homework & Assignment Module (`HomeworkModule`)
 
 **Endpoints**
 
-- `POST /api/v1/homework` — teacher creates with attachments (Cloudinary)
-- `GET /api/v1/homework?classId=&subjectId=`
-- `PUT/DELETE /api/v1/homework/:id`
-- `POST /api/v1/homework/:id/submit` — student uploads submission
-- `GET /api/v1/homework/:id/submissions` — teacher tracking (submitted/pending via count aggregates)
-- `PUT /api/v1/homework/submissions/:id/grade`
+- [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary) `(admin, teacher)`
+- [ ] `GET /api/v1/homework?classId=&subjectId=` — list, scoped to the caller's role `(admin, teacher, student, parent of child)`
+- [ ] `GET /api/v1/homework/:id` — detail + attachments `(admin, teacher, student, parent of child)`
+- [ ] `PUT /api/v1/homework/:id` `(admin, teacher)`
+- [ ] `DELETE /api/v1/homework/:id` `(admin, teacher)`
+- [ ] `POST /api/v1/homework/:id/submit` — student uploads a submission `(student)`
+- [ ] `GET /api/v1/homework/:id/submissions` — teacher tracking, submitted/pending counts `(admin, teacher)`
+- [ ] `PUT /api/v1/homework/submissions/:id/grade` — grade + remarks `(admin, teacher)`
 
 **Behavior**
 
@@ -215,10 +259,11 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 **Endpoints**
 
-- `POST /api/v1/timetables` — admin builds weekly timetable per class (nested create with periods)
-- `GET /api/v1/timetables/class/:classId`
-- `GET /api/v1/timetables/teacher/:teacherId`
-- `PUT /api/v1/timetables/:id`
+- [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
+- [ ] `GET /api/v1/timetables/class/:classId` `(admin, teacher, student, parent of child)`
+- [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
+- [ ] `PUT /api/v1/timetables/:id` — replaces the period set `(admin)`
+- [ ] `DELETE /api/v1/timetables/:id` `(admin)`
 
 **Behavior**
 
@@ -229,12 +274,17 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 **Endpoints**
 
-- `CRUD /api/v1/exams` — create exam schedule (dates, subjects, max marks)
-- `POST /api/v1/exams/:id/marks` — bulk marks entry per class/subject (`upsert` per student/subject)
-- `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications)
-- `GET /api/v1/exams/schedule?classId=`
-- `GET /api/v1/results/student/:studentId?examId=`
-- `GET /api/v1/report-cards/:studentId/:examId` — grades, percentage, rank, AI comment
+- [ ] `POST /api/v1/exams` — schedule with subjects and max marks `(admin)`
+- [ ] `GET /api/v1/exams` — filter by class/type/status `(admin, teacher, student, parent of child)`
+- [ ] `GET /api/v1/exams/:id` — exam with its subjects `(admin, teacher, student, parent of child)`
+- [ ] `PUT /api/v1/exams/:id` `(admin)`
+- [ ] `DELETE /api/v1/exams/:id` `(admin)`
+- [ ] `GET /api/v1/exams/schedule?classId=` — dated schedule `(admin, teacher, student, parent of child)`
+- [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry per class/subject (`upsert` per student/subject) `(admin, teacher)`
+- [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(admin)`
+- [ ] `POST /api/v1/exams/:id/unpublish` — admin-only rollback `(admin)`
+- [ ] `GET /api/v1/results/student/:studentId?examId=` `(admin, teacher, student own, parent of child)`
+- [ ] `GET /api/v1/report-cards/:studentId/:examId` — grades, percentage, rank, AI comment `(admin, teacher, student own, parent of child)`
 
 **Behavior**
 
@@ -245,15 +295,19 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 **Events**
 
-- JWT-authenticated handshake (guard on gateway `handleConnection`)
-- `chat:join` / `chat:message` / `chat:typing` / `chat:read`
-- `notification:new` — notices, fee reminders, attendance alerts
+- [ ] JWT-authenticated handshake (guard on gateway `handleConnection`)
+- [ ] `chat:join` — subscribe to a conversation once the allowed-pair check passes
+- [ ] `chat:message` — persist first, then fan out to the participants
+- [ ] `chat:typing` — ephemeral, never persisted
+- [ ] `chat:read` — receipt, stamps `readAt`
+- [ ] `notification:new` — notices, fee reminders, attendance alerts
 
-**Endpoints (history/persistence)**
+**Endpoints (history/persistence)** — the gateway carries live traffic; these hydrate the client and keep history
 
-- `GET /api/v1/chat/conversations`
-- `GET /api/v1/chat/:conversationId/messages`
-- `POST /api/v1/chat/conversations` — allowed pairs enforced (admin↔teacher, teacher↔student, teacher↔parent)
+- [ ] `POST /api/v1/chat/conversations` — allowed pairs enforced (admin↔teacher, teacher↔student, teacher↔parent) `(authenticated)`
+- [ ] `GET /api/v1/chat/conversations` — the caller's conversations, newest `lastMessageAt` first `(authenticated)`
+- [ ] `GET /api/v1/chat/:conversationId/messages` — paginated history `(participant)`
+- [ ] `POST /api/v1/chat/:conversationId/read` — mark read up to a message `(participant)`
 
 **Behavior**
 
@@ -262,21 +316,32 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ### 4.11 Notices & Events (`NoticesModule`)
 
-- `CRUD /api/v1/notices` — audience targeting (all/teachers/class)
-- `CRUD /api/v1/events` — event calendar
-- Socket broadcast + email notification on publish
+**Endpoints**
+
+- [ ] `POST /api/v1/notices` — audience targeting (all/teachers/class through `notice_classes`) `(admin)`
+- [ ] `GET /api/v1/notices` — role-filtered feed `(all roles)`
+- [ ] `GET /api/v1/notices/:id` `(all roles)`
+- [ ] `PUT /api/v1/notices/:id` `(admin)`
+- [ ] `DELETE /api/v1/notices/:id` `(admin)`
+- [ ] `POST /api/v1/events` — calendar entry `(admin)`
+- [ ] `GET /api/v1/events` — filter by date range/audience `(all roles)`
+- [ ] `GET /api/v1/events/:id` `(all roles)`
+- [ ] `PUT /api/v1/events/:id` `(admin)`
+- [ ] `DELETE /api/v1/events/:id` `(admin)`
+- [ ] Publish side effects — Socket broadcast + email notification on notice publish
 
 ### 4.12 AI Assistant (`AiModule`)
 
-**Endpoints**
+**Endpoints** — one endpoint per feature: a server-side prompt template + throttled LLM call, history in `ai_conversations`
 
-- `POST /api/v1/ai/chat` — school insights chat (admin): queries DB aggregates via Supabase RPC, answers via LLM
-- `POST /api/v1/ai/report-comment` — report card comment generator
-- `POST /api/v1/ai/fee-reminder` — fee reminder message generator
-- `POST /api/v1/ai/notice` — notice drafting
-- `POST /api/v1/ai/event-plan` — event planner
-- `POST /api/v1/ai/homework-help` — student homework helper
-- `POST /api/v1/ai/quiz` — quiz generator (topic, class level, count → JSON questions)
+- [ ] `POST /api/v1/ai/chat` — school insights (admin): DB aggregates via Supabase RPC, answered by the LLM `(admin)`
+- [ ] `POST /api/v1/ai/report-comment` — report card comment generator `(admin, teacher)`
+- [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator `(admin)`
+- [ ] `POST /api/v1/ai/notice` — notice drafting `(admin)`
+- [ ] `POST /api/v1/ai/event-plan` — event planner `(admin)`
+- [ ] `POST /api/v1/ai/homework-help` — student homework helper `(student)`
+- [ ] `POST /api/v1/ai/quiz` — quiz generator (topic, class level, count → JSON questions) `(student, teacher)`
+- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by feature `(authenticated)`
 
 **Behavior**
 
@@ -288,19 +353,20 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 **Endpoints**
 
-- `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage), type: PDF/notes/worksheet/previous-year paper
-- `GET /api/v1/materials?classId=&subjectId=&type=`
-- `DELETE /api/v1/materials/:id` — removes stored asset
+- [ ] `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage); type: PDF/notes/worksheet/previous-year paper `(admin, teacher)`
+- [ ] `GET /api/v1/materials?classId=&subjectId=&type=` — list `(all roles)`
+- [ ] `GET /api/v1/materials/:id` — metadata + signed URL `(all roles)`
+- [ ] `DELETE /api/v1/materials/:id` — removes the row and the stored asset `(admin, teacher)`
 
 ### 4.14 Reports & Analytics (`ReportsModule`)
 
 **Endpoints**
 
-- `GET /api/v1/reports/attendance?from=&to=&classId=`
-- `GET /api/v1/reports/financial?from=&to=` — collected/pending/concessions
-- `GET /api/v1/reports/students/:id` — academic profile report
-- `GET /api/v1/reports/export?type=&format=csv`
-- `GET /api/v1/dashboard/admin` — counts, collection stats, attendance today, charts data (Chart.js-ready)
+- [ ] `GET /api/v1/reports/attendance?from=&to=&classId=` — attendance aggregates `(admin, teacher)`
+- [ ] `GET /api/v1/reports/financial?from=&to=` — collected/pending/concessions `(admin)`
+- [ ] `GET /api/v1/reports/students/:id` — academic profile report `(admin, teacher, parent of child)`
+- [ ] `GET /api/v1/reports/export?type=&format=csv` — streaming CSV of any report above `(admin)`
+- [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance today, chart series (Recharts-ready: plain labelled series, no chart config) `(admin)`
 
 **Behavior**
 
@@ -309,13 +375,15 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 ### 4.15 Email Notifications (`MailModule` — Resend)
 
-Triggered emails:
+No HTTP endpoints — this module is called by the other services and by the scheduler.
 
-- OTP verification (registration, password reset)
-- Teacher/student/parent login credentials on creation
-- Fee reminders (manual + scheduled via `@nestjs/schedule` cron)
-- Result publication alerts
-- Notice broadcasts
+**Templates & triggers**
+
+- [ ] OTP verification (registration, password reset)
+- [ ] Teacher/student/parent login credentials on creation
+- [ ] Fee reminders (manual trigger + `@nestjs/schedule` cron)
+- [ ] Result publication alerts
+- [ ] Notice broadcasts
 
 **Behavior**
 

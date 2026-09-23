@@ -1,46 +1,63 @@
 # Phases — Backend
 
-## Phase 1: Foundation & Auth
+> The endpoint-level checklist for each item lives in `docs/backend/PRD.md` §4 — build and tick one
+> endpoint at a time there, then tick the matching line here. **Phase 1 blocks everything; Phase 2
+> blocks 3–5.** Do not start a phase before its blockers are done.
 
-- [ ] NestJS scaffold, Supabase client module (`database/`) + base schema migration (`supabase/migrations`: School, User, profiles, Otp)
-- [ ] Global pipes, filters, interceptors, helmet, CORS, throttler
-- [ ] School registration + OTP verification + resend
-- [ ] JWT login/refresh/logout, forgot/reset password, `JwtAuthGuard` + `RolesGuard` + tenant guard
-- [ ] MailModule with credential/OTP templates
+## Phase 1: Foundation & Auth — PRD §4.1, §4.2, §4.15
 
-**Done when:** a school registers with OTP, admin logs in, and a protected route rejects wrong roles.
+- [ ] NestJS scaffold, config module, global pipes/filters/interceptors, helmet, CORS, throttler
+- [ ] Supabase client module (`database/`) + base schema migration (`supabase/migrations`: `schools`, `users`, `teachers`/`students`/`parents`, `otps`)
+- [ ] OTP-integrated school registration — `POST /schools/register`, `POST /schools/verify-otp`, `POST /schools/resend-otp` (transactional create; bcrypt-hashed code, 10-minute expiry, 5 attempts, 60s resend cooldown)
+- [ ] School settings — `GET /schools/current`, `GET`/`PUT /schools/:id/settings`
+- [ ] MailModule (Resend) with the OTP + credentials templates
+- [ ] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
+- [ ] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard
 
-## Phase 2: Core Domain
+**Done when:** a school registers and verifies by OTP, the admin logs in, and a protected route rejects wrong roles.
 
-- [ ] Users module: teachers/students/parents CRUD, credential emails, CSV bulk import, parent↔student linking
-- [ ] Classes & subjects CRUD, class teacher assignment, student roster
+> OTP registration stays in Phase 1 rather than moving later: nothing downstream can be exercised
+> without a verified admin and a working JWT, so it is a hard blocker for every other module.
 
-**Done when:** admin can provision a full school (people, classes, subjects) via API.
+## Phase 2: Core Domain — PRD §4.3, §4.4, §4.8
 
-## Phase 3: Attendance & Homework
+- [ ] Users module: teacher / student / parent CRUD, credential emails, auto-generated admission + employee numbers
+- [ ] Student CSV bulk import (row-by-row validation, transaction per batch)
+- [ ] Parent ↔ student linking (`parent_students`) + unlink
+- [ ] Classes CRUD, class-teacher assignment, student roster + `assign-students`
+- [ ] Subjects CRUD and class/teacher assignment
+- [ ] Timetable builder: weekly timetable per class with nested periods + teacher double-booking conflict check
 
-- [ ] Attendance mark (daily/bulk upsert), daily register, monthly reports, analytics, defaulters
+**Done when:** admin can provision a full school (people, classes, subjects, timetables) via API.
+
+## Phase 3: Attendance & Homework — PRD §4.5, §4.7, §4.13
+
+- [ ] Attendance mark (daily/bulk upsert), daily register, monthly summary, student history, analytics, defaulters
+- [ ] `attendance:marked` socket event for parent alerts
 - [ ] Homework CRUD, submissions, grading, late flag
-- [ ] Study materials upload (Cloudinary) + listing
+- [ ] Study materials upload (Cloudinary) + listing + deletion of the stored asset
 
-**Done when:** attendance analytics return correct aggregates and homework lifecycle completes.
+**Done when:** attendance analytics return correct aggregates and the homework lifecycle completes.
 
-## Phase 4: Fees & Exams
+## Phase 4: Fees & Exams — PRD §4.6, §4.9, §4.14
 
-- [ ] Fee structures, bulk invoice generation, pending/history, concessions
-- [ ] Stripe + SSLCommerz order/create, verify, and webhooks + manual payment, receipt sequence (transactional)
-- [ ] Exams CRUD, marks entry, publish, report cards with grade computation
-- [ ] Reports module: attendance/financial/student reports + CSV export + admin dashboard endpoint
+- [ ] Fee structures + fee heads, bulk invoice generation, invoice list/detail, pending list, payment history, summary
+- [ ] Stripe + SSLCommerz order/create, verify, both webhooks, and manual payment recording — receipt sequence inside one transaction
+- [ ] Concessions with the admin approval flow
+- [ ] Exams CRUD, marks entry, publish (+ unpublish), report cards with grade computation and AI comments
+- [ ] Reports module: attendance/financial/student reports, CSV export, admin dashboard endpoint
 
 **Done when:** a payment confirms atomically via webhook and a published report card is generated.
 
-## Phase 5: Communication & AI
+## Phase 5: Communication & AI — PRD §4.10, §4.11, §4.12
 
-- [ ] Notices & events CRUD with audience targeting + broadcasts
-- [ ] Chat gateway: JWT handshake, conversations, messages, read receipts, allowed-pair enforcement
-- [ ] AI module: 8 features with prompt templates, rate limits, history storage
+- [ ] Notices & events CRUD with audience targeting + publish side effects (socket broadcast + email)
+- [ ] Chat gateway: JWT handshake, `chat:join`/`chat:message`/`chat:typing`/`chat:read`, allowed-pair enforcement
+- [ ] Chat REST history: conversations, paginated messages, read receipts
+- [ ] AI module: 8 features with prompt templates, per-user rate limits, history in `ai_conversations`
 
-**Done when:** permitted role pairs chat in real time and all AI features return output.
+**Done when:** permitted role pairs chat in real time and every AI feature returns output.
 
 ## Phase 6: Hardening & Deploy
 
@@ -49,5 +66,3 @@
 - [ ] Health endpoint, graceful shutdown, Render deploy + Supabase production config
 
 **Done when:** all acceptance criteria in `docs/backend/PRD.md` §9 pass in production.
-
-> Dependencies: Phase 1 blocks everything. Phase 2 blocks 3–5. Do not start a phase before its blockers are done.
