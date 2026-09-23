@@ -38,11 +38,12 @@ export function RadioGroup({
 }: RadioGroupProps) {
   const generatedId = useId()
   const groupName = name ?? generatedId
-  const [selected, setSelected] = useControllableState<string | undefined>({
-    value,
-    defaultValue,
-    onChange: onValueChange,
-  })
+  const [selected, setSelected] = useControllableState<string | undefined>({ value, defaultValue })
+
+  function selectValue(nextValue: string) {
+    setSelected(nextValue)
+    onValueChange?.(nextValue)
+  }
 
   return (
     <fieldset className={cn('border-0 p-0', className)} disabled={disabled}>
@@ -70,7 +71,7 @@ export function RadioGroup({
                   value={option.value}
                   checked={isSelected}
                   disabled={isDisabled}
-                  onChange={() => setSelected(option.value)}
+                  onChange={() => selectValue(option.value)}
                   className="peer sr-only"
                 />
 
