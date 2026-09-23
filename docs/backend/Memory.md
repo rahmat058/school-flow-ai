@@ -5,7 +5,7 @@
 - 2026-09-21 — Backend PRD written (NestJS + Supabase/PostgreSQL) in `docs/backend/PRD.md`
 - 2026-09-21 — Docs scaffolded per vibe-coding structure (Architecture, Rules, Phases, Design, Memory)
 - 2026-09-23 — Stack dependencies updated in `backend/package.json`: removed Prisma/Razorpay/Nodemailer; added Supabase, Stripe, SSLCommerz, Resend. Docs refreshed to match.
-- 2026-09-23 — Added `docs/backend/Database.md` — the feature-wise ERD derived from PRD §3/§4 (10 mermaid diagrams, 33 tables, enums, indexes, transaction boundaries, PRD→table traceability). Records the identifier decision and flags 10 gaps for review (§15). Linked from `AGENTS.md` and `backend/README.md`. No migrations exist yet — every table is a design target.
+- 2026-09-23 — Added `docs/backend/Database.md` — the feature-wise ERD derived from PRD §3/§4. Restructured table-by-table: a feature-level ERD per PRD feature module, then one section per table (heading + metadata tag + full column spec + constraints + its own ERD) for all 33 tables, plus enums, indexes, transaction boundaries, a table inventory and PRD→table coverage. 43 mermaid diagrams in total. Records the identifier decision and flags 12 gaps for review (§16). Linked from `AGENTS.md` and `backend/README.md`. No migrations exist yet — every table is a design target.
 
 ## Currently working on
 
