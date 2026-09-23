@@ -200,7 +200,7 @@ export function Select({
                   onClick={() => selectOption(index)}
                   className={cn(
                     'flex cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-2 text-[14px] transition-colors',
-                    !option.disabled && index === activeIndex && 'bg-primary-soft',
+                    !option.disabled && index === activeIndex && 'bg-primary-soft text-primary',
                     option.disabled && 'text-ink-subtle cursor-not-allowed',
                     isSelected && !option.disabled && 'text-primary font-medium',
                   )}>

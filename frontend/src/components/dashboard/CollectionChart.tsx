@@ -70,7 +70,7 @@ export function CollectionChart({ monthly, quarterly, highlightedMonth }: Collec
               onClick={() => setPeriod(item.id)}
               className={cn(
                 'h-8 rounded-md px-3 text-[13px] font-medium transition-colors',
-                period === item.id ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:text-ink',
+                period === item.id ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:text-primary',
               )}>
               {item.label}
             </button>

@@ -4,7 +4,7 @@ import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const navButtonStyles =
-  'text-ink-muted hover:bg-primary-soft hover:text-ink inline-flex size-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40'
+  'text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40'
 
 interface PaginationProps {
   page: number
@@ -58,7 +58,7 @@ export function Pagination({ page, pageCount, onPageChange, siblingCount = 1, cl
             aria-current={item === page ? 'page' : undefined}
             className={cn(
               'relative size-8 rounded-md text-[13px] font-medium transition-colors',
-              item === page ? 'text-primary' : 'text-ink-muted hover:bg-primary-soft hover:text-ink',
+              item === page ? 'text-primary' : 'text-ink-muted hover:bg-primary-soft hover:text-primary',
             )}>
             {item === page ? (
               <motion.span

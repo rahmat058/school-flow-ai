@@ -137,7 +137,7 @@ export function DataTable<T>({
                       type="button"
                       onClick={() => toggleSort(column.id)}
                       className={cn(
-                        'hover:text-ink inline-flex items-center gap-1.5 transition-colors',
+                        'hover:text-primary inline-flex items-center gap-1.5 transition-colors',
                         isSorted && 'text-ink',
                       )}>
                       {column.header}

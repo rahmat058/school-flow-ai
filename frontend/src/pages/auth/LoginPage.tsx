@@ -19,7 +19,7 @@ export function LoginPage() {
       <div className="space-y-4">
         <LoginForm />
         <p className="text-center">
-          <Link to={paths.forgotPassword} className="text-ink-muted hover:text-ink text-[13px]">
+          <Link to={paths.forgotPassword} className="text-ink-muted hover:text-primary text-[13px]">
             Forgot your password?
           </Link>
         </p>

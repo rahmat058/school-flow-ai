@@ -100,7 +100,7 @@ export function Tab({ value, children, disabled, className }: TabProps) {
       onClick={() => setValue(value)}
       className={cn(
         'relative px-3 py-2.5 text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        isActive ? 'text-primary' : 'text-ink-muted hover:text-ink',
+        isActive ? 'text-primary' : 'text-ink-muted hover:text-primary',
         className,
       )}>
       {children}

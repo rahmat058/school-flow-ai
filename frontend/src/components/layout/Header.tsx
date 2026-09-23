@@ -50,7 +50,7 @@ export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }
         <button
           type="button"
           onClick={onMenuClick}
-          className="text-ink-muted hover:bg-primary-soft hover:text-ink inline-flex size-9 items-center justify-center rounded-md lg:hidden"
+          className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-9 items-center justify-center rounded-md lg:hidden"
           aria-label="Open navigation">
           <Menu className="size-5" />
         </button>
@@ -61,7 +61,7 @@ export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }
           aria-pressed={sidebarCollapsed}
           aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="text-ink-muted hover:bg-primary-soft hover:text-ink hidden size-9 items-center justify-center rounded-md transition-colors lg:inline-flex">
+          className="text-ink-muted hover:bg-primary-soft hover:text-primary hidden size-9 items-center justify-center rounded-md transition-colors lg:inline-flex">
           {/* Crossfade rather than a hard icon swap, so the toggle reads as one control. */}
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
@@ -96,14 +96,14 @@ export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }
       <div className="flex items-center gap-1 sm:gap-2">
         <button
           type="button"
-          className="text-ink-muted hover:bg-primary-soft hover:text-ink inline-flex size-9 items-center justify-center rounded-md"
+          className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-9 items-center justify-center rounded-md"
           aria-label="Notifications"
           title="Notifications">
           <Bell className="size-4.5" strokeWidth={1.75} />
         </button>
         <button
           type="button"
-          className="text-ink-muted hover:bg-primary-soft hover:text-ink inline-flex size-9 items-center justify-center rounded-md"
+          className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-9 items-center justify-center rounded-md"
           aria-label="Help"
           title="Help">
           <CircleHelp className="size-4.5" strokeWidth={1.75} />

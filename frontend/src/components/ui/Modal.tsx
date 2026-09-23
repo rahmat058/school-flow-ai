@@ -121,7 +121,7 @@ export function Modal({ open, onClose, title, description, size = 'md', children
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="text-ink-subtle hover:bg-primary-soft hover:text-ink absolute top-4 right-4 rounded-md p-1.5 transition-colors">
+                className="text-ink-subtle hover:bg-primary-soft hover:text-primary absolute top-4 right-4 rounded-md p-1.5 transition-colors">
                 <X className="size-4" strokeWidth={2} />
               </button>
 

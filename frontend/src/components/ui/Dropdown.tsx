@@ -141,7 +141,7 @@ export function Dropdown({ items, triggerLabel, trigger, align = 'end', classNam
             openMenu()
           }
         }}
-        className="text-ink-muted hover:bg-primary-soft hover:text-ink inline-flex size-8 items-center justify-center rounded-md transition-colors">
+        className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors">
         {trigger ?? <MoreVertical className="size-4" strokeWidth={1.75} />}
       </button>
 
@@ -178,8 +178,13 @@ export function Dropdown({ items, triggerLabel, trigger, align = 'end', classNam
                     onClick={() => selectItem(index)}
                     className={cn(
                       'flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] transition-colors',
-                      item.danger ? 'text-error hover:bg-error-soft' : 'text-ink',
+                      // Danger items keep the error tint; every other item previews the active state
+                      // on hover and on keyboard highlight alike.
+                      item.danger
+                        ? 'text-error hover:bg-error-soft'
+                        : 'text-ink hover:bg-primary-soft hover:text-primary',
                       !item.disabled && index === activeIndex && 'bg-primary-soft',
+                      !item.disabled && !item.danger && index === activeIndex && 'text-primary',
                       item.disabled && 'text-ink-subtle pointer-events-none opacity-60',
                     )}>
                     {Icon ? <Icon className="size-4 shrink-0" strokeWidth={1.75} /> : null}

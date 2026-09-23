@@ -64,7 +64,7 @@ export function Toast({ title, description, tone = 'info', icon, onDismiss }: To
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss notification"
-          className="text-ink-subtle hover:text-ink -mt-1 -mr-1 shrink-0 rounded-md p-1 transition-colors">
+          className="text-ink-subtle hover:text-primary -mt-1 -mr-1 shrink-0 rounded-md p-1 transition-colors">
           <X className="size-4" strokeWidth={2} />
         </button>
       ) : null}
