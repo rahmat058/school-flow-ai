@@ -32,8 +32,8 @@
     "class-validator": "^0.15.1",
     "cloudinary": "^2.11.0",
     "ioredis": "^6.0.0",
-    "nodemailer": "^10.0.10",
     "passport-jwt": "^4.0.1",
+    "resend": "^6.28.1",
     "socket.io": "^4.8.3",
     "sslcommerz": "^1.7.0",
     "stripe": "^22.6.2"
@@ -43,7 +43,6 @@
     "@nestjs/testing": "^12.0.4",
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^26.6.2",
-    "@types/nodemailer": "^8.0.2",
     "@types/passport-jwt": "^4.0.1",
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",

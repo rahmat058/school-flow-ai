@@ -19,7 +19,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | Real-Time    | Socket.io (NestJS WebSocket Gateways)                                   |
 | Auth         | JWT (Passport.js) + bcrypt                                              |
 | File Storage | Cloudinary (or Supabase Storage)                                        |
-| Email        | Nodemailer (SMTP)                                                       |
+| Email        | Resend (transactional email API)                                        |
 | Payments     | Stripe (international) + SSLCommerz (Bangladesh)                        |
 | AI           | LLM API (e.g., OpenAI/Gemini)                                           |
 | Validation   | class-validator + class-transformer (DTOs)                              |
@@ -116,7 +116,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 **Behavior**
 
 - 6-digit OTP (bcrypt-hashed in `Otp` table), 10-minute expiry, max 5 attempts, resend cooldown 60s
-- Email verification via Nodemailer before admin login is allowed
+- Email verification via Resend before admin login is allowed
 - Unique school slug auto-generated
 - Registration runs in a database transaction (school + admin user + OTP)
 
@@ -307,7 +307,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - Aggregations via SQL (`group by`/aggregate through Supabase RPC) and PostgreSQL materialized views for heavy reports
 - CSV streaming export for large datasets
 
-### 4.15 Email Notifications (`MailModule` — Nodemailer)
+### 4.15 Email Notifications (`MailModule` — Resend)
 
 Triggered emails:
 
@@ -382,10 +382,8 @@ JWT_REFRESH_SECRET=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
+RESEND_API_KEY=
+RESEND_FROM=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 SSLCOMMERZ_STORE_ID=

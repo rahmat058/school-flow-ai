@@ -50,6 +50,6 @@ backend/
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe
 - **BullMQ + Redis** — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
-- **Stripe** (international) + **SSLCommerz** (Bangladesh) — payments; **Nodemailer** — SMTP email; **Cloudinary** — file storage
+- **Stripe** (international) + **SSLCommerz** (Bangladesh) — payments; **Resend** — transactional email; **Cloudinary** — file storage
 - **@nestjs/throttler** — rate limiting; **helmet** — headers
 - Deployed on **Render**
