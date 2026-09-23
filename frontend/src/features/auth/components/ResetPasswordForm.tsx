@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
 import { Lock } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +11,11 @@ import { ApiError } from '@/services/apiClient'
 import { useResetPassword } from '@/features/auth/api'
 import { paths } from '@/routes/paths'
 
+interface ResetPasswordFormValues {
+  password: string
+  confirmPassword: string
+}
+
 const MIN_PASSWORD = 8
 
 export function ResetPasswordForm() {
@@ -19,12 +24,20 @@ export function ResetPasswordForm() {
   const { toast } = useToast()
   const resetPassword = useResetPassword()
 
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordFormValues>({
+    defaultValues: { password: '', confirmPassword: '' },
+    mode: 'onTouched',
+  })
+
   const token = searchParams.get('token') ?? ''
 
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string; form?: string }>({})
-
+  // Every hook above this line runs unconditionally; the token check only gates the markup.
   if (!token) {
     return (
       <div className="space-y-4">
@@ -38,35 +51,22 @@ export function ResetPasswordForm() {
     )
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const nextErrors: typeof errors = {}
-    if (password.length < MIN_PASSWORD) nextErrors.password = `Use at least ${MIN_PASSWORD} characters`
-    if (confirmPassword !== password) nextErrors.confirmPassword = 'Passwords do not match'
-
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
-
-    resetPassword.mutate(
-      { token, password },
-      {
-        onSuccess: () => {
-          toast({ tone: 'success', title: 'Password updated', description: 'Sign in with your new password.' })
-          navigate(paths.login, { replace: true })
-        },
-        onError: (error) => {
-          const message = error instanceof ApiError ? error.message : 'Could not reset the password'
-          const details = error instanceof ApiError ? error.details.join(', ') : ''
-          setErrors({ form: details || message })
-        },
-      },
-    )
+  const onSubmit: SubmitHandler<ResetPasswordFormValues> = async (values) => {
+    try {
+      await resetPassword.mutateAsync({ token, password: values.password })
+      toast({ tone: 'success', title: 'Password updated', description: 'Sign in with your new password.' })
+      navigate(paths.login, { replace: true })
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : 'Could not reset the password'
+      // Validation details from the API take precedence over the summary message.
+      const details = error instanceof ApiError ? error.details.join(', ') : ''
+      setError('root.serverError', { type: 'server', message: details || message })
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {errors.form ? <Alert tone="error" title={errors.form} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
       <Input
         label="New password"
@@ -74,9 +74,11 @@ export function ResetPasswordForm() {
         icon={Lock}
         autoComplete="new-password"
         hint={`At least ${MIN_PASSWORD} characters.`}
-        value={password}
-        error={errors.password}
-        onChange={(event) => setPassword(event.target.value)}
+        error={errors.password?.message}
+        {...register('password', {
+          required: 'Password is required',
+          minLength: { value: MIN_PASSWORD, message: `Use at least ${MIN_PASSWORD} characters` },
+        })}
       />
 
       <Input
@@ -84,13 +86,15 @@ export function ResetPasswordForm() {
         type="password"
         icon={Lock}
         autoComplete="new-password"
-        value={confirmPassword}
-        error={errors.confirmPassword}
-        onChange={(event) => setConfirmPassword(event.target.value)}
+        error={errors.confirmPassword?.message}
+        {...register('confirmPassword', {
+          required: 'Confirm the new password',
+          validate: (value) => value === getValues('password') || 'Passwords do not match',
+        })}
       />
 
-      <Button type="submit" className="w-full" disabled={resetPassword.isPending}>
-        {resetPassword.isPending ? <Spinner size="sm" className="text-white" label="Saving" /> : null}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner size="sm" className="text-white" label="Saving" /> : null}
         Update password
       </Button>
     </form>

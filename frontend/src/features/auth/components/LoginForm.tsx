@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
 import { Lock, Mail } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -11,10 +11,9 @@ import { ApiError } from '@/services/apiClient'
 import { useLogin } from '@/features/auth/api'
 import { paths } from '@/routes/paths'
 
-interface FieldErrors {
-  email?: string
-  password?: string
-  form?: string
+interface LoginFormValues {
+  email: string
+  password: string
 }
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
@@ -25,43 +24,35 @@ export function LoginForm() {
   const { toast } = useToast()
   const login = useLogin()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState<FieldErrors>({})
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    defaultValues: { email: '', password: '' },
+    mode: 'onTouched',
+  })
 
   // Where the guard interrupted them, if anywhere.
   const redirectTo = (location.state as { from?: string } | null)?.from ?? paths.dashboard
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const nextErrors: FieldErrors = {}
-    if (!email.trim()) nextErrors.email = 'Email is required'
-    else if (!EMAIL_PATTERN.test(email.trim())) nextErrors.email = 'Enter a valid email address'
-    if (!password) nextErrors.password = 'Password is required'
-
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
-
-    login.mutate(
-      { email: email.trim(), password },
-      {
-        onSuccess: (session) => {
-          toast({ tone: 'success', title: `Welcome back, ${session.user.firstName}` })
-          navigate(redirectTo, { replace: true })
-        },
-        onError: (error) => {
-          const message = error instanceof ApiError ? error.message : 'Unable to sign in right now'
-          setErrors({ form: message })
-          toast({ tone: 'error', title: 'Sign in failed', description: message })
-        },
-      },
-    )
+  const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
+    try {
+      const session = await login.mutateAsync({ email: values.email.trim(), password: values.password })
+      toast({ tone: 'success', title: `Welcome back, ${session.user.firstName}` })
+      navigate(redirectTo, { replace: true })
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : 'Unable to sign in right now'
+      // Surfaces the API's error code message above the form.
+      setError('root.serverError', { type: 'server', message })
+      toast({ tone: 'error', title: 'Sign in failed', description: message })
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {errors.form ? <Alert tone="error" title={errors.form} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
       <Input
         label="Email"
@@ -69,9 +60,11 @@ export function LoginForm() {
         icon={Mail}
         autoComplete="email"
         placeholder="you@school.edu"
-        value={email}
-        error={errors.email}
-        onChange={(event) => setEmail(event.target.value)}
+        error={errors.email?.message}
+        {...register('email', {
+          required: 'Email is required',
+          pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
+        })}
       />
 
       <Input
@@ -80,13 +73,12 @@ export function LoginForm() {
         icon={Lock}
         autoComplete="current-password"
         placeholder="••••••••"
-        value={password}
-        error={errors.password}
-        onChange={(event) => setPassword(event.target.value)}
+        error={errors.password?.message}
+        {...register('password', { required: 'Password is required' })}
       />
 
-      <Button type="submit" className="w-full" disabled={login.isPending}>
-        {login.isPending ? <Spinner size="sm" className="text-white" label="Signing in" /> : null}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner size="sm" className="text-white" label="Signing in" /> : null}
         Sign in
       </Button>
     </form>

@@ -1,9 +1,10 @@
 import { cn } from '@/lib/cn'
 import { useId } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import type { InputHTMLAttributes } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+/** `ComponentPropsWithRef` (not `InputHTMLAttributes`) so react-hook-form's `register()` ref flows through. */
+interface InputProps extends ComponentPropsWithRef<'input'> {
   label?: string
   hint?: string
   error?: string

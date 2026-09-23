@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
 import { Building2, Lock, Mail, MapPin, Phone, User } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -11,91 +11,73 @@ import { ApiError } from '@/services/apiClient'
 import { useRegisterSchool } from '@/features/auth/api'
 import { paths } from '@/routes/paths'
 
-interface SignupErrors {
-  schoolName?: string
-  address?: string
-  contactEmail?: string
-  contactPhone?: string
-  adminFirstName?: string
-  adminLastName?: string
-  email?: string
-  password?: string
-  form?: string
+interface SignupFormValues {
+  schoolName: string
+  address: string
+  contactEmail: string
+  contactPhone: string
+  adminFirstName: string
+  adminLastName: string
+  email: string
+  password: string
 }
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 const MIN_PASSWORD = 8
+
+const EMAIL_RULES = {
+  required: 'Email is required',
+  pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
+} as const
 
 export function SignupForm() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const registerSchool = useRegisterSchool()
 
-  const [form, setForm] = useState({
-    schoolName: '',
-    address: '',
-    contactEmail: '',
-    contactPhone: '',
-    adminFirstName: '',
-    adminLastName: '',
-    email: '',
-    password: '',
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormValues>({
+    defaultValues: {
+      schoolName: '',
+      address: '',
+      contactEmail: '',
+      contactPhone: '',
+      adminFirstName: '',
+      adminLastName: '',
+      email: '',
+      password: '',
+    },
+    mode: 'onTouched',
   })
-  const [errors, setErrors] = useState<SignupErrors>({})
 
-  function update<K extends keyof typeof form>(key: K, value: string) {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
+  const onSubmit: SubmitHandler<SignupFormValues> = async (values) => {
+    try {
+      const result = await registerSchool.mutateAsync({
+        schoolName: values.schoolName.trim(),
+        address: values.address.trim(),
+        contactEmail: values.contactEmail.trim(),
+        contactPhone: values.contactPhone.trim(),
+        adminFirstName: values.adminFirstName.trim(),
+        adminLastName: values.adminLastName.trim(),
+        email: values.email.trim(),
+        password: values.password,
+      })
 
-  function validate(): SignupErrors {
-    const next: SignupErrors = {}
-    if (!form.schoolName.trim()) next.schoolName = 'School name is required'
-    if (!form.address.trim()) next.address = 'Address is required'
-    if (!form.contactEmail.trim()) next.contactEmail = 'Contact email is required'
-    else if (!EMAIL_PATTERN.test(form.contactEmail.trim())) next.contactEmail = 'Enter a valid email address'
-    if (!form.contactPhone.trim()) next.contactPhone = 'Contact number is required'
-    if (!form.adminFirstName.trim()) next.adminFirstName = 'First name is required'
-    if (!form.adminLastName.trim()) next.adminLastName = 'Last name is required'
-    if (!form.email.trim()) next.email = 'Email is required'
-    else if (!EMAIL_PATTERN.test(form.email.trim())) next.email = 'Enter a valid email address'
-    if (form.password.length < MIN_PASSWORD) next.password = `Use at least ${MIN_PASSWORD} characters`
-    return next
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const nextErrors = validate()
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
-
-    registerSchool.mutate(
-      {
-        schoolName: form.schoolName.trim(),
-        address: form.address.trim(),
-        contactEmail: form.contactEmail.trim(),
-        contactPhone: form.contactPhone.trim(),
-        adminFirstName: form.adminFirstName.trim(),
-        adminLastName: form.adminLastName.trim(),
-        email: form.email.trim(),
-        password: form.password,
-      },
-      {
-        onSuccess: (result) => {
-          toast({ tone: 'success', title: 'School created', description: 'Check the OTP to activate the account.' })
-          navigate(paths.verifyOtp, { state: { email: result.email } })
-        },
-        onError: (error) => {
-          const message = error instanceof ApiError ? error.message : 'Could not create the school'
-          setErrors({ form: message })
-        },
-      },
-    )
+      toast({ tone: 'success', title: 'School created', description: 'Check the OTP to activate the account.' })
+      navigate(paths.verifyOtp, { state: { email: result.email } })
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : 'Could not create the school'
+      setError('root.serverError', { type: 'server', message })
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-      {errors.form ? <Alert tone="error" title={errors.form} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
       <fieldset className="space-y-4">
         <legend className="text-ink-subtle text-[11px] font-medium tracking-[0.04em] uppercase">School</legend>
@@ -103,34 +85,30 @@ export function SignupForm() {
           label="School name"
           icon={Building2}
           placeholder="Bright Future School"
-          value={form.schoolName}
-          error={errors.schoolName}
-          onChange={(event) => update('schoolName', event.target.value)}
+          error={errors.schoolName?.message}
+          {...register('schoolName', { required: 'School name is required' })}
         />
         <Input
           label="Address"
           icon={MapPin}
           placeholder="House, road, area, city"
-          value={form.address}
-          error={errors.address}
-          onChange={(event) => update('address', event.target.value)}
+          error={errors.address?.message}
+          {...register('address', { required: 'Address is required' })}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Contact email"
             type="email"
             icon={Mail}
-            value={form.contactEmail}
-            error={errors.contactEmail}
-            onChange={(event) => update('contactEmail', event.target.value)}
+            error={errors.contactEmail?.message}
+            {...register('contactEmail', EMAIL_RULES)}
           />
           <Input
             label="Contact number"
             icon={Phone}
             placeholder="+880 1700 000000"
-            value={form.contactPhone}
-            error={errors.contactPhone}
-            onChange={(event) => update('contactPhone', event.target.value)}
+            error={errors.contactPhone?.message}
+            {...register('contactPhone', { required: 'Contact number is required' })}
           />
         </div>
       </fieldset>
@@ -141,16 +119,14 @@ export function SignupForm() {
           <Input
             label="First name"
             icon={User}
-            value={form.adminFirstName}
-            error={errors.adminFirstName}
-            onChange={(event) => update('adminFirstName', event.target.value)}
+            error={errors.adminFirstName?.message}
+            {...register('adminFirstName', { required: 'First name is required' })}
           />
           <Input
             label="Last name"
             icon={User}
-            value={form.adminLastName}
-            error={errors.adminLastName}
-            onChange={(event) => update('adminLastName', event.target.value)}
+            error={errors.adminLastName?.message}
+            {...register('adminLastName', { required: 'Last name is required' })}
           />
         </div>
         <Input
@@ -158,23 +134,24 @@ export function SignupForm() {
           type="email"
           icon={Mail}
           hint="Used to sign in and to receive the verification code."
-          value={form.email}
-          error={errors.email}
-          onChange={(event) => update('email', event.target.value)}
+          error={errors.email?.message}
+          {...register('email', EMAIL_RULES)}
         />
         <Input
           label="Password"
           type="password"
           icon={Lock}
           hint={`At least ${MIN_PASSWORD} characters.`}
-          value={form.password}
-          error={errors.password}
-          onChange={(event) => update('password', event.target.value)}
+          error={errors.password?.message}
+          {...register('password', {
+            required: 'Password is required',
+            minLength: { value: MIN_PASSWORD, message: `Use at least ${MIN_PASSWORD} characters` },
+          })}
         />
       </fieldset>
 
-      <Button type="submit" className="w-full" disabled={registerSchool.isPending}>
-        {registerSchool.isPending ? <Spinner size="sm" className="text-white" label="Creating school" /> : null}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner size="sm" className="text-white" label="Creating school" /> : null}
         Create school
       </Button>
     </form>

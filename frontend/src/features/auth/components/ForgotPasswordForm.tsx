@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
 import { Mail } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -11,35 +12,37 @@ import { ApiError } from '@/services/apiClient'
 import { useForgotPassword } from '@/features/auth/api'
 import { paths } from '@/routes/paths'
 
+interface ForgotPasswordFormValues {
+  email: string
+}
+
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
 export function ForgotPasswordForm() {
   const forgotPassword = useForgotPassword()
-
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState<string>()
   const [sentTo, setSentTo] = useState<string>()
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordFormValues>({
+    defaultValues: { email: '' },
+    mode: 'onTouched',
+  })
 
-    if (!EMAIL_PATTERN.test(email.trim())) {
-      setError('Enter a valid email address')
-      return
+  const onSubmit: SubmitHandler<ForgotPasswordFormValues> = async (values) => {
+    try {
+      // Always report success — the API must not reveal whether an account exists.
+      const result = await forgotPassword.mutateAsync({ email: values.email.trim() })
+      setSentTo(result.email)
+    } catch (error) {
+      setError('root.serverError', {
+        type: 'server',
+        message: error instanceof ApiError ? error.message : 'Could not send the reset email',
+      })
     }
-
-    setError(undefined)
-
-    forgotPassword.mutate(
-      { email: email.trim() },
-      {
-        // Always report success — the API must not reveal whether an account exists.
-        onSuccess: (result) => setSentTo(result.email),
-        onError: (mutationError) => {
-          setError(mutationError instanceof ApiError ? mutationError.message : 'Could not send the reset email')
-        },
-      },
-    )
   }
 
   if (sentTo) {
@@ -67,8 +70,8 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {error ? <Alert tone="error" title={error} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
       <Input
         label="Email"
@@ -77,12 +80,15 @@ export function ForgotPasswordForm() {
         autoComplete="email"
         placeholder="you@school.edu"
         hint="We will email a link to choose a new password."
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        error={errors.email?.message}
+        {...register('email', {
+          required: 'Email is required',
+          pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
+        })}
       />
 
-      <Button type="submit" className="w-full" disabled={forgotPassword.isPending}>
-        {forgotPassword.isPending ? <Spinner size="sm" className="text-white" label="Sending" /> : null}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner size="sm" className="text-white" label="Sending" /> : null}
         Send reset link
       </Button>
     </form>

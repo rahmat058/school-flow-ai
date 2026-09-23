@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
 import { KeyRound } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +16,10 @@ interface OtpFormProps {
   email: string
 }
 
+interface OtpFormValues {
+  code: string
+}
+
 const CODE_LENGTH = 6
 const RESEND_COOLDOWN_SECONDS = 60
 
@@ -25,10 +30,18 @@ export function OtpForm({ email }: OtpFormProps) {
   const verifyOtp = useVerifyOtp()
   const resendOtp = useResendOtp()
 
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string>()
   const [resendAt, setResendAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<OtpFormValues>({
+    defaultValues: { code: '' },
+    mode: 'onTouched',
+  })
 
   // Tick while a resend cooldown is running; setState happens inside the interval callback.
   useEffect(() => {
@@ -39,28 +52,22 @@ export function OtpForm({ email }: OtpFormProps) {
 
   const secondsLeft = resendAt === null ? 0 : Math.max(0, Math.ceil((resendAt - now) / 1000))
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const codeField = register('code', {
+    required: `Enter the ${CODE_LENGTH}-digit code from your email`,
+    minLength: { value: CODE_LENGTH, message: `The code is ${CODE_LENGTH} digits` },
+  })
 
-    if (code.trim().length !== CODE_LENGTH) {
-      setError(`Enter the ${CODE_LENGTH}-digit code from your email`)
-      return
+  const onSubmit: SubmitHandler<OtpFormValues> = async (values) => {
+    try {
+      await verifyOtp.mutateAsync({ email, code: values.code, purpose: 'REGISTER' })
+      toast({ tone: 'success', title: 'Account verified', description: 'You can sign in now.' })
+      navigate(paths.login, { replace: true, state: { email } })
+    } catch (error) {
+      setError('root.serverError', {
+        type: 'server',
+        message: error instanceof ApiError ? error.message : 'Could not verify the code',
+      })
     }
-
-    setError(undefined)
-
-    verifyOtp.mutate(
-      { email, code: code.trim(), purpose: 'REGISTER' },
-      {
-        onSuccess: () => {
-          toast({ tone: 'success', title: 'Account verified', description: 'You can sign in now.' })
-          navigate(paths.login, { replace: true, state: { email } })
-        },
-        onError: (mutationError) => {
-          setError(mutationError instanceof ApiError ? mutationError.message : 'Could not verify the code')
-        },
-      },
-    )
   }
 
   function handleResend() {
@@ -70,14 +77,17 @@ export function OtpForm({ email }: OtpFormProps) {
         toast({ tone: 'info', title: 'Code sent', description: `We emailed a new code to ${email}.` })
       },
       onError: (mutationError) => {
-        setError(mutationError instanceof ApiError ? mutationError.message : 'Could not resend the code')
+        setError('root.serverError', {
+          type: 'server',
+          message: mutationError instanceof ApiError ? mutationError.message : 'Could not resend the code',
+        })
       },
     })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {error ? <Alert tone="error" title={error} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      {errors.root?.serverError ? <Alert tone="error" title={errors.root.serverError.message} /> : null}
 
       <Input
         label="Verification code"
@@ -87,13 +97,18 @@ export function OtpForm({ email }: OtpFormProps) {
         maxLength={CODE_LENGTH}
         placeholder="123456"
         hint={`We sent a ${CODE_LENGTH}-digit code to ${email}. It expires in 10 minutes.`}
-        value={code}
-        onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+        error={errors.code?.message}
         className="font-mono tracking-[0.3em]"
+        {...codeField}
+        onChange={(event) => {
+          // Digits only, capped at CODE_LENGTH — then hand the event back to react-hook-form.
+          event.target.value = event.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH)
+          void codeField.onChange(event)
+        }}
       />
 
-      <Button type="submit" className="w-full" disabled={verifyOtp.isPending}>
-        {verifyOtp.isPending ? <Spinner size="sm" className="text-white" label="Verifying" /> : null}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner size="sm" className="text-white" label="Verifying" /> : null}
         Verify account
       </Button>
 

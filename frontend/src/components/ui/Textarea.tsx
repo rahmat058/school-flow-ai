@@ -1,8 +1,9 @@
 import { cn } from '@/lib/cn'
 import { useId } from 'react'
-import type { TextareaHTMLAttributes } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 
-interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+/** `ComponentPropsWithRef` (not `TextareaHTMLAttributes`) so react-hook-form's `register()` ref flows through. */
+interface TextareaProps extends ComponentPropsWithRef<'textarea'> {
   label?: string
   hint?: string
   error?: string
