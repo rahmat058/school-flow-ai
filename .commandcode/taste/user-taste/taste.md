@@ -37,6 +37,6 @@
 - Frontend state management: **Zustand** for global state (auth/session, school context), preferred over Redux. Confidence: 0.9
 - Frontend server state: **TanStack Query 5** (`@tanstack/react-query`) for all API/server state — `useQuery`/`useMutation` hooks colocated in feature `api.ts` modules with cache + invalidation; Zustand is for client-only state and must never be used as an API-response cache. Confidence: 0.85
 - When a new library/dependency is adopted, expects it recorded across the project's docs in the same pass — Architecture.md tech stack + layer description, Rules.md (Use/Avoid), Memory.md (completed entry + lasting decision), and the CODE_REVIEWER.md checklist — while leaving the product-scope PRD.md untouched (PRD is "what to build for whom", not a place for stack details). Confidence: 0.7
-- Frontend animations: **framer-motion** (`motion` API) for UI animations and transitions. Confidence: 0.85
+- Frontend animations: **`motion`** (v13) is the animation library — the current package that supersedes `framer-motion`; React APIs are imported from `motion/react` and `framer-motion` (legacy name for the same library) must not be imported directly. Confidence: 0.85
 - Frontend date utilities: **date-fns** for date formatting and academic-calendar helpers. Confidence: 0.9
 - Frontend PDF generation: **@react-pdf/renderer** for exporting report cards and invoices. Confidence: 0.85

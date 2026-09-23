@@ -45,7 +45,7 @@ frontend/
 - **Tailwind CSS 4** (`@tailwindcss/vite`) — styling, theme tokens in CSS
 - **Zustand** — client-only global state (auth/session, school context) — no Redux
 - **TanStack Query 5** (`@tanstack/react-query`) — server state: query/mutation hooks, caching, and invalidation for all `/api/v1` data
-- **framer-motion** — UI animations and transitions
+- **motion** (v13, successor to `framer-motion`) — UI animations and transitions; import React APIs from `motion/react`
 - **date-fns** — date formatting and academic-calendar helpers
 - **@react-pdf/renderer** — PDF report cards / invoices from shared data
 - **Recharts** — dashboard/report charts

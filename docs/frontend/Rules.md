@@ -6,6 +6,7 @@
 - `cn()` from `src/lib/cn.ts` for conditional classes
 - `lucide-react` for all icons
 - Recharts for all charts — never mix in another chart library
+- `motion` for all animations and transitions — import React APIs from `motion/react`, never from `framer-motion`
 - Function components + hooks; TypeScript strict types for all props and API data
 - Design-system primitives from `src/components/ui/` before writing one-off markup
 - TanStack Query (`@tanstack/react-query`) for all server state — `useQuery`/`useMutation` hooks live in the feature `api.ts`; components consume hooks, never the API client

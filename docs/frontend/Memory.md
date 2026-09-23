@@ -6,6 +6,7 @@
 - 2026-09-21 — Docs scaffolded per vibe-coding structure (PRD, Architecture, Rules, Phases, Design, Memory)
 - 2026-09-23 — Added frontend dependencies: zustand, framer-motion, date-fns, @react-pdf/renderer. Docs (Architecture tech stack, Memory decisions) updated to record them.
 - 2026-09-23 — Adopted TanStack Query 5 (`@tanstack/react-query`) for all server state. Docs updated: Architecture (tech stack + data layer), Rules (Use/Avoid), CODE_REVIEWER (frontend checklist), this file. Not yet wired in `src/` — `QueryClientProvider` and the first query hooks land with the Phase 1 API client.
+- 2026-09-23 — Added `motion` v13 for animations; docs updated (Architecture tech stack, Rules). Not yet used in `src/`. `framer-motion` remains a direct dependency but is redundant — `motion` depends on it, and `framer-motion` 13.4.x is the same library under its legacy name.
 
 ## Currently working on
 
@@ -19,7 +20,7 @@
 - Recharts (not Chart.js) for charts — already installed
 - State: Zustand for client-only global state (auth/session, school context) — no Redux
 - Server state: TanStack Query 5 for all `/api/v1` data — query/mutation hooks in feature `api.ts` with cache + invalidation; never cache API responses in Zustand
-- Animations: framer-motion for UI transitions
+- Animations: `motion` v13 for UI transitions — React APIs imported from `motion/react`; `framer-motion` is the legacy package name for the same library and must not be imported directly
 - Dates: date-fns for formatting and academic-calendar helpers
 - Reports: @react-pdf/renderer for PDF export (report cards, invoices)
 - Mock data in `src/data/` is temporary; replace with API calls per phase
