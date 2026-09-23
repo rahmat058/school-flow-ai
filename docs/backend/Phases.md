@@ -9,7 +9,7 @@
 - [ ] NestJS scaffold, config module, global pipes/filters/interceptors, helmet, CORS, throttler
 - [ ] Supabase client module (`database/`) + base schema migration (`supabase/migrations`: `schools`, `users`, `teachers`/`students`/`parents`, `otps`)
 - [ ] OTP-integrated school registration — `POST /schools/register`, `POST /schools/verify-otp`, `POST /schools/resend-otp` (transactional create; bcrypt-hashed code, 10-minute expiry, 5 attempts, 60s resend cooldown)
-- [ ] School settings — `GET /schools/current`, `GET`/`PUT /schools/:id/settings`
+- [ ] School settings — `GET /schools/current`, `GET`/`PATCH /schools/:id/settings`
 - [ ] MailModule (Resend) with the OTP + credentials templates
 - [ ] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
@@ -20,16 +20,18 @@
 > OTP registration stays in Phase 1 rather than moving later: nothing downstream can be exercised
 > without a verified admin and a working JWT, so it is a hard blocker for every other module.
 
-## Phase 2: Core Domain — PRD §4.3, §4.4, §4.8
+## Phase 2: Core Domain — PRD §4.3, §4.4
 
 - [ ] Users module: teacher / student / parent CRUD, credential emails, auto-generated admission + employee numbers
 - [ ] Student CSV bulk import (row-by-row validation, transaction per batch)
-- [ ] Parent ↔ student linking (`parent_students`) + unlink
+- [ ] Parent ↔ student linking (`parent_students`): list linked children, link and unlink
 - [ ] Classes CRUD, class-teacher assignment, student roster + `assign-students`
 - [ ] Subjects CRUD and class/teacher assignment
-- [ ] Timetable builder: weekly timetable per class with nested periods + teacher double-booking conflict check
 
-**Done when:** admin can provision a full school (people, classes, subjects, timetables) via API.
+**Done when:** admin can provision a full school (people, classes, subjects) via API.
+
+> **Post-MVP:** the timetable builder (PRD §4.8) belongs to no phase — `Database.md` tags
+> `timetables`/`periods` as `phase: none`, matching the frontend's "Timetable builder UI is post-MVP".
 
 ## Phase 3: Attendance & Homework — PRD §4.5, §4.7, §4.13
 
@@ -55,7 +57,7 @@
 - [ ] Notices & events CRUD with audience targeting + publish side effects (socket broadcast + email)
 - [ ] Chat gateway: JWT handshake, `chat:join`/`chat:message`/`chat:typing`/`chat:read`, allowed-pair enforcement
 - [ ] Chat REST history: conversations, paginated messages, read receipts
-- [ ] AI module: 8 features with prompt templates, per-user rate limits, history in `ai_conversations`
+- [ ] AI module: 7 features (the `ai_feature` enum) with prompt templates, per-user rate limits, history in `ai_conversations`
 
 **Done when:** permitted role pairs chat in real time and every AI feature returns output.
 

@@ -100,6 +100,11 @@ export async function put<T>(url: string, body?: unknown): Promise<ApiResult<T>>
   return unwrap(response.data)
 }
 
+export async function patch<T>(url: string, body?: unknown): Promise<ApiResult<T>> {
+  const response = await http.patch<ApiEnvelope<T>>(url, body)
+  return unwrap(response.data)
+}
+
 export async function remove<T>(url: string): Promise<ApiResult<T>> {
   const response = await http.delete<ApiEnvelope<T>>(url)
   return unwrap(response.data)

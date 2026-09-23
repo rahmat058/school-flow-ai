@@ -1813,7 +1813,7 @@ list and `GET /dashboard/admin`.
 
 ## 17. Feature Coverage
 
-Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tables documented above.
+Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tables documented above. The endpoint list for each feature lives in `PRD.md` §4, and every section there opens with the same table names in reverse — so the two documents can be diffed against each other. `PRD.md` §4.16 (`GET /health`) touches no table.
 
 | PRD feature               | Feature ERD | Tables                                                                                            |
 | ------------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
@@ -1851,9 +1851,9 @@ writing migrations:
 3. **Receipt numbers** — §4.6 wants a transactional receipt sequence. `receipt_sequences` (§8) is the
    proposed mechanism; confirm per-school vs global numbering and the reset boundary (fiscal vs academic
    year).
-4. **Timetable has no phase** — `PRD.md` §4.8 and `Architecture.md` both list `timetables/`, but
-   `Phases.md` never schedules it, so `timetables` / `periods` cannot be placed in the delivery order.
-   This needs a phase.
+4. **Timetable has no phase** — **Resolved 2026-09-23:** timetables are deliberately post-MVP, which is
+   what `phase: none` on `timetables`/`periods` already meant. `Phases.md` and `PRD.md` §4.8 now say so
+   explicitly rather than leaving the endpoints unscheduled; §4.8 stays defined for when it is picked up.
 5. **Class roster history** — `students.class_id` (current class only) was chosen over a
    `class_enrollments` join table. If promotion/academic-year history must be reportable, a join table is
    required instead.
@@ -1862,8 +1862,9 @@ writing migrations:
 7. **Chat allowed pairs** — admin↔teacher, teacher↔student, teacher↔parent is enforced in the service. A
    DB `check` cannot express it; consider a trigger if the rule must be airtight. There is also no unique
    key preventing two conversations between the same pair.
-8. **AI feature count** — `Architecture.md` and §1.1 say "8 AI assistant features"; §4.12 lists 7
-   endpoints and acceptance criterion 8 says "seven". The `ai_feature` enum has the 7 documented values.
+8. **AI feature count** — **Resolved 2026-09-23:** the count is **7**, matching the `ai_feature` enum
+   above and the frontend's `AiFeature` type. `PRD.md` §1.1, `Architecture.md` and `Phases.md` all said 8
+   and have been corrected; acceptance criterion 8 ("seven") was already right.
 9. **Global vs per-school email uniqueness** — `users.email` is globally unique. If staff can belong to
    multiple schools, switch to `unique (school_id, email)`.
 10. **Audit trail** — `marked_by_id`, `entered_by_id`, `approved_by_id`, `recorded_by_id` cover the

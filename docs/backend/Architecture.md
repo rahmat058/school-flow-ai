@@ -32,7 +32,7 @@ backend/
 │   ├── exams/                # exams, results, report cards
 │   ├── chat/                 # gateway + conversations + messages
 │   ├── notices/              # notices + events
-│   ├── ai/                   # 8 AI assistant features
+│   ├── ai/                   # 7 AI assistant features (ai_feature enum)
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
 │   └── mail/                 # mailer + handlebars templates

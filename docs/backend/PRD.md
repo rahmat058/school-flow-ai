@@ -6,7 +6,7 @@
 
 Build the complete backend for a multi-role School Management System using **NestJS and Supabase (PostgreSQL)**, serving a React.js frontend. The backend powers Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, AI assistance, real-time chat, reports, and role-based security.
 
-> Feature scope is aligned with the complete school-management feature set: school registration with OTP, dashboard analytics, student/teacher/parent management, class & subject management, school settings, attendance (daily/bulk/monthly/analytics), fee management (structures, collection, pending, history, reports, concessions), homework with submissions, timetables, tests & exams with report cards, study materials (PDFs, notes, worksheets, previous-year papers), real-time chat between permitted role pairs, notices & events, an 8-feature AI assistant, reports with CSV export, JWT/bcrypt security, and automated emails.
+> Feature scope is aligned with the complete school-management feature set: school registration with OTP, dashboard analytics, student/teacher/parent management, class & subject management, school settings, attendance (daily/bulk/monthly/analytics), fee management (structures, collection, pending, history, reports, concessions), homework with submissions, timetables, tests & exams with report cards, study materials (PDFs, notes, worksheets, previous-year papers), real-time chat between permitted role pairs, notices & events, a seven-feature AI assistant, reports with CSV export, JWT/bcrypt security, and automated emails.
 
 ### 1.2 Tech Stack
 
@@ -48,23 +48,23 @@ Build the complete backend for a multi-role School Management System using **Nes
 
 ## 2. Roles & Access Matrix
 
-| Module                           | Admin | Teacher  | Student            | Parent       |
-| -------------------------------- | ----- | -------- | ------------------ | ------------ |
-| School registration/settings     | ✅    | ❌       | ❌                 | ❌           |
-| User management (CRUD)           | ✅    | ❌       | ❌                 | ❌           |
-| Class/Subject management         | ✅    | ❌       | ❌                 | ❌           |
-| Attendance (mark)                | ✅    | ✅       | ❌                 | ❌           |
-| Attendance (view)                | ✅    | ✅       | own                | child's      |
-| Homework (create)                | ✅    | ✅       | ❌                 | ❌           |
-| Homework (submit/view)           | ✅    | ✅       | ✅                 | child's      |
-| Fees (structure/collect/reports) | ✅    | ❌       | pay own            | pay child's  |
-| Exams (create/publish)           | ✅    | ✅       | view               | view child's |
-| Timetable                        | ✅    | view own | view own           | view child's |
-| Study material (upload)          | ✅    | ✅       | download           | view         |
-| Notices (publish)                | ✅    | ❌       | view               | view         |
-| Chat                             | ✅    | ✅       | ✅                 | ✅           |
-| AI Assistant                     | ✅    | ✅       | ✅ (homework/quiz) | ❌           |
-| Reports & exports                | ✅    | limited  | ❌                 | ❌           |
+| Module                           | Admin | Teacher              | Student             | Parent       |
+| -------------------------------- | ----- | -------------------- | ------------------- | ------------ |
+| School registration/settings     | ✅    | ❌                   | ❌                  | ❌           |
+| User management (CRUD)           | ✅    | ❌                   | ❌                  | ❌           |
+| Class/Subject management         | ✅    | ❌                   | ❌                  | ❌           |
+| Attendance (mark)                | ✅    | ✅                   | ❌                  | ❌           |
+| Attendance (view)                | ✅    | ✅                   | own                 | child's      |
+| Homework (create)                | ✅    | ✅                   | ❌                  | ❌           |
+| Homework (submit/view)           | ✅    | ✅                   | ✅                  | child's      |
+| Fees (structure/collect/reports) | ✅    | ❌                   | pay own             | pay child's  |
+| Exams (create/publish)           | ✅    | ✅                   | view                | view child's |
+| Timetable                        | ✅    | view own             | view own            | view child's |
+| Study material (upload)          | ✅    | ✅                   | download            | view         |
+| Notices (publish)                | ✅    | ❌                   | view                | view         |
+| Chat                             | ✅    | ✅                   | ✅                  | ✅           |
+| AI Assistant                     | all 7 | report-comment, quiz | homework-help, quiz | ❌           |
+| Reports & exports                | ✅    | limited              | ❌                  | ❌           |
 
 ---
 
@@ -108,6 +108,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.1 School Registration & OTP Verification (`SchoolsModule`)
 
+**Tables:** `schools`, `users`, `otps` · Database.md §3
+
 **Endpoints**
 
 - [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)`
@@ -115,7 +117,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `POST /api/v1/schools/resend-otp` — resend within the 60s cooldown `(public)`
 - [ ] `GET /api/v1/schools/current` — the caller's own school `(admin)` — the frontend already calls this
 - [ ] `GET /api/v1/schools/:id/settings` — academic year, grading scheme, fee heads, branding `(admin)`
-- [ ] `PUT /api/v1/schools/:id/settings` — update settings `(admin)`
+- [ ] `PATCH /api/v1/schools/:id/settings` — update settings `(admin)`
 
 **Behavior**
 
@@ -125,6 +127,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - Registration runs in a database transaction (school + admin user + OTP)
 
 ### 4.2 Authentication & RBAC (`AuthModule`)
+
+**Tables:** `users`, `refresh_tokens` · Database.md §3
 
 **Endpoints**
 
@@ -144,24 +148,27 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.3 User Management (`UsersModule` — Admin only)
 
+**Tables:** `teachers`, `students`, `parents`, `parent_students` · Database.md §3
+
 **Endpoints** — build `/teachers` end to end first, then repeat the same five routes for `/students` and `/parents`
 
 - [ ] `POST /api/v1/teachers` — create + email credentials `(admin)`
 - [ ] `GET /api/v1/teachers` — paginated, search, filter by subject/status `(admin)`
 - [ ] `GET /api/v1/teachers/:id` `(admin)`
-- [ ] `PUT /api/v1/teachers/:id` `(admin)`
+- [ ] `PATCH /api/v1/teachers/:id` `(admin)`
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
 - [ ] `POST /api/v1/students` — create + admission number + email credentials `(admin)`
 - [ ] `GET /api/v1/students` — paginated, search, filter by class/status `(admin)`
-- [ ] `GET /api/v1/students/:id` `(admin)`
-- [ ] `PUT /api/v1/students/:id` `(admin)`
+- [ ] `GET /api/v1/students/:id` — profile `(admin, parent of child)`
+- [ ] `PATCH /api/v1/students/:id` `(admin)`
 - [ ] `DELETE /api/v1/students/:id` — soft delete `(admin)`
 - [ ] `POST /api/v1/parents` — create + email credentials `(admin)`
 - [ ] `GET /api/v1/parents` — paginated, search `(admin)`
 - [ ] `GET /api/v1/parents/:id` `(admin)`
-- [ ] `PUT /api/v1/parents/:id` `(admin)`
+- [ ] `PATCH /api/v1/parents/:id` `(admin)`
 - [ ] `DELETE /api/v1/parents/:id` — soft delete `(admin)`
 - [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch `(admin)`
+- [ ] `GET /api/v1/parents/:id/students` — linked children `(admin, parent own)`
 - [ ] `POST /api/v1/parents/:id/link-student` — link through `parent_students` `(admin)`
 - [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink `(admin)`
 
@@ -173,22 +180,26 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.4 Class & Subject Management (`ClassesModule`)
 
+**Tables:** `classes`, `subjects` (+ `students.class_id`) · Database.md §4
+
 **Endpoints**
 
 - [ ] `POST /api/v1/classes` — grade/section `(admin)`
 - [ ] `GET /api/v1/classes` — list with student counts `(admin)`
 - [ ] `GET /api/v1/classes/:id` — class + roster `(admin, teacher)`
-- [ ] `PUT /api/v1/classes/:id` — including class-teacher assignment `(admin)`
+- [ ] `PATCH /api/v1/classes/:id` — including class-teacher assignment `(admin)`
 - [ ] `DELETE /api/v1/classes/:id` `(admin)`
 - [ ] `GET /api/v1/classes/:id/students` — roster `(admin, teacher)`
 - [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move `(admin)`
 - [ ] `POST /api/v1/subjects` — name, code, class, teacher `(admin)`
 - [ ] `GET /api/v1/subjects` — filter by class/teacher `(admin, teacher)`
 - [ ] `GET /api/v1/subjects/:id` `(admin, teacher)`
-- [ ] `PUT /api/v1/subjects/:id` `(admin)`
+- [ ] `PATCH /api/v1/subjects/:id` `(admin)`
 - [ ] `DELETE /api/v1/subjects/:id` `(admin)`
 
 ### 4.5 Attendance Management (`AttendanceModule`)
+
+**Tables:** `attendance` · Database.md §5
 
 **Endpoints**
 
@@ -197,6 +208,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `GET /api/v1/attendance/monthly?classId=&month=` — monthly summary `(admin, teacher)`
 - [ ] `GET /api/v1/attendance/student/:id` — individual history `(admin, teacher, student own, parent of child)`
 - [ ] `GET /api/v1/attendance/analytics?classId=` — trends and defaulters (<75%) `(admin, teacher)`
+- [ ] `attendance:marked` socket event — notify the class's parents in real time
 
 **Behavior**
 
@@ -206,12 +218,14 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.6 Fee Management (`FeesModule`)
 
+**Tables:** `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions`, `receipt_sequences` · Database.md §8
+
 **Endpoints** — every money-writing route runs in a transaction; read Behavior below before starting one
 
 - [ ] `POST /api/v1/fees/structures` — structure with its heads `(admin)`
 - [ ] `GET /api/v1/fees/structures` — filter by class/academic year `(admin)`
 - [ ] `GET /api/v1/fees/structures/:id` `(admin)`
-- [ ] `PUT /api/v1/fees/structures/:id` `(admin)`
+- [ ] `PATCH /api/v1/fees/structures/:id` `(admin)`
 - [ ] `DELETE /api/v1/fees/structures/:id` `(admin)`
 - [ ] `POST /api/v1/fees/invoices/generate` — bulk generation per class (transactional batch insert) `(admin)`
 - [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status `(admin)` — the frontend already calls this
@@ -219,7 +233,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances `(admin)`
 - [ ] `GET /api/v1/fees/history/:studentId` — payment history `(admin, parent of child)`
 - [ ] `GET /api/v1/fees/summary` — collection totals for the dashboard `(admin)` — the frontend already calls this
-- [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz `(admin, parent)`
+- [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz `(admin, student own, parent of child)`
 - [ ] `POST /api/v1/fees/payments/verify` — signature/IPN verification, provider callback `(public)`
 - [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque payment `(admin)`
 - [ ] `POST /api/v1/webhooks/stripe` — Stripe events, signature verified `(public)`
@@ -227,7 +241,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `POST /api/v1/fees/concessions` — record a concession request `(admin)`
 - [ ] `GET /api/v1/fees/concessions` — filter by status `(admin)`
 - [ ] `GET /api/v1/fees/concessions/:id` `(admin)`
-- [ ] `PUT /api/v1/fees/concessions/:id` — the approval decision `(admin)`
+- [ ] `PATCH /api/v1/fees/concessions/:id` — the approval decision `(admin)`
 - [ ] `DELETE /api/v1/fees/concessions/:id` `(admin)`
 - [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export `(admin)`
 
@@ -239,16 +253,18 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.7 Homework & Assignment Module (`HomeworkModule`)
 
+**Tables:** `homework`, `homework_submissions` · Database.md §6
+
 **Endpoints**
 
 - [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary) `(admin, teacher)`
 - [ ] `GET /api/v1/homework?classId=&subjectId=` — list, scoped to the caller's role `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/homework/:id` — detail + attachments `(admin, teacher, student, parent of child)`
-- [ ] `PUT /api/v1/homework/:id` `(admin, teacher)`
+- [ ] `PATCH /api/v1/homework/:id` `(admin, teacher)`
 - [ ] `DELETE /api/v1/homework/:id` `(admin, teacher)`
 - [ ] `POST /api/v1/homework/:id/submit` — student uploads a submission `(student)`
 - [ ] `GET /api/v1/homework/:id/submissions` — teacher tracking, submitted/pending counts `(admin, teacher)`
-- [ ] `PUT /api/v1/homework/submissions/:id/grade` — grade + remarks `(admin, teacher)`
+- [ ] `PATCH /api/v1/homework/submissions/:id/grade` — grade + remarks `(admin, teacher)`
 
 **Behavior**
 
@@ -257,12 +273,16 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.8 Timetable Management (`TimetablesModule`)
 
+**Tables:** `timetables`, `periods` · Database.md §7
+
+> Post-MVP: `Database.md` marks `timetables`/`periods` as `phase: none` and no phase claims them yet — build these after Phase 5.
+
 **Endpoints**
 
 - [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
 - [ ] `GET /api/v1/timetables/class/:classId` `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
-- [ ] `PUT /api/v1/timetables/:id` — replaces the period set `(admin)`
+- [ ] `PUT /api/v1/timetables/:id` — **full replacement**: the body carries the whole period set, so this is the one route where `PUT` is correct `(admin)`
 - [ ] `DELETE /api/v1/timetables/:id` `(admin)`
 
 **Behavior**
@@ -272,16 +292,18 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.9 Exams, Tests & Report Cards (`ExamsModule`)
 
+**Tables:** `exams`, `exam_subjects`, `results`, `report_cards` · Database.md §9
+
 **Endpoints**
 
-- [ ] `POST /api/v1/exams` — schedule with subjects and max marks `(admin)`
+- [ ] `POST /api/v1/exams` — schedule with subjects and max marks `(admin, teacher)`
 - [ ] `GET /api/v1/exams` — filter by class/type/status `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/exams/:id` — exam with its subjects `(admin, teacher, student, parent of child)`
-- [ ] `PUT /api/v1/exams/:id` `(admin)`
+- [ ] `PATCH /api/v1/exams/:id` `(admin)`
 - [ ] `DELETE /api/v1/exams/:id` `(admin)`
 - [ ] `GET /api/v1/exams/schedule?classId=` — dated schedule `(admin, teacher, student, parent of child)`
 - [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry per class/subject (`upsert` per student/subject) `(admin, teacher)`
-- [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(admin)`
+- [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(admin, teacher)`
 - [ ] `POST /api/v1/exams/:id/unpublish` — admin-only rollback `(admin)`
 - [ ] `GET /api/v1/results/student/:studentId?examId=` `(admin, teacher, student own, parent of child)`
 - [ ] `GET /api/v1/report-cards/:studentId/:examId` — grades, percentage, rank, AI comment `(admin, teacher, student own, parent of child)`
@@ -292,6 +314,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - Results locked after publish; unpublish is admin-only
 
 ### 4.10 Real-Time Communication (`ChatModule` — Socket.io Gateway)
+
+**Tables:** `conversations`, `conversation_participants`, `messages` · Database.md §10
 
 **Events**
 
@@ -316,23 +340,27 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.11 Notices & Events (`NoticesModule`)
 
+**Tables:** `notices`, `notice_classes`, `events` · Database.md §11
+
 **Endpoints**
 
 - [ ] `POST /api/v1/notices` — audience targeting (all/teachers/class through `notice_classes`) `(admin)`
 - [ ] `GET /api/v1/notices` — role-filtered feed `(all roles)`
 - [ ] `GET /api/v1/notices/:id` `(all roles)`
-- [ ] `PUT /api/v1/notices/:id` `(admin)`
+- [ ] `PATCH /api/v1/notices/:id` `(admin)`
 - [ ] `DELETE /api/v1/notices/:id` `(admin)`
 - [ ] `POST /api/v1/events` — calendar entry `(admin)`
 - [ ] `GET /api/v1/events` — filter by date range/audience `(all roles)`
 - [ ] `GET /api/v1/events/:id` `(all roles)`
-- [ ] `PUT /api/v1/events/:id` `(admin)`
+- [ ] `PATCH /api/v1/events/:id` `(admin)`
 - [ ] `DELETE /api/v1/events/:id` `(admin)`
 - [ ] Publish side effects — Socket broadcast + email notification on notice publish
 
 ### 4.12 AI Assistant (`AiModule`)
 
-**Endpoints** — one endpoint per feature: a server-side prompt template + throttled LLM call, history in `ai_conversations`
+**Tables:** `ai_conversations` · Database.md §12
+
+**Endpoints** — the seven `ai_feature` values from `Database.md`, one endpoint each: a server-side prompt template plus a throttled LLM call, history in `ai_conversations`
 
 - [ ] `POST /api/v1/ai/chat` — school insights (admin): DB aggregates via Supabase RPC, answered by the LLM `(admin)`
 - [ ] `POST /api/v1/ai/report-comment` — report card comment generator `(admin, teacher)`
@@ -351,6 +379,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.13 Study Material Module (`MaterialsModule`)
 
+**Tables:** `study_materials` · Database.md §6
+
 **Endpoints**
 
 - [ ] `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage); type: PDF/notes/worksheet/previous-year paper `(admin, teacher)`
@@ -359,6 +389,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `DELETE /api/v1/materials/:id` — removes the row and the stored asset `(admin, teacher)`
 
 ### 4.14 Reports & Analytics (`ReportsModule`)
+
+**Tables:** no tables — materialized views and RPC aggregates only · Database.md §16
 
 **Endpoints**
 
@@ -375,6 +407,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.15 Email Notifications (`MailModule` — Resend)
 
+**Tables:** no table — BullMQ email queue · Database.md §17
+
 No HTTP endpoints — this module is called by the other services and by the scheduler.
 
 **Templates & triggers**
@@ -390,9 +424,17 @@ No HTTP endpoints — this module is called by the other services and by the sch
 - Email queue with retry (BullMQ + Redis)
 - Handlebars HTML templates in `src/mail/templates/`
 
+### 4.16 Platform endpoints (no feature module)
+
+**Tables:** none — platform endpoint
+
+- [ ] `GET /api/v1/health` — liveness/readiness for the Render health check `(public)` (see §8)
+
 ---
 
 ## 5. API Conventions
+
+**Methods** — `GET` reads; `POST` creates or triggers an action; `PATCH` for partial updates (send only the fields you change — the default for every update route); `PUT` only where the body replaces a whole sub-resource (`PUT /timetables/:id` replaces its `periods`); `DELETE` removes.
 
 **Response envelope** (via global response interceptor)
 

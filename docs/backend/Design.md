@@ -7,6 +7,7 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 - Global prefix `/api/v1`; plural, kebab-case resources: `/fees/structures`, `/report-cards`
 - Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`
 - Filters via query params: `?classId=&from=&to=&status=`
+- Methods: `PATCH` for partial updates — send only the fields that changed, and treat it as the default for every update route; `PUT` only where the body replaces a whole sub-resource (`PUT /timetables/:id` replaces its `periods`); a `PATCH` body is never required to carry every field
 
 ## Response envelope (success)
 
