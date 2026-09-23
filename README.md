@@ -1,6 +1,8 @@
-# School Flow AI
-
-Multi-role **School Management System** — Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, an AI assistant, real-time chat, and reports.
+<div align="center">
+  <h1>School Flow AI</h1>
+  <p>Multi-role **School Management System** — Admin, Teacher, Student, and Parent dashboards with attendance, fees, homework, exams, an AI assistant, real-time chat, and reports.
+</p>
+</div>
 
 <div>
 <img src="https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black">
