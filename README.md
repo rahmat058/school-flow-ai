@@ -8,12 +8,12 @@ Multi-role **School Management System** — Admin, Teacher, Student, and Parent 
 <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white">
 <img src="https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
 <img src="https://img.shields.io/badge/NestJS_12-E0234E?style=for-the-badge&logo=nestjs&logoColor=white">
-<img src="https://img.shields.io/badge/Prisma_7-2D3748?style=for-the-badge&logo=prisma&logoColor=white">
+<img src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white">
 <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
 <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge">
 </div>
 
-Monorepo with a React frontend (`frontend/`) and a NestJS + Prisma + PostgreSQL (Supabase) backend (`backend/`). Product plans, architecture, rules, and delivery phases live in **[docs/](./docs)** — those files are the source of truth. Agents and maintainers start with **[AGENTS.md](./AGENTS.md)**.
+Monorepo with a React frontend (`frontend/`) and a NestJS + Supabase (PostgreSQL) backend (`backend/`). Product plans, architecture, rules, and delivery phases live in **[docs/](./docs)** — those files are the source of truth. Agents and maintainers start with **[AGENTS.md](./AGENTS.md)**.
 
 ---
 
@@ -23,7 +23,7 @@ Monorepo with a React frontend (`frontend/`) and a NestJS + Prisma + PostgreSQL 
 
 | Requirement    | Notes                                                                |
 | -------------- | -------------------------------------------------------------------- |
-| **Node.js**    | 20+ (npm)                                                            |
+| **Node.js**    | 24+ (npm)                                                            |
 | **PostgreSQL** | Supabase project (pooler URL for runtime, direct URL for migrations) |
 
 ### Frontend
@@ -45,10 +45,11 @@ npm run lint && npm run typecheck
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
-npx prisma migrate dev
+cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT secrets, etc.
 npm run start:dev
 ```
+
+The database schema lives in your Supabase project — manage tables and migrations with the Supabase SQL editor or CLI.
 
 Validate before finishing work:
 
@@ -74,11 +75,11 @@ school-flow-ai/
 │       ├── services/            # API client + socket client
 │       ├── hooks/, context/     # useAuth, AuthContext, SchoolContext
 │       ├── lib/, data/, types/, styles/
-├── backend/                     # NestJS 12 + Prisma + PostgreSQL
-│   ├── prisma/schema.prisma     # Single source of truth for the DB
+├── backend/                     # NestJS 12 + Supabase (PostgreSQL)
+│   ├── supabase/                # DB schema + migrations (Supabase project)
 │   └── src/
 │       ├── main.ts              # Prefix /api/v1, pipes, filters, helmet, CORS
-│       ├── prisma/              # PrismaModule + PrismaService (global)
+│       ├── database/            # Supabase client module (global)
 │       ├── common/              # guards, decorators, filters, interceptors
 │       └── <feature modules>    # auth, schools, users, classes, attendance,
 │                                # fees, homework, exams, chat, notices, ai, …
@@ -99,7 +100,8 @@ Per-side guides: **[frontend/README.md](./frontend/README.md)** · **[backend/RE
 - [Vite](https://vitejs.dev/) + [Tailwind CSS 4](https://tailwindcss.com/) — build tooling and design tokens
 - [Recharts](https://recharts.org/) — dashboard and report charts
 - [NestJS 12](https://nestjs.com/) — modular backend with dependency injection
-- [Prisma](https://www.prisma.io/) + [PostgreSQL (Supabase)](https://supabase.com/) — ORM and database
+- [Supabase](https://supabase.com/) — PostgreSQL database and data access from the backend
+- [PostgreSQL](https://www.postgresql.org/) — relational database (hosted on Supabase)
 - [Passport.js + JWT](https://www.passportjs.org/) — access (15m) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — real-time chat and notifications
 - [BullMQ + Redis](https://docs.bullmq.io/) — email and notification queues
@@ -134,7 +136,6 @@ Per-side guides: **[frontend/README.md](./frontend/README.md)** · **[backend/RE
 | `npm run build`     | `nest build`            |
 | `npm run lint`      | ESLint                  |
 | `npm test`          | Jest                    |
-| `npm run migrate`   | `prisma migrate dev`    |
 
 ---
 

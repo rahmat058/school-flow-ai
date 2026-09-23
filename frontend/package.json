@@ -1,8 +1,9 @@
 {
-  "name": "curator-pro",
+  "name": "school-flow-ai-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "School Flow AI frontend — React dashboards for Admin, Teacher, Student, and Parent roles (Vite + TypeScript + Tailwind CSS 4)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
