@@ -7,13 +7,16 @@ PostgreSQL (Supabase) schema for School Flow AI, derived from the data models in
 reference ERD — when you change a table, add a migration **and** update the matching table section
 here.
 
-> ⚠️ No migrations exist yet — `backend/` currently holds only `package.json` and docs, so every
-> table below is a **design target**, not a description of a live database.
+> ⚠️ No migrations exist yet — `backend/` currently holds only `package.json` and docs, so every table
+> below is a **design target**, not a description of a live database.
 
 **How to read this file.** Each PRD feature has its own section: a feature-level ERD first, then one
-subsection per table with a metadata tag, its full column list, its constraints, and a small ERD of
-that table's own relationships. Per-table ERDs show identity + foreign-key columns only — the
-authoritative column list is the table immediately above each diagram.
+subsection per table with a metadata tag, its full column list, its **keys**, its **indexes**, its
+**constraints**, and its own ERD. Per-table ERDs draw identity + foreign-key columns; the authoritative
+column list is the column table immediately above each diagram.
+
+Two consolidated references close the document: §13 **Foreign Key Map** (every FK with its `on delete`
+action) and §14 **Index Plan** (every index, per table).
 
 ## 1. Conventions
 
@@ -38,13 +41,32 @@ from the original Prisma plan, which was dropped in favour of raw Supabase SQL �
 | Fixed sets  | Postgres enum                                    | §2 — values `SCREAMING_SNAKE` per `Design.md`     |
 | Arrays      | `text[]` / enum[]                                | rendered `text_array` / enum name in ERDs         |
 
-**Diagram notation:** mermaid ERD supports only `PK`/`FK`/`UK`. Composite unique constraints and
-partial indexes cannot be drawn, so they are listed as bullets under each table. Solid lines
-(`||--o{`) are enforced foreign keys; dotted lines (`||..o{`) are logical links that are **not**
-enforced by a constraint.
+**Primary keys.** Every table has a surrogate `id uuid` primary key **except `notice_classes`**, which
+uses the natural composite key `(notice_id, class_id)` — a join row has no identity of its own, and both
+of those columns are also foreign keys, so they carry the `PK, FK` marker. `parent_students` keeps a
+surrogate `id` plus `unique (parent_id, student_id)` because it carries attributes (`relation`,
+`is_primary`).
 
-**Phases** in the table tags come from [`Phases.md`](./Phases.md). Timetable is the one feature with
-no phase assigned — see §16.
+**Foreign keys.** FKs are declared in the column table (`Key` = `FK`) and listed per table under
+**Keys**, with their `on delete` action. The full list is §13. The action policy:
+
+| Situation                                                    | Action     | Why                                                                   |
+| ------------------------------------------------------------ | ---------- | --------------------------------------------------------------------- |
+| `schools.id` from any tenant table                           | `restrict` | a school purge must be deliberate, never an accidental cascade        |
+| Attribution columns (`*_by_id`) that are nullable            | `set null` | the row survives its author; history stays intact                     |
+| Optional links (`class_teacher_id`, `class_id`)              | `set null` | the dependent row is valid without the link                           |
+| Composition — child has no meaning alone                     | `cascade`  | e.g. `periods` under `timetables`, `fee_heads` under `fee_structures` |
+| Anything with history (attendance, invoices, results, marks) | `restrict` | never silently destroy financial or academic records                  |
+
+**Indexes.** Every tenant table is indexed on `school_id` — as a single-column index or as the leading
+column of a composite, which is what the tenant guard needs (`PRD.md` §3). See §14 for the full plan.
+
+**Diagram notation:** mermaid ERD supports only `PK`/`FK`/`UK`. Composite keys and partial indexes
+cannot be drawn, so they are listed under each table. Solid lines (`||--o{`) are enforced FKs; dotted
+lines (`||..o{`) are logical links with no constraint.
+
+**Phases** in the table tags come from [`Phases.md`](./Phases.md). Timetable is the one feature with no
+phase assigned — see §18.
 
 ## 2. Enums
 
@@ -113,10 +135,12 @@ the first `otps` row.
 | `updated_at`          | `timestamptz`         | no   |     | trigger                  |
 | `deleted_at`          | `timestamptz`         | yes  |     | soft delete              |
 
-**Constraints & indexes**
+**Keys** — PK `id` · no foreign keys (this _is_ the tenant) · `unique (slug)`.
 
-- `unique (slug)`.
-- The only table without `school_id` — it _is_ the tenant.
+**Indexes** — `unique (slug)`, `(subscription_status)`.
+
+**Constraints** — the only table without `school_id`; every other tenant table's `school_id` points
+here with `on delete restrict`.
 
 ```mermaid
 erDiagram
@@ -147,9 +171,9 @@ _Every other tenant table also references `schools`; only a sample is drawn here
 
 <!-- table: users · module: AuthModule · prd: §4.2 · phase: 1 · tenant: yes · soft-delete: yes -->
 
-Authentication identity for all four roles. Profile data lives in `teachers` / `students` /
-`parents`; this table holds credentials and RBAC only. `password_hash` (bcrypt, 12 rounds) must never
-appear in a response — strip it via select/serializer.
+Authentication identity for all four roles. Profile data lives in `teachers` / `students` / `parents`;
+this table holds credentials and RBAC only. `password_hash` (bcrypt, 12 rounds) must never appear in a
+response — strip it via select/serializer.
 
 | Column          | Type          | Null | Key | Notes             |
 | --------------- | ------------- | ---- | --- | ----------------- |
@@ -164,11 +188,12 @@ appear in a response — strip it via select/serializer.
 | `updated_at`    | `timestamptz` | no   |     |                   |
 | `deleted_at`    | `timestamptz` | yes  |     | soft delete       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (email)`.
 
-- `unique (email)` — global (`PRD.md` §3). Per-school uniqueness is the alternative in §16.
-- Index `(school_id, role)` for roster listing.
-- `is_verified` gates login until the registration OTP is confirmed.
+**Indexes** — `unique (email)`, `(school_id, role)`.
+
+**Constraints** — `is_verified` gates login until the registration OTP is confirmed. Global email
+uniqueness is the `PRD.md` §3 reading; per-school is the alternative in §18.
 
 ```mermaid
 erDiagram
@@ -192,8 +217,8 @@ erDiagram
 
 <!-- table: otps · module: SchoolsModule · prd: §4.1 · phase: 1 · tenant: yes · soft-delete: no -->
 
-One-time codes for registration and password reset, stored bcrypt-hashed. Ephemeral: 10-minute
-expiry, max 5 attempts, 60-second resend cooldown, and rows are purged once expired.
+One-time codes for registration and password reset, stored bcrypt-hashed. Ephemeral: 10-minute expiry,
+max 5 attempts, 60-second resend cooldown, and rows are purged once expired.
 
 | Column        | Type          | Null | Key | Notes                       |
 | ------------- | ------------- | ---- | --- | --------------------------- |
@@ -207,11 +232,13 @@ expiry, max 5 attempts, 60-second resend cooldown, and rows are purged once expi
 | `consumed_at` | `timestamptz` | yes  |     | set on success              |
 | `created_at`  | `timestamptz` | no   |     |                             |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (cascade) · **no FK to `users`** — codes are matched
+by `email`, because a registration OTP precedes the admin's first login.
 
-- Index `(email, purpose)` — the verify/resend lookup path.
-- `school_id` is nullable because a reset OTP can be issued before the linkage is confirmed.
-- A row is usable only while `consumed_at is null and expires_at > now()`.
+**Indexes** — `(email, purpose)` (verify/resend lookup), `(expires_at)` (purge job), `(school_id)`.
+
+**Constraints** — a row is usable only while `consumed_at is null and expires_at > now()`.
+`school_id` is nullable because a reset OTP can be issued before the linkage is confirmed.
 
 ```mermaid
 erDiagram
@@ -243,10 +270,13 @@ inserts a new one, so a replayed token fails.
 | `ip_address` | `text`        | yes  |     | audit           |
 | `created_at` | `timestamptz` | no   |     |                 |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `user_id` → `users.id` (cascade — tokens are worthless without their user) ·
+`unique (token_hash)`.
 
-- `unique (token_hash)`; index `(user_id, expires_at)`.
-- Not in `PRD.md` §3 — added because §4.2 requires server-side refresh storage (§16).
+**Indexes** — `unique (token_hash)`, `(user_id, expires_at)`.
+
+**Constraints** — tenant scope is inherited through `users`, so there is no `school_id` column. Not in
+`PRD.md` §3 — added because §4.2 requires server-side refresh storage (§18).
 
 ```mermaid
 erDiagram
@@ -265,8 +295,8 @@ erDiagram
 
 <!-- table: teachers · module: UsersModule · prd: §4.3 · phase: 2 · tenant: yes · soft-delete: yes -->
 
-Teacher profile, 1:1 with `users`. `employee_no` comes from a per-school sequence. Referenced as
-class teacher, subject teacher, and homework author.
+Teacher profile, 1:1 with `users`. `employee_no` comes from a per-school sequence. Referenced as class
+teacher, subject teacher, and homework author.
 
 | Column          | Type            | Null | Key | Notes               |
 | --------------- | --------------- | ---- | --- | ------------------- |
@@ -284,10 +314,13 @@ class teacher, subject teacher, and homework author.
 | `updated_at`    | `timestamptz`   | no   |     |                     |
 | `deleted_at`    | `timestamptz`   | yes  |     | soft delete         |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade) ·
+`unique (user_id)` (the 1:1 guard), `unique (school_id, employee_no)`.
 
-- `unique (user_id)` — enforces 1:1 with `users`.
-- `unique (school_id, employee_no)`; index `(school_id, status)` for roster filters.
+**Indexes** — `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`.
+
+**Constraints** — hard-deleting a user removes the profile; normal removal is the `deleted_at` soft
+delete.
 
 ```mermaid
 erDiagram
@@ -327,12 +360,14 @@ Student profile, 1:1 with `users`. `class_id` is the student's **current** class
 | `updated_at`    | `timestamptz`   | no   |     |                          |
 | `deleted_at`    | `timestamptz`   | yes  |     | soft delete              |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade),
+`class_id` → `classes.id` (set null) · `unique (user_id)`, `unique (school_id, admission_no)`.
 
-- `unique (user_id)`; `unique (school_id, admission_no)`.
-- Index `(class_id)` for the class roster; `(school_id, status)` for user-list filters.
-- `POST /classes/:id/assign-students` sets `class_id` on many students. Per-year enrollment history
-  would need a join table — see §16.
+**Indexes** — `unique (user_id)`, `unique (school_id, admission_no)`, `(school_id, status)`,
+`(class_id)`.
+
+**Constraints** — `POST /classes/:id/assign-students` rewrites `class_id` for many students. Per-year
+enrollment history would need a join table — see §18.
 
 ```mermaid
 erDiagram
@@ -369,10 +404,12 @@ Parent/guardian profile, 1:1 with `users`. Linked to children through `parent_st
 | `updated_at` | `timestamptz`   | no   |     |                   |
 | `deleted_at` | `timestamptz`   | yes  |     | soft delete       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade) ·
+`unique (user_id)` (1:1).
 
-- `unique (user_id)` — 1:1 with `users`.
-- Index `(school_id, status)`.
+**Indexes** — `unique (user_id)`, `(school_id, status)`.
+
+**Constraints** — no natural business key; a phone number is not unique across parents.
 
 ```mermaid
 erDiagram
@@ -403,10 +440,14 @@ homework, and results for each linked child.
 | `is_primary` | `boolean`         | no   |     | default `false`     |
 | `created_at` | `timestamptz`     | no   |     |                     |
 
-**Constraints & indexes**
+**Keys** — PK `id` (surrogate, because the row carries attributes) · FK `school_id` → `schools.id`
+(restrict), `parent_id` → `parents.id` (cascade), `student_id` → `students.id` (cascade) ·
+`unique (parent_id, student_id)`.
 
-- `unique (parent_id, student_id)`; index `(student_id)`.
-- Partial unique index on `(student_id)` where `is_primary` — one primary contact per student.
+**Indexes** — `unique (parent_id, student_id)`, `(student_id)` (child → guardians), `(school_id)`.
+
+**Constraints** — partial unique index on `(student_id)` where `is_primary` — one primary contact per
+student.
 
 ```mermaid
 erDiagram
@@ -452,10 +493,12 @@ assignable after creation; students attach via `students.class_id`.
 | `created_at`       | `timestamptz` | no   |     |                 |
 | `updated_at`       | `timestamptz` | no   |     |                 |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_teacher_id` → `teachers.id`
+(set null) · `unique (school_id, grade, section, academic_year)`.
 
-- `unique (school_id, grade, section, academic_year)` — no duplicate classes per year.
-- `class_teacher_id` is nullable; index `(class_teacher_id)`.
+**Indexes** — `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`.
+
+**Constraints** — `class_teacher_id` is nullable so a class can exist before a teacher is assigned.
 
 ```mermaid
 erDiagram
@@ -474,8 +517,8 @@ erDiagram
 
 <!-- table: subjects · module: ClassesModule · prd: §4.4 · phase: 2 · tenant: yes · soft-delete: no -->
 
-A subject taught to one class by one teacher. Timetable periods, homework, exams, and results all
-hang off `subjects`.
+A subject taught to one class by one teacher. Timetable periods, homework, exams, and results all hang
+off `subjects`.
 
 | Column       | Type          | Null | Key | Notes           |
 | ------------ | ------------- | ---- | --- | --------------- |
@@ -488,10 +531,13 @@ hang off `subjects`.
 | `created_at` | `timestamptz` | no   |     |                 |
 | `updated_at` | `timestamptz` | no   |     |                 |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict —
+subjects carry exams and results), `teacher_id` → `teachers.id` (set null) ·
+`unique (school_id, class_id, code)`.
 
-- `unique (school_id, class_id, code)`.
-- Index `(class_id)`, `(teacher_id)`.
+**Indexes** — `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`.
+
+**Constraints** — `teacher_id` is nullable until a teacher is assigned.
 
 ```mermaid
 erDiagram
@@ -541,13 +587,17 @@ register is idempotent. Monthly %/defaulters are aggregations, not stored column
 | `created_at`      | `timestamptz`       | no   |     |                   |
 | `updated_at`      | `timestamptz`       | no   |     |                   |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict),
+`student_id` → `students.id` (restrict), `marked_by_id` → `users.id` (restrict) ·
+`unique (class_id, student_id, attendance_date)`.
 
-- `unique (class_id, student_id, attendance_date)` — the duplicate guard from `PRD.md` §4.5.
-- Index `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`.
-- `class_id` is stored **in addition to** `students.class_id` on purpose: history must stay correct
-  after a student changes class mid-year.
-- Writes emit `attendance:marked` over Socket.io to linked parents.
+**Indexes** — `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`,
+`(class_id, attendance_date)`, `(student_id, attendance_date)`.
+
+**Constraints** — the unique key is the duplicate guard from `PRD.md` §4.5; bulk marking is an upsert on
+it. `class_id` is stored **in addition to** `students.class_id` on purpose: history must stay correct
+after a student changes class mid-year. Writes emit `attendance:marked` over Socket.io to linked
+parents.
 
 ```mermaid
 erDiagram
@@ -603,10 +653,12 @@ An assignment posted by a teacher to one class + subject. `attachments` holds Cl
 | `updated_at`  | `timestamptz` | no   |     |                 |
 | `deleted_at`  | `timestamptz` | yes  |     | soft delete     |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict),
+`subject_id` → `subjects.id` (restrict), `teacher_id` → `teachers.id` (restrict).
 
-- Index `(class_id, subject_id, due_date)` — the listing path.
-- Deletion is soft so submissions keep their parent.
+**Indexes** — `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`.
+
+**Constraints** — no natural key; deletion is soft so submissions keep their parent.
 
 ```mermaid
 erDiagram
@@ -647,10 +699,14 @@ Teacher tracking (submitted vs pending) is a count aggregate over this table.
 | `created_at`   | `timestamptz` | no   |     |                 |
 | `updated_at`   | `timestamptz` | no   |     |                 |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `homework_id` → `homework.id` (cascade),
+`student_id` → `students.id` (restrict), `graded_by_id` → `users.id` (set null) ·
+`unique (homework_id, student_id)`.
 
-- `unique (homework_id, student_id)` — one submission per student per assignment.
-- Index `(student_id)`; `(homework_id)`.
+**Indexes** — `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`.
+
+**Constraints** — one submission per student per assignment; `grade` / `remarks` / `graded_*` are null
+until graded.
 
 ```mermaid
 erDiagram
@@ -689,10 +745,12 @@ PDF/JPG/PNG/DOCX ≤ 10MB and stored in Cloudinary; this table keeps the `file_u
 | `updated_at`      | `timestamptz`   | no   |     |                 |
 | `deleted_at`      | `timestamptz`   | yes  |     | soft delete     |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict),
+`subject_id` → `subjects.id` (restrict), `uploaded_by_id` → `users.id` (restrict).
 
-- Index `(class_id, subject_id, type)` — the filtered listing.
-- `DELETE /materials/:id` removes the stored asset as well as the row.
+**Indexes** — `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`.
+
+**Constraints** — `DELETE /materials/:id` removes the stored asset as well as the row.
 
 ```mermaid
 erDiagram
@@ -710,7 +768,7 @@ erDiagram
 
 ## 7. Feature ERD — Timetable
 
-`PRD.md` §4.8. **No phase assigned in `Phases.md`** — see §16.
+`PRD.md` §4.8. **No phase assigned in `Phases.md`** — see §18.
 
 ```mermaid
 erDiagram
@@ -724,8 +782,8 @@ erDiagram
 
 <!-- table: timetables · module: TimetablesModule · prd: §4.8 · phase: none · tenant: yes · soft-delete: no -->
 
-One weekly timetable per class per academic year. A day's periods are created nested; the parent row
-is the conflict-detection boundary.
+One weekly timetable per class per academic year. A day's periods are created nested; the parent row is
+the conflict-detection boundary.
 
 | Column          | Type          | Null | Key | Notes          |
 | --------------- | ------------- | ---- | --- | -------------- |
@@ -737,11 +795,13 @@ is the conflict-detection boundary.
 | `created_at`    | `timestamptz` | no   |     |                |
 | `updated_at`    | `timestamptz` | no   |     |                |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (cascade —
+periods belong to the class's timetable) · `unique (class_id, day, academic_year)`.
 
-- `unique (class_id, day, academic_year)`.
-- Teacher double-booking is validated in the service before save (spans rows, not expressible as a
-  constraint).
+**Indexes** — `unique (class_id, day, academic_year)`, `(school_id)`.
+
+**Constraints** — teacher double-booking is validated in the service before save (it spans rows, so it
+is not expressible as a constraint).
 
 ```mermaid
 erDiagram
@@ -774,10 +834,13 @@ A single slot inside a day. Break rows carry `is_break = true` with no subject o
 | `order_index`  | `integer` | no   |     | display order within day |
 | `room`         | `text`    | yes  |     |                          |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `timetable_id` → `timetables.id`
+(cascade), `subject_id` → `subjects.id` (set null), `teacher_id` → `teachers.id` (set null).
 
-- Index `(timetable_id, order_index)`, `(teacher_id)` for the teacher view.
-- `subject_id` / `teacher_id` are required unless `is_break`.
+**Indexes** — `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)` (the teacher's weekly view).
+
+**Constraints** — `subject_id` / `teacher_id` are required unless `is_break`; `check (end_time >
+start_time)`.
 
 ```mermaid
 erDiagram
@@ -817,8 +880,8 @@ erDiagram
 
 <!-- table: fee_structures · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
-A named fee plan for one class in one academic year (e.g. "Grade 5 — 2026"). Its heads define what
-is charged; invoices are generated from it per student.
+A named fee plan for one class in one academic year (e.g. "Grade 5 — 2026"). Its heads define what is
+charged; invoices are generated from it per student.
 
 | Column          | Type          | Null | Key | Notes          |
 | --------------- | ------------- | ---- | --- | -------------- |
@@ -830,9 +893,12 @@ is charged; invoices are generated from it per student.
 | `created_at`    | `timestamptz` | no   |     |                |
 | `updated_at`    | `timestamptz` | no   |     |                |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict) ·
+`unique (school_id, class_id, academic_year, name)`.
 
-- `unique (school_id, class_id, academic_year, name)`.
+**Indexes** — `unique (school_id, class_id, academic_year, name)`, `(class_id)`.
+
+**Constraints** — a structure may not be deleted while invoices reference it (restrict).
 
 ```mermaid
 erDiagram
@@ -851,8 +917,8 @@ erDiagram
 
 <!-- table: fee_heads · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
-A line item inside a structure — tuition, transport, lab, etc. A **child table** rather than the
-JSONB array `PRD.md` §3 allowed, so collection reports can group by head.
+A line item inside a structure — tuition, transport, lab, etc. A **child table** rather than the JSONB
+array `PRD.md` §3 allowed, so collection reports can group by head.
 
 | Column             | Type            | Null | Key | Notes                 |
 | ------------------ | --------------- | ---- | --- | --------------------- |
@@ -864,10 +930,12 @@ JSONB array `PRD.md` §3 allowed, so collection reports can group by head.
 | `frequency`        | `fee_frequency` | no   |     | `MONTHLY`…`ONE_TIME`  |
 | `created_at`       | `timestamptz`   | no   |     |                       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `fee_structure_id` → `fee_structures.id`
+(cascade) · `unique (fee_structure_id, name)`.
 
-- `unique (fee_structure_id, name)`; `check (amount_paise >= 0)`.
-- Index `(fee_structure_id)`.
+**Indexes** — `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`.
+
+**Constraints** — `check (amount_paise >= 0)`; a head is deleted with its structure.
 
 ```mermaid
 erDiagram
@@ -886,8 +954,8 @@ erDiagram
 
 <!-- table: fee_invoices · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
-A billable demand for one student, generated in bulk per class. `paid_paise` accumulates across
-payments so `PARTIAL` can be topped up; `receipt_no` is assigned on the first successful payment from
+A billable demand for one student, generated in bulk per class. `paid_paise` accumulates across payments
+so `PARTIAL` can be topped up; `receipt_no` is assigned on the first successful payment from
 `receipt_sequences` inside the payment transaction.
 
 | Column             | Type             | Null | Key | Notes                    |
@@ -906,11 +974,15 @@ payments so `PARTIAL` can be topped up; `receipt_no` is assigned on the first su
 | `created_at`       | `timestamptz`    | no   |     |                          |
 | `updated_at`       | `timestamptz`    | no   |     |                          |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `student_id` → `students.id` (restrict),
+`fee_structure_id` → `fee_structures.id` (restrict) · `unique (school_id, receipt_no)` (partial, where
+`receipt_no is not null`).
 
-- `unique (school_id, receipt_no)` where `receipt_no is not null`.
-- `check (paid_paise <= amount_paise - discount_paise)`.
-- Index `(student_id, status)` — the pending/history path — and `(school_id, status, due_date)`.
+**Indexes** — `unique (school_id, receipt_no)` partial, `(student_id, status)` (the pending/history
+path), `(school_id, status, due_date)`, `(fee_structure_id)`.
+
+**Constraints** — `check (paid_paise <= amount_paise - discount_paise)`. Invoices are never deleted —
+they are financial records.
 
 ```mermaid
 erDiagram
@@ -951,11 +1023,15 @@ A settlement against an invoice — online via Stripe/SSLCommerz, or offline rec
 | `created_at`        | `timestamptz`      | no   |     |                           |
 | `updated_at`        | `timestamptz`      | no   |     |                           |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `invoice_id` → `fee_invoices.id`
+(restrict), `student_id` → `students.id` (restrict), `recorded_by_id` → `users.id` (set null) ·
+`unique (provider, provider_txn_id)` (partial, where `provider_txn_id is not null`).
 
-- `unique (provider, provider_txn_id)` where `provider_txn_id is not null` — **webhook idempotency**;
-  a replayed event must not double-credit the invoice.
-- Index `(invoice_id)`, `(provider_order_id)`.
+**Indexes** — `unique (provider, provider_txn_id)` partial, `(invoice_id)`, `(provider_order_id)`,
+`(school_id, paid_at)`.
+
+**Constraints** — the partial unique key is the **webhook idempotency guard**; a replayed event must not
+double-credit the invoice. `check (amount_paise > 0)`.
 
 ```mermaid
 erDiagram
@@ -994,11 +1070,14 @@ A discount/scholarship for a student, scoped to one fee head, with an admin appr
 | `created_at`     | `timestamptz`       | no   |     |                      |
 | `updated_at`     | `timestamptz`       | no   |     |                      |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `student_id` → `students.id` (restrict),
+`fee_head_id` → `fee_heads.id` (set null), `approved_by_id` → `users.id` (set null).
 
-- `check` — exactly one of `percentage` / `amount_paise` set, matching `type`.
-- `approved_by_id` / `approved_at` are null while `status = PENDING`.
-- Index `(student_id, status)` for the approval queue.
+**Indexes** — `(student_id, status)` (the approval queue), `(school_id, status)`, `(fee_head_id)`.
+
+**Constraints** — a `check` enforces exactly one of `percentage` / `amount_paise`, matching `type`.
+`approved_by_id` / `approved_at` are null while `status = PENDING`. No unique key — a student may hold
+several concessions.
 
 ```mermaid
 erDiagram
@@ -1018,8 +1097,8 @@ erDiagram
 
 <!-- table: receipt_sequences · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
-Per-school receipt counter, locked with `select … for update` inside the payment transaction so
-receipt numbers never collide — the "receipt number sequence (transactional)" requirement.
+Per-school receipt counter, locked with `select … for update` inside the payment transaction so receipt
+numbers never collide — the "receipt number sequence (transactional)" requirement.
 
 | Column        | Type          | Null | Key | Notes          |
 | ------------- | ------------- | ---- | --- | -------------- |
@@ -1029,10 +1108,13 @@ receipt numbers never collide — the "receipt number sequence (transactional)" 
 | `last_number` | `integer`     | no   |     | default `0`    |
 | `updated_at`  | `timestamptz` | no   |     |                |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (school_id, fiscal_year)`.
 
-- `unique (school_id, fiscal_year)`.
-- Not in `PRD.md` §3 — added to make the receipt sequence atomic (§16).
+**Indexes** — `unique (school_id, fiscal_year)` — this also serves as the tenant index for the table.
+
+**Constraints** — **no FK to `fee_invoices`**: the relationship is logical (invoices are numbered _from_
+this counter), which is why the ERD draws it dotted. Not in `PRD.md` §3 — added to make the receipt
+sequence atomic (§18).
 
 ```mermaid
 erDiagram
@@ -1084,9 +1166,12 @@ cards exist. Publishing is one transaction (results → report cards → notific
 | `created_at`   | `timestamptz` | no   |     |                      |
 | `updated_at`   | `timestamptz` | no   |     |                      |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict).
 
-- Index `(class_id, type, start_date)`; `check (end_date >= start_date)`.
+**Indexes** — `(school_id, class_id, type, start_date)`, `(class_id, start_date)`.
+
+**Constraints** — `check (end_date >= start_date)`; no unique key, since a class may run two exams with
+the same name in one year.
 
 ```mermaid
 erDiagram
@@ -1107,8 +1192,8 @@ erDiagram
 
 <!-- table: exam_subjects · module: ExamsModule · prd: §4.9 · phase: 4 · tenant: yes · soft-delete: no -->
 
-Which subjects are examined, when, and for how many marks. `max_marks` bounds
-`results.obtained_marks` and feeds percentage computation.
+Which subjects are examined, when, and for how many marks. `max_marks` bounds `results.obtained_marks`
+and feeds percentage computation.
 
 | Column       | Type      | Null | Key | Notes               |
 | ------------ | --------- | ---- | --- | ------------------- |
@@ -1120,10 +1205,12 @@ Which subjects are examined, when, and for how many marks. `max_marks` bounds
 | `max_marks`  | `integer` | no   |     |                     |
 | `pass_marks` | `integer` | yes  |     | default from scheme |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `exam_id` → `exams.id` (cascade),
+`subject_id` → `subjects.id` (restrict) · `unique (exam_id, subject_id)`.
 
-- `unique (exam_id, subject_id)`.
-- `check (pass_marks <= max_marks)`.
+**Indexes** — `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`.
+
+**Constraints** — `check (pass_marks <= max_marks)` and `check (max_marks > 0)`.
 
 ```mermaid
 erDiagram
@@ -1156,11 +1243,15 @@ One student's mark in one subject of one exam. Bulk marks entry upserts on the u
 | `created_at`     | `timestamptz` | no   |     |                             |
 | `updated_at`     | `timestamptz` | no   |     |                             |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `exam_id` → `exams.id` (restrict),
+`student_id` → `students.id` (restrict), `subject_id` → `subjects.id` (restrict), `entered_by_id` →
+`users.id` (set null) · `unique (exam_id, student_id, subject_id)`.
 
-- `unique (exam_id, student_id, subject_id)` — the upsert key.
-- `check (obtained_marks >= 0)`; the upper bound against `max_marks` is validated in the service.
-- Index `(student_id, exam_id)` for the student result view.
+**Indexes** — `unique (exam_id, student_id, subject_id)` (the upsert key), `(school_id)`,
+`(student_id, exam_id)`.
+
+**Constraints** — `check (obtained_marks >= 0)`; the upper bound against `max_marks` is validated in the
+service because it spans tables. Marks are never deleted once published.
 
 ```mermaid
 erDiagram
@@ -1200,10 +1291,13 @@ The computed summary per student per exam — totals, percentage, grade, and cla
 | `created_at`     | `timestamptz` | no   |     |                         |
 | `updated_at`     | `timestamptz` | no   |     |                         |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `exam_id` → `exams.id` (cascade),
+`student_id` → `students.id` (restrict) · `unique (exam_id, student_id)`.
 
-- `unique (exam_id, student_id)`; index `(student_id, exam_id)`.
-- Grade bands come from `schools.settings` (JSONB), so `grade` is `text` — schools configure their own.
+**Indexes** — `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`.
+
+**Constraints** — `check (percentage between 0 and 100)`. Grade bands come from `schools.settings`
+(JSONB), so `grade` is `text` — each school configures its own scheme.
 
 ```mermaid
 erDiagram
@@ -1248,11 +1342,13 @@ conversation list sorts without touching `messages`.
 | `created_at`      | `timestamptz` | no   |     |                 |
 | `updated_at`      | `timestamptz` | no   |     |                 |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `created_by_id` → `users.id` (set null).
 
-- Index `(school_id, last_message_at desc)` for the inbox.
-- Allowed pairs (admin↔teacher, teacher↔student, teacher↔parent) are enforced in the service, not a
-  constraint — see §16.
+**Indexes** — `(school_id, last_message_at desc)` (the inbox).
+
+**Constraints** — allowed pairs (admin↔teacher, teacher↔student, teacher↔parent) are enforced in the
+service; a DB `check` cannot express a cross-table rule (§18). There is also no unique key preventing two
+conversations between the same pair.
 
 ```mermaid
 erDiagram
@@ -1270,8 +1366,8 @@ erDiagram
 
 <!-- table: conversation_participants · module: ChatModule · prd: §4.10 · phase: 5 · tenant: yes · soft-delete: no -->
 
-Membership + read state for a conversation. `last_read_at` drives the unread badge; `chat:read`
-updates it over the gateway.
+Membership + read state for a conversation. `last_read_at` drives the unread badge; `chat:read` updates
+it over the gateway.
 
 | Column            | Type          | Null | Key | Notes                |
 | ----------------- | ------------- | ---- | --- | -------------------- |
@@ -1282,10 +1378,12 @@ updates it over the gateway.
 | `last_read_at`    | `timestamptz` | yes  |     | unread marker        |
 | `joined_at`       | `timestamptz` | no   |     |                      |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `conversation_id` → `conversations.id`
+(cascade), `user_id` → `users.id` (cascade) · `unique (conversation_id, user_id)`.
 
-- `unique (conversation_id, user_id)`; typically exactly 2 rows per conversation.
-- Index `(user_id)` for the user's conversation list.
+**Indexes** — `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)` (the user's thread list).
+
+**Constraints** — typically exactly two rows per conversation.
 
 ```mermaid
 erDiagram
@@ -1318,10 +1416,14 @@ within a conversation.
 | `updated_at`      | `timestamptz` | no   |     |                      |
 | `deleted_at`      | `timestamptz` | yes  |     | soft delete          |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `conversation_id` → `conversations.id`
+(cascade), `sender_id` → `users.id` (restrict).
 
-- Index `(conversation_id, created_at desc)` — the pagination path from `PRD.md` §3.
-- Payloads mirror the REST DTO shapes (`Design.md`), so the same serializer is reused.
+**Indexes** — `(conversation_id, created_at desc)` (the pagination path from `PRD.md` §3), `(school_id)`,
+`(sender_id)`.
+
+**Constraints** — `check (char_length(body) > 0)`. Payloads mirror the REST DTO shapes (`Design.md`), so
+the same serializer is reused.
 
 ```mermaid
 erDiagram
@@ -1354,8 +1456,8 @@ erDiagram
 
 <!-- table: notices · module: NoticesModule · prd: §4.11 · phase: 5 · tenant: yes · soft-delete: yes -->
 
-An announcement. `audience` selects role groups; class narrowing lives in `notice_classes`.
-Publishing broadcasts over Socket.io and queues email via BullMQ.
+An announcement. `audience` selects role groups; class narrowing lives in `notice_classes`. Publishing
+broadcasts over Socket.io and queues email via BullMQ.
 
 | Column            | Type                | Null | Key | Notes             |
 | ----------------- | ------------------- | ---- | --- | ----------------- |
@@ -1371,11 +1473,13 @@ Publishing broadcasts over Socket.io and queues email via BullMQ.
 | `updated_at`      | `timestamptz`       | no   |     |                   |
 | `deleted_at`      | `timestamptz`       | yes  |     | soft delete       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `published_by_id` → `users.id`
+(restrict — a notice keeps its author).
 
-- Index `(school_id, published_at desc)`.
-- `audience` is an enum array (`PRD.md` §3 allowed "enum[] or JSONB") — see §16 on why class scope is
-  a join table instead of a UUID array.
+**Indexes** — `(school_id, published_at desc)`, `(published_by_id)`.
+
+**Constraints** — `audience` is an enum array (`PRD.md` §3 allowed "enum[] or JSONB"); see §18 for why
+class scope is a join table rather than an array of class UUIDs.
 
 ```mermaid
 erDiagram
@@ -1395,26 +1499,29 @@ erDiagram
 <!-- table: notice_classes · module: NoticesModule · prd: §4.11 · phase: 5 · tenant: yes · soft-delete: no -->
 
 Class-scoped targeting for a notice. Absent rows mean the notice applies to every class matching
-`notices.audience`.
+`notices.audience`. **The only table with a composite primary key instead of a surrogate `id`.**
 
-| Column      | Type   | Null | Key | Notes          |
-| ----------- | ------ | ---- | --- | -------------- |
-| `notice_id` | `uuid` | no   | FK  | → `notices.id` |
-| `class_id`  | `uuid` | no   | FK  | → `classes.id` |
-| `school_id` | `uuid` | no   | FK  | → `schools.id` |
+| Column      | Type   | Null | Key    | Notes          |
+| ----------- | ------ | ---- | ------ | -------------- |
+| `notice_id` | `uuid` | no   | PK, FK | → `notices.id` |
+| `class_id`  | `uuid` | no   | PK, FK | → `classes.id` |
+| `school_id` | `uuid` | no   | FK     | → `schools.id` |
 
-**Constraints & indexes**
+**Keys** — composite PK `(notice_id, class_id)` · FK `notice_id` → `notices.id` (cascade), `class_id` →
+`classes.id` (cascade), `school_id` → `schools.id` (restrict).
 
-- Primary key `(notice_id, class_id)`.
-- Index `(class_id)` — "notices for my class".
+**Indexes** — primary key `(notice_id, class_id)`, `(class_id)` ("notices for my class"), `(school_id)`.
+
+**Constraints** — no surrogate `id` and no timestamps: the row is pure membership, and both key columns
+are simultaneously FKs. `school_id` is denormalised for the tenant guard.
 
 ```mermaid
 erDiagram
   notices ||--o{ notice_classes : "targets"
   classes ||--o{ notice_classes : "is targeted"
   notice_classes {
-    uuid notice_id PK
-    uuid class_id PK
+    uuid notice_id PK, FK
+    uuid class_id PK, FK
     uuid school_id FK
   }
 ```
@@ -1441,9 +1548,12 @@ optional time window.
 | `updated_at`    | `timestamptz`       | no   |     |                   |
 | `deleted_at`    | `timestamptz`       | yes  |     | soft delete       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `created_by_id` → `users.id` (restrict).
 
-- Index `(school_id, event_date)`.
+**Indexes** — `(school_id, event_date)`, `(created_by_id)`.
+
+**Constraints** — `check (end_time > start_time)` when both times are present. Events have no
+class-scoping join table today, unlike notices — see §18.
 
 ```mermaid
 erDiagram
@@ -1485,10 +1595,11 @@ Prompts are server-side templates, so raw user input is never forwarded to the L
 | `created_at` | `timestamptz` | no   |     |                       |
 | `updated_at` | `timestamptz` | no   |     |                       |
 
-**Constraints & indexes**
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade).
 
-- Index `(user_id, feature, created_at desc)` — the per-feature history view.
-- Rate limits are per user via `@Throttle`, not a column.
+**Indexes** — `(user_id, feature, created_at desc)` (per-feature history), `(school_id)`.
+
+**Constraints** — rate limits are per user via `@Throttle`, not a column.
 
 ```mermaid
 erDiagram
@@ -1501,7 +1612,146 @@ erDiagram
   }
 ```
 
-## 13. Table Inventory
+## 13. Foreign Key Map
+
+Every FK in the schema, with its `on delete` action (§1). `restrict` is the default for anything carrying
+history; `cascade` is only for rows that cannot exist alone.
+
+| Child table                 | Column             | → Parent            | On delete |
+| --------------------------- | ------------------ | ------------------- | --------- |
+| `users`                     | `school_id`        | `schools.id`        | restrict  |
+| `otps`                      | `school_id`        | `schools.id`        | cascade   |
+| `refresh_tokens`            | `user_id`          | `users.id`          | cascade   |
+| `teachers`                  | `school_id`        | `schools.id`        | restrict  |
+| `teachers`                  | `user_id`          | `users.id`          | cascade   |
+| `students`                  | `school_id`        | `schools.id`        | restrict  |
+| `students`                  | `user_id`          | `users.id`          | cascade   |
+| `students`                  | `class_id`         | `classes.id`        | set null  |
+| `parents`                   | `school_id`        | `schools.id`        | restrict  |
+| `parents`                   | `user_id`          | `users.id`          | cascade   |
+| `parent_students`           | `school_id`        | `schools.id`        | restrict  |
+| `parent_students`           | `parent_id`        | `parents.id`        | cascade   |
+| `parent_students`           | `student_id`       | `students.id`       | cascade   |
+| `classes`                   | `school_id`        | `schools.id`        | restrict  |
+| `classes`                   | `class_teacher_id` | `teachers.id`       | set null  |
+| `subjects`                  | `school_id`        | `schools.id`        | restrict  |
+| `subjects`                  | `class_id`         | `classes.id`        | restrict  |
+| `subjects`                  | `teacher_id`       | `teachers.id`       | set null  |
+| `attendance`                | `school_id`        | `schools.id`        | restrict  |
+| `attendance`                | `class_id`         | `classes.id`        | restrict  |
+| `attendance`                | `student_id`       | `students.id`       | restrict  |
+| `attendance`                | `marked_by_id`     | `users.id`          | restrict  |
+| `homework`                  | `school_id`        | `schools.id`        | restrict  |
+| `homework`                  | `class_id`         | `classes.id`        | restrict  |
+| `homework`                  | `subject_id`       | `subjects.id`       | restrict  |
+| `homework`                  | `teacher_id`       | `teachers.id`       | restrict  |
+| `homework_submissions`      | `school_id`        | `schools.id`        | restrict  |
+| `homework_submissions`      | `homework_id`      | `homework.id`       | cascade   |
+| `homework_submissions`      | `student_id`       | `students.id`       | restrict  |
+| `homework_submissions`      | `graded_by_id`     | `users.id`          | set null  |
+| `study_materials`           | `school_id`        | `schools.id`        | restrict  |
+| `study_materials`           | `class_id`         | `classes.id`        | restrict  |
+| `study_materials`           | `subject_id`       | `subjects.id`       | restrict  |
+| `study_materials`           | `uploaded_by_id`   | `users.id`          | restrict  |
+| `timetables`                | `school_id`        | `schools.id`        | restrict  |
+| `timetables`                | `class_id`         | `classes.id`        | cascade   |
+| `periods`                   | `school_id`        | `schools.id`        | restrict  |
+| `periods`                   | `timetable_id`     | `timetables.id`     | cascade   |
+| `periods`                   | `subject_id`       | `subjects.id`       | set null  |
+| `periods`                   | `teacher_id`       | `teachers.id`       | set null  |
+| `fee_structures`            | `school_id`        | `schools.id`        | restrict  |
+| `fee_structures`            | `class_id`         | `classes.id`        | restrict  |
+| `fee_heads`                 | `school_id`        | `schools.id`        | restrict  |
+| `fee_heads`                 | `fee_structure_id` | `fee_structures.id` | cascade   |
+| `fee_invoices`              | `school_id`        | `schools.id`        | restrict  |
+| `fee_invoices`              | `student_id`       | `students.id`       | restrict  |
+| `fee_invoices`              | `fee_structure_id` | `fee_structures.id` | restrict  |
+| `fee_payments`              | `school_id`        | `schools.id`        | restrict  |
+| `fee_payments`              | `invoice_id`       | `fee_invoices.id`   | restrict  |
+| `fee_payments`              | `student_id`       | `students.id`       | restrict  |
+| `fee_payments`              | `recorded_by_id`   | `users.id`          | set null  |
+| `concessions`               | `school_id`        | `schools.id`        | restrict  |
+| `concessions`               | `student_id`       | `students.id`       | restrict  |
+| `concessions`               | `fee_head_id`      | `fee_heads.id`      | set null  |
+| `concessions`               | `approved_by_id`   | `users.id`          | set null  |
+| `receipt_sequences`         | `school_id`        | `schools.id`        | restrict  |
+| `exams`                     | `school_id`        | `schools.id`        | restrict  |
+| `exams`                     | `class_id`         | `classes.id`        | restrict  |
+| `exam_subjects`             | `school_id`        | `schools.id`        | restrict  |
+| `exam_subjects`             | `exam_id`          | `exams.id`          | cascade   |
+| `exam_subjects`             | `subject_id`       | `subjects.id`       | restrict  |
+| `results`                   | `school_id`        | `schools.id`        | restrict  |
+| `results`                   | `exam_id`          | `exams.id`          | restrict  |
+| `results`                   | `student_id`       | `students.id`       | restrict  |
+| `results`                   | `subject_id`       | `subjects.id`       | restrict  |
+| `results`                   | `entered_by_id`    | `users.id`          | set null  |
+| `report_cards`              | `school_id`        | `schools.id`        | restrict  |
+| `report_cards`              | `exam_id`          | `exams.id`          | cascade   |
+| `report_cards`              | `student_id`       | `students.id`       | restrict  |
+| `conversations`             | `school_id`        | `schools.id`        | restrict  |
+| `conversations`             | `created_by_id`    | `users.id`          | set null  |
+| `conversation_participants` | `school_id`        | `schools.id`        | restrict  |
+| `conversation_participants` | `conversation_id`  | `conversations.id`  | cascade   |
+| `conversation_participants` | `user_id`          | `users.id`          | cascade   |
+| `messages`                  | `school_id`        | `schools.id`        | restrict  |
+| `messages`                  | `conversation_id`  | `conversations.id`  | cascade   |
+| `messages`                  | `sender_id`        | `users.id`          | restrict  |
+| `notices`                   | `school_id`        | `schools.id`        | restrict  |
+| `notices`                   | `published_by_id`  | `users.id`          | restrict  |
+| `notice_classes`            | `notice_id`        | `notices.id`        | cascade   |
+| `notice_classes`            | `class_id`         | `classes.id`        | cascade   |
+| `notice_classes`            | `school_id`        | `schools.id`        | restrict  |
+| `events`                    | `school_id`        | `schools.id`        | restrict  |
+| `events`                    | `created_by_id`    | `users.id`          | restrict  |
+| `ai_conversations`          | `school_id`        | `schools.id`        | restrict  |
+| `ai_conversations`          | `user_id`          | `users.id`          | cascade   |
+
+`otps` has no FK to `users` — matching is by `email` (§3). `receipt_sequences` has no FK to
+`fee_invoices`; that link is logical only.
+
+## 14. Index Plan
+
+Every index, by table. `unique (…)` marks constraint-backed indexes; the rest are plain indexes. Indexes
+on `school_id` (alone or leading a composite) are what the tenant guard relies on, so every tenant table
+has one.
+
+| Table                       | Indexes                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schools`                   | `unique (slug)`, `(subscription_status)`                                                                                                         |
+| `users`                     | `unique (email)`, `(school_id, role)`                                                                                                            |
+| `otps`                      | `(email, purpose)`, `(expires_at)`, `(school_id)`                                                                                                |
+| `refresh_tokens`            | `unique (token_hash)`, `(user_id, expires_at)` — no `school_id` column; scopes through `users`                                                   |
+| `teachers`                  | `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`                                                                     |
+| `students`                  | `unique (user_id)`, `unique (school_id, admission_no)`, `(school_id, status)`, `(class_id)`                                                      |
+| `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                        |
+| `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                          |
+| `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                         |
+| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                |
+| `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)` |
+| `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                            |
+| `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                |
+| `study_materials`           | `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`                                                                                    |
+| `timetables`                | `unique (class_id, day, academic_year)`, `(school_id)`                                                                                           |
+| `periods`                   | `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)`                                                                                     |
+| `fee_structures`            | `unique (school_id, class_id, academic_year, name)`, `(class_id)`                                                                                |
+| `fee_heads`                 | `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`                                                                           |
+| `fee_invoices`              | `unique (school_id, receipt_no) where receipt_no is not null`, `(student_id, status)`, `(school_id, status, due_date)`, `(fee_structure_id)`     |
+| `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`            |
+| `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                   |
+| `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                |
+| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                              |
+| `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                    |
+| `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                               |
+| `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                           |
+| `conversations`             | `(school_id, last_message_at desc)`                                                                                                              |
+| `conversation_participants` | `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)`                                                                                  |
+| `messages`                  | `(conversation_id, created_at desc)`, `(school_id)`, `(sender_id)`                                                                               |
+| `notices`                   | `(school_id, published_at desc)`, `(published_by_id)`                                                                                            |
+| `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                 |
+| `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                     |
+| `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                             |
+
+## 15. Table Inventory
 
 All 33 tables, with the section that documents each one.
 
@@ -1541,16 +1791,16 @@ All 33 tables, with the section that documents each one.
 | 32  | `events`                    | §11 Notices     | §4.11 | 5     |
 | 33  | `ai_conversations`          | §12 AI          | §4.12 | 5     |
 
-## 14. Cross-Cutting Concerns
+## 16. Cross-Cutting Concerns
 
 **Tenancy.** Every tenant table carries a non-null `school_id` and every query is scoped by it via the
-tenant guard (`Rules.md`, `Memory.md`). Exceptions: `schools` (it _is_ the tenant) and
-`notice_classes` (inherits scope from its notice). The backend connects with the Supabase
-**service-role key**, which **bypasses RLS** — so tenant isolation is enforced in application code,
-and any RLS policies added later are defence-in-depth, not the primary control.
+tenant guard (`Rules.md`, `Memory.md`). Exceptions: `schools` (it _is_ the tenant), `refresh_tokens`
+(scopes through `users`), and `notice_classes` (inherits scope from its notice). The backend connects
+with the Supabase **service-role key**, which **bypasses RLS** — so tenant isolation is enforced in
+application code, and any RLS policies added later are defence-in-depth, not the primary control.
 
-**`updated_at`.** Maintained by a shared `set_updated_at()` trigger on every table rather than by
-application writes.
+**`updated_at`.** Maintained by a shared `set_updated_at()` trigger on every table that has the column,
+rather than by application writes.
 
 **Transaction boundaries** (`Rules.md`, `PRD.md`): school registration (school + admin + OTP), bulk
 invoice generation, payment confirmation (payment + invoice + receipt number), exam publish
@@ -1561,7 +1811,7 @@ projections, not tables: `mv_attendance_monthly` (attendance % per student/class
 `mv_fee_collection` (collected/pending/concessions per period), plus on-demand RPCs for the defaulter
 list and `GET /dashboard/admin`.
 
-## 15. Feature Coverage
+## 17. Feature Coverage
 
 Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tables documented above.
 
@@ -1580,46 +1830,48 @@ Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tab
 | §4.11 Notices & events    | §11         | `notices`, `notice_classes`, `events`                                                             |
 | §4.12 AI assistant        | §12         | `ai_conversations`                                                                                |
 | §4.13 Study materials     | §6          | `study_materials`                                                                                 |
-| §4.14 Reports & analytics | —           | _views only_ (§14)                                                                                |
+| §4.14 Reports & analytics | —           | _views only_ (§16)                                                                                |
 | §4.15 Email notifications | —           | _no table — BullMQ queue_                                                                         |
 
 **Module coverage:** `SchoolsModule` §3 · `AuthModule` §3 · `UsersModule` §3 · `ClassesModule` §4 ·
 `AttendanceModule` §5 · `HomeworkModule` §6 · `TimetablesModule` §7 · `FeesModule` §8 · `ExamsModule`
 §9 · `ChatModule` §10 · `NoticesModule` §11 · `AiModule` §12 · `MaterialsModule` §6 · `ReportsModule`
-§14 · `MailModule` — no tables.
+§16 · `MailModule` — no tables.
 
-## 16. Gaps & Open Questions
+## 18. Gaps & Open Questions
 
-Items where the PRD implies something it does not model, or where a decision should be confirmed
-before writing migrations:
+Items where the PRD implies something it does not model, or where a decision should be confirmed before
+writing migrations:
 
-1. **Refresh tokens** — §4.2 requires "hashed refresh tokens stored server-side" but §3 lists no
-   model. Added `refresh_tokens` (§3); confirm the rotation/revocation policy.
-2. **Notifications** — the `notification:new` socket event and fee-reminder/result/notice emails
-   imply persistence so an offline user still sees them. No table exists. Add a `notifications` table
+1. **Refresh tokens** — §4.2 requires "hashed refresh tokens stored server-side" but §3 lists no model.
+   Added `refresh_tokens` (§3); confirm the rotation/revocation policy.
+2. **Notifications** — the `notification:new` socket event and fee-reminder/result/notice emails imply
+   persistence so an offline user still sees them. No table exists. Add a `notifications` table
    (`user_id`, `type`, `payload`, `read_at`) or accept fire-and-forget delivery.
 3. **Receipt numbers** — §4.6 wants a transactional receipt sequence. `receipt_sequences` (§8) is the
-   proposed mechanism; confirm per-school vs global numbering and the reset boundary (fiscal vs
-   academic year).
+   proposed mechanism; confirm per-school vs global numbering and the reset boundary (fiscal vs academic
+   year).
 4. **Timetable has no phase** — `PRD.md` §4.8 and `Architecture.md` both list `timetables/`, but
    `Phases.md` never schedules it, so `timetables` / `periods` cannot be placed in the delivery order.
    This needs a phase.
 5. **Class roster history** — `students.class_id` (current class only) was chosen over a
-   `class_enrollments` join table. If promotion/academic-year history must be reportable, a join table
-   is required instead.
+   `class_enrollments` join table. If promotion/academic-year history must be reportable, a join table is
+   required instead.
 6. **`students.class_id` vs `attendance.class_id`** — deliberate denormalisation for historical
    accuracy. Confirm attendance is always written with the student's class at that date.
-7. **Chat allowed pairs** — admin↔teacher, teacher↔student, teacher↔parent is enforced in the
-   service. A DB `check` cannot express it; consider a trigger if the rule must be airtight.
+7. **Chat allowed pairs** — admin↔teacher, teacher↔student, teacher↔parent is enforced in the service. A
+   DB `check` cannot express it; consider a trigger if the rule must be airtight. There is also no unique
+   key preventing two conversations between the same pair.
 8. **AI feature count** — `Architecture.md` and §1.1 say "8 AI assistant features"; §4.12 lists 7
-   endpoints and acceptance criterion 8 says "seven". The `ai_feature` enum has the 7 documented
-   values.
-9. **Global vs per-school email uniqueness** — `users.email` is globally unique. If staff can belong
-   to multiple schools, switch to `unique (school_id, email)`.
+   endpoints and acceptance criterion 8 says "seven". The `ai_feature` enum has the 7 documented values.
+9. **Global vs per-school email uniqueness** — `users.email` is globally unique. If staff can belong to
+   multiple schools, switch to `unique (school_id, email)`.
 10. **Audit trail** — `marked_by_id`, `entered_by_id`, `approved_by_id`, `recorded_by_id` cover the
-    sensitive writes, but there is no general audit log for edits/deletes of marks, invoices, or
-    users. Worth adding given exam marks and payments are involved.
-11. **Soft-delete coverage** — `deleted_at` is applied to profiles and content, not to financial or
-    attendance rows, which are kept for reporting. Confirm this is intended.
-12. **Super-admin / multi-school staff** — no platform-level role exists above `schools`; every user is
+    sensitive writes, but there is no general audit log for edits/deletes of marks, invoices, or users.
+    Worth adding given exam marks and payments are involved.
+11. **Soft-delete coverage** — `deleted_at` is applied to profiles and content; financial and attendance
+    rows are protected by `on delete restrict` instead. Confirm this is intended.
+12. **Events have no class targeting** — `notices` can be narrowed to classes via `notice_classes`, but
+    `events` uses only the `audience` array. Add `event_classes` if events need class scoping.
+13. **Super-admin / multi-school staff** — no platform-level role exists above `schools`; every user is
     bound to one school.
