@@ -39,7 +39,7 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 - **Inputs:** 1px border, 6px radius, 10×14 padding, 14px text; focus = indigo border + 3px indigo ring; error = red border.
 - **Badges/chips:** pill shape, 12px text; semantic colors for status (success/warning/error).
 - **Tables:** stacked rows, 1px dividers, 12×16 cell padding, subtle row hover.
-- **Nav:** sidebar 240px, collapsing to a 76px icon rail on desktop and sliding in as a drawer on mobile; header 64px (72px on desktop) with backdrop-blur
+- **Nav:** sidebar 240px, collapsing to a 76px icon rail on desktop and sliding in as a drawer on mobile; header 64px (72px on desktop) with backdrop-blur; the sidebar is viewport-pinned, so only the main column scrolls
 - **Currency:** amounts are stored as integer minor units and displayed in **USD** (`$1,500.00`) — see `src/lib/format.ts`
 - **Focus:** 3px indigo ring `0 0 0 3px rgba(99,102,241,0.12)`.
 

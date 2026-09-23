@@ -65,6 +65,25 @@
     font-family: inherit;
   }
 
+  /*
+   * Tailwind 4's preflight leaves buttons on the browser default cursor, so nothing clickable
+   * showed a pointer. Restore it globally and keep disabled controls honest. Declared after the
+   * tailwind import so it wins inside the base layer.
+   */
+  button,
+  [role='button'],
+  summary,
+  label[for],
+  a {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role='button'][aria-disabled='true'],
+  button[aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+
   :focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgb(99 102 241 / 0.12);

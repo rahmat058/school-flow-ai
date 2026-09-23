@@ -18,7 +18,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       <div className="grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-6">
-            <img src={BRAND.wordmark} alt={BRAND.name} className="h-10 w-auto max-w-[220px] object-contain" />
+            <img src={BRAND.wordmark} alt={BRAND.name} className="h-10 w-auto max-w-80 object-cover" />
             <p className="text-ink-subtle mt-3 text-[12px]">
               {activeSchool.name} · {activeSchool.settings.academicYear}
             </p>

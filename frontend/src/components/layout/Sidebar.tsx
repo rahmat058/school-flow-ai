@@ -39,9 +39,10 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
 
       <aside
         className={cn(
-          // Mobile: an overlay drawer that slides in. Desktop: a static rail whose width animates.
+          // Mobile: an overlay drawer that slides in. Desktop: a viewport-height rail that stays
+          // pinned while the main column scrolls, so the account block never scrolls out of view.
           'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r',
-          'transition-[width,transform] duration-200 ease-out lg:static lg:translate-x-0',
+          'transition-[width,transform] duration-200 ease-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
           collapsed ? 'lg:w-[76px]' : 'lg:w-60',
           open ? 'translate-x-0' : '-translate-x-full',
         )}>
@@ -64,7 +65,7 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto pb-4" aria-label="Primary">
+        <nav className="flex-1 space-y-1 overflow-y-auto overscroll-contain pb-4" aria-label="Primary">
           {items.map((item) => {
             const Icon = item.icon
 
