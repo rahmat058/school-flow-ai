@@ -32,3 +32,7 @@
 - Licenses his projects under MIT. Confidence: 0.7
 - README conventions: a shields.io badge row for the tech stack, a prerequisites table, per-package quick-start and scripts tables, a monorepo structure tree, a docs-as-source-of-truth table, and a "Made by" / contact section. Confidence: 0.6
 - Wants backend and frontend organized to best-practice, feature-based folder structures — NestJS backend as per-feature modules (each with module/controller/service/dto) plus shared `database/` (Supabase client module, global — replaced the old `prisma/` module) and `common/` (guards/decorators/filters/interceptors); React frontend with `pages/<role>/`, `components/` split into layout/ui/dashboard, and `features/<name>/` folders each holding components + hooks + api.ts, alongside services/, hooks/, context/, types/, lib/, data/, styles/. Confidence: 0.6
+- Frontend state management: **Zustand** for global state (auth/session, school context), preferred over Redux. Confidence: 0.9
+- Frontend animations: **framer-motion** (`motion` API) for UI animations and transitions. Confidence: 0.85
+- Frontend date utilities: **date-fns** for date formatting and academic-calendar helpers. Confidence: 0.9
+- Frontend PDF generation: **@react-pdf/renderer** for exporting report cards and invoices. Confidence: 0.85
