@@ -6,6 +6,7 @@
 - Monorepo layout with `frontend/` and `backend/` folders; root package.json holds shared tooling and delegates to packages via `npm --prefix <pkg> run <script>`. Confidence: 0.7
 - Conventional Commits with gitmoji-style type emoji prefixes in the header (✨ feat, 🐛 fix, 📚 docs, etc.), enforced by commitlint with a custom parser preset plus commitizen interactive prompts. Confidence: 0.75
 - Husky hook setup: `commit-msg` (auto-prepend type emoji, then commitlint), `pre-commit` (lint-staged), `pre-push` (lint + format:check). Confidence: 0.75
+- Treats husky `pre-push` validation (lint + format/typecheck) as a hard gate — will not `--no-verify` past a failure; surfaces the error and asks to fix it at the root (e.g. aligning dependency versions such as TypeScript with the `typescript-eslint`-supported range, and doing a clean `node_modules`/`package-lock.json` reinstall when the tree is in a partial state) rather than disabling or weakening the hook. Confidence: 0.75
 - Prettier: no semicolons, single quotes, trailing commas "all", printWidth 120, 2-space indent, LF line endings. Confidence: 0.7
 - ESLint flat config (`eslint.config.*`) per package; keep framework-appropriate configs (Vite vs Next) rather than copying blindly. Confidence: 0.6
 - User's shell has `NODE_ENV=production` set globally — npm silently skips devDependencies, so clear NODE_ENV before `npm install`. Confidence: 0.9

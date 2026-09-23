@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(node -e \"const es=require('./node_modules/eslint/package.json'); console.log('eslint', es.version)\")",
+      "Shell(node -e \"const g=require('./node_modules/globals/package.json'); console.log('globals', g.version)\")"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
