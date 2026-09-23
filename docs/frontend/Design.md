@@ -43,6 +43,7 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 - **Auth screens:** two columns from `lg` — the form column (max 448px) plus a 320px auxiliary panel; the brand sits in its own grid row above both, so the card and the panel start on the same line
 - **Nav:** sidebar 240px, collapsing to a 76px icon rail on desktop and sliding in as a drawer on mobile; header 64px (72px on desktop) with backdrop-blur; the sidebar is viewport-pinned, so only the main column scrolls
 - **Currency:** amounts are stored as integer minor units and displayed in **USD** (`$1,500.00`) — see `src/lib/format.ts`
+- **Scrollbars:** thin and neutral (`--color-scrollbar-thumb`, darkening on hover), defined once globally in `src/styles/index.css` — a 4px pill via the WebKit pseudo-elements, `scrollbar-width: thin` for Firefox. Don't set `scrollbar-width`/`scrollbar-color` anywhere else: Chrome ignores `::-webkit-scrollbar` entirely as soon as either is set.
 - **Focus:** 3px indigo ring `0 0 0 3px rgba(99,102,241,0.12)`.
 
 ## Spacing & radius
