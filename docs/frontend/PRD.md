@@ -29,7 +29,7 @@ A multi-role School Management System web app built with React (Vite + TypeScrip
 - [ ] Student dashboard — attendance, homework, study material, fee payment, exam schedule, report card
 - [ ] Parent dashboard — child attendance, fee status, results, notices, progress
 - [ ] Attendance UI — daily register, bulk mark, monthly view, analytics charts
-- [ ] Fee UI — structure, invoices, Razorpay checkout, payment history, pending list
+- [ ] Fee UI — structure, invoices, payment checkout (Stripe / SSLCommerz), payment history, pending list
 - [ ] Homework UI — create, submit, track, grade
 - [ ] Exams UI — schedule, results, report cards
 - [ ] Notices & events feed

@@ -31,7 +31,8 @@ commit SHA.
 - **Rate limiting** — `@nestjs/throttler` on auth, OTP, and AI endpoints
 - **Transport hardening** — `helmet` security headers and a locked-down CORS
   policy on the API
-- **Payments** — Razorpay signatures are verified server-side; money is stored
+- **Payments** — Stripe signature verification and SSLCommerz IPN verification are
+  performed server-side; money is stored
   as integer paise, never as floats
 - **Uploads** — files are validated and stored via Cloudinary, not on the app
   filesystem
@@ -58,7 +59,7 @@ We will acknowledge reports as soon as practical and work on a fix for `main`.
 
 - Attacks that require a compromised or tampered deployment of this codebase
 - Social engineering, phishing, or physical access to an unlocked machine
-- Vulnerabilities in third-party services (Supabase, Razorpay, Cloudinary) —
+- Vulnerabilities in third-party services (Supabase, Stripe, SSLCommerz, Cloudinary) —
   report those to the respective vendor
 - Findings from automated scanners with no demonstrated impact
 - Denial of service through raw traffic volume against an unconfigured

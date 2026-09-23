@@ -16,7 +16,7 @@ agree to follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
   redesigns. Touch only the files the task needs; never refactor unrelated code.
 
 Never paste real student, parent, or payment data into issues or PRs, and never
-commit secrets (`.env`, Supabase keys, JWT secrets, Razorpay keys). For security
+commit secrets (`.env`, Supabase keys, JWT secrets, Stripe / SSLCommerz keys). For security
 reports, see **[SECURITY.md](./SECURITY.md)** (do not file them as public
 issues).
 

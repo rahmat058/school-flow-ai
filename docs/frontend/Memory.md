@@ -13,7 +13,7 @@
 
 ## Decisions
 
-- Backend is NestJS + PostgreSQL (Supabase) + Prisma — all API calls target `/api/v1`
+- Backend is NestJS + PostgreSQL via Supabase — all API calls target `/api/v1`
 - Recharts (not Chart.js) for charts — already installed
 - Mock data in `src/data/` is temporary; replace with API calls per phase
 - Design tokens follow `docs/frontend/Design.md` — indigo primary, 4px grid

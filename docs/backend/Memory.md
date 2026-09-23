@@ -2,18 +2,19 @@
 
 ## Completed
 
-- 2026-09-21 — Backend PRD written (NestJS + PostgreSQL/Supabase + Prisma) in `docs/backend/PRD.md`
+- 2026-09-21 — Backend PRD written (NestJS + Supabase/PostgreSQL) in `docs/backend/PRD.md`
 - 2026-09-21 — Docs scaffolded per vibe-coding structure (Architecture, Rules, Phases, Design, Memory)
 
 ## Currently working on
 
 - File: —
-- Task: Phase 1 — NestJS scaffold, Prisma schema, school registration + OTP, JWT auth
+- Task: Phase 1 — NestJS scaffold, Supabase client module + base schema migration, school registration + OTP, JWT auth
 - Blocker: none
 
 ## Decisions
 
-- Stack locked: NestJS + Prisma + Supabase PostgreSQL (replacing original MERN plan)
+- Stack locked: NestJS + Supabase (PostgreSQL) (replacing original MERN/Prisma plan)
+- Payments: Stripe (international) + SSLCommerz (Bangladesh) — Razorpay removed
 - Money stored as integer paise; dates ISO-8601; UUIDs for all IDs
 - Multi-tenant via `schoolId` on every table + tenant guard — do not add unscoped queries
 - API contract defined in `docs/backend/Design.md` — follow envelopes exactly

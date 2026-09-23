@@ -85,7 +85,7 @@ same internal layout:
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
 - [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
-- [Razorpay](https://razorpay.com/) — payments; [Nodemailer](https://nodemailer.com/) — email; [Cloudinary](https://cloudinary.com/) — file storage
+- [Stripe](https://stripe.com/) (international) + [SSLCommerz](https://sslcommerz.com/) (Bangladesh) — payments; [Nodemailer](https://nodemailer.com/) — email; [Cloudinary](https://cloudinary.com/) — file storage
 - `@nestjs/throttler` — rate limiting; `helmet` — security headers
 
 ---

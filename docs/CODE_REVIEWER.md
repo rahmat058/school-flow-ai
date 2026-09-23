@@ -15,13 +15,13 @@ Apply this checklist to every change before it is considered done. Review the **
 - [ ] Every query is scoped by `schoolId` — no cross-school data leaks
 - [ ] All request bodies validated by DTOs (`class-validator`, `whitelist: true`)
 - [ ] No sensitive data in responses or logs (`passwordHash`, OTPs, tokens)
-- [ ] Payment confirmation verifies Razorpay signatures; file uploads validate type + size
-- [ ] No SQL injection risk (Prisma parameterized only); no XSS (no `dangerouslySetInnerHTML`)
+- [ ] Payment confirmation verifies Stripe signatures and SSLCommerz IPN; file uploads validate type + size
+- [ ] No SQL injection risk (parameterized queries via Supabase only); no XSS (no `dangerouslySetInnerHTML`)
 
-## 3. Backend conventions (NestJS + Prisma)
+## 3. Backend conventions (NestJS + Supabase)
 
 - [ ] Controllers are thin; business logic lives in services
-- [ ] Multi-write operations run in `prisma.$transaction`
+- [ ] Multi-write operations run in a database transaction
 - [ ] Schema changes come with a migration — never `db push` to shared DBs
 - [ ] Responses use the envelope from `docs/backend/Design.md`; errors use domain codes (`FEE_NOT_FOUND`)
 - [ ] Money is integer paise; dates ISO-8601; IDs UUID; enums `SCREAMING_SNAKE`
@@ -36,7 +36,7 @@ Apply this checklist to every change before it is considered done. Review the **
 
 ## 5. Performance
 
-- [ ] List endpoints paginated (`take=20` default); no N+1 Prisma queries (use `include`/`select` deliberately)
+- [ ] List endpoints paginated (`take=20` default); no N+1 queries (select fields deliberately)
 - [ ] Indexes exist for new query patterns (attendance by class+date, messages by conversation)
 - [ ] Frontend: no unnecessary re-renders; heavy lists virtualized or paginated; charts memoized
 - [ ] CSV exports stream; heavy reports use aggregations, not in-memory loops

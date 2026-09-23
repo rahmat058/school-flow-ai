@@ -30,7 +30,7 @@
 ## Phase 4: Fees & Exams
 
 - [ ] Fee structures, invoices, pending list, history
-- [ ] Razorpay checkout integration
+- [ ] Stripe / SSLCommerz checkout integration
 - [ ] Exam schedule, marks entry, publish, report card view
 - [ ] Reports screens with CSV export
 

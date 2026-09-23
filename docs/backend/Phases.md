@@ -28,7 +28,7 @@
 ## Phase 4: Fees & Exams
 
 - [ ] Fee structures, bulk invoice generation, pending/history, concessions
-- [ ] Razorpay order + verify + webhook + manual payment, receipt sequence (transactional)
+- [ ] Stripe + SSLCommerz order/create, verify, and webhooks + manual payment, receipt sequence (transactional)
 - [ ] Exams CRUD, marks entry, publish, report cards with grade computation
 - [ ] Reports module: attendance/financial/student reports + CSV export + admin dashboard endpoint
 

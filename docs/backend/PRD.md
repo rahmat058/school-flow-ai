@@ -20,7 +20,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | Auth         | JWT (Passport.js) + bcrypt                                              |
 | File Storage | Cloudinary (or Supabase Storage)                                        |
 | Email        | Nodemailer (SMTP)                                                       |
-| Payments     | Razorpay                                                                |
+| Payments     | Stripe (international) + SSLCommerz (Bangladesh)                        |
 | AI           | LLM API (e.g., OpenAI/Gemini)                                           |
 | Validation   | class-validator + class-transformer (DTOs)                              |
 | Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                      |
@@ -81,7 +81,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **Attendance** — date, classId, studentId, status (`PRESENT | ABSENT | LEAVE | LATE`); unique constraint on (classId, studentId, date)
 - **FeeStructure** — classId, heads (JSONB array or FeeHead child table: name, amount, frequency)
 - **FeeInvoice** — studentId, amount, dueDate, status (`PENDING | PAID | PARTIAL | OVERDUE`), receiptNo
-- **FeePayment** — invoiceId, studentId, amount, method, razorpayOrderId, razorpayPaymentId, paidAt
+- **FeePayment** — invoiceId, studentId, amount, method, provider (`STRIPE | SSLCOMMERZ`), providerOrderId, status (`PENDING | PAID | FAILED`), paidAt
 - **Concession** — studentId, type, percentage/amount, status, approvedById
 - **Homework** — classId, subjectId, teacherId, title, description, dueDate, attachments (string[])
 - **HomeworkSubmission** — homeworkId, studentId, files (string[]), submittedAt, isLate, grade, remarks
@@ -181,8 +181,8 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 
 - `CRUD /api/v1/fees/structures`
 - `POST /api/v1/fees/invoices/generate` — bulk invoice generation per class (transactional batch insert)
-- `POST /api/v1/fees/payments/razorpay-order` — create order
-- `POST /api/v1/fees/payments/verify` — signature verification (Razorpay webhook-safe)
+- `POST /api/v1/fees/payments/create-order` — create a payment order (provider chosen by country/method: Stripe or SSLCommerz)
+- `POST /api/v1/fees/payments/verify` — signature/IPN verification (provider webhook-safe)
 - `POST /api/v1/fees/payments/manual` — admin records cash/cheque payment
 - `GET /api/v1/fees/pending?classId=`
 - `GET /api/v1/fees/history/:studentId`
@@ -192,7 +192,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 **Behavior**
 
 - Atomic payment confirmation in a database transaction (payment + invoice status + receipt number sequence)
-- `POST /api/v1/webhooks/razorpay` for payment events
+- `POST /api/v1/webhooks/stripe` and `POST /api/v1/webhooks/sslcommerz` for payment events
 - AI fee-reminder text generator (see §4.12)
 
 ### 4.7 Homework & Assignment Module (`HomeworkModule`)
@@ -352,7 +352,7 @@ Triggered emails:
 - DTO validation (`class-validator`, global `ValidationPipe` with `whitelist: true`)
 - Parameterized queries via the Supabase client (SQL-injection safe)
 - Cloudinary signed uploads; file type/size validation (PDFs, images ≤ 10MB)
-- Razorpay signature verification on all payment confirmations and webhooks
+- Stripe signature verification and SSLCommerz IPN verification on all payment confirmations and webhooks
 - No sensitive data (passwords, OTPs) in logs or responses (`ClassSerializerInterceptor` to strip fields)
 
 ---
@@ -386,9 +386,11 @@ SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+SSLCOMMERZ_STORE_ID=
+SSLCOMMERZ_STORE_PASSWORD=
+SSLCOMMERZ_IS_SANDBOX=
 AI_API_KEY=
 REDIS_URL=
 CLIENT_URL=
@@ -441,7 +443,7 @@ backend/
 1. School can register with OTP verification and configure settings.
 2. All four roles can log in and only access permitted resources (RBAC enforced via guards).
 3. Teacher marks daily/bulk attendance; monthly reports and analytics return correct aggregates.
-4. Admin defines fee structures; students/parents pay online via Razorpay with verified receipts; pending-fee report is accurate.
+4. Admin defines fee structures; students/parents pay online via Stripe or SSLCommerz with verified receipts; pending-fee report is accurate.
 5. Homework lifecycle (create → submit → grade) works with file uploads.
 6. Exams support marks entry, result publishing, and report card generation with AI comments.
 7. Real-time chat delivers messages between permitted role pairs with persistence.
