@@ -1880,8 +1880,11 @@ writing migrations:
     rows are protected by `on delete restrict` instead. Confirm this is intended.
 12. **Events have no class targeting** — `notices` can be narrowed to classes via `notice_classes`, but
     `events` uses only the `audience` array. Add `event_classes` if events need class scoping.
-13. **Super-admin / multi-school staff** — no platform-level role exists above `schools`; every user is
-    bound to one school.
+13. **Super-admin / multi-school staff** — no platform-level role exists above `schools`; every user is bound to one school.
+14. **Student documents have no table** — `PRD.md` §4.3 defines `GET /students/:id/documents` and the profile's
+    Documents tab renders its empty state from it, but no `student_documents` table exists yet. Either add one
+    (student, title, kind, storage key, size, uploaded by/at — mirroring `study_materials`) before the upload flow
+    is built, or drop the endpoint.
 
 ## 19. Full Schema ERD
 

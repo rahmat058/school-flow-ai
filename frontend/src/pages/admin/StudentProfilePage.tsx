@@ -65,7 +65,7 @@ export function StudentProfilePage() {
 
       {profile.data ? <ProfileHeader profile={profile.data} /> : <Skeleton className="h-32 rounded-xl" />}
 
-      <div className="border-line flex gap-1 overflow-x-auto border-b">
+      <div className="border-line flex [scrollbar-width:none] gap-1 overflow-x-auto border-b [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -84,22 +84,40 @@ export function StudentProfilePage() {
       {tab === 'overview' ? profile.data ? <StudentOverviewTab profile={profile.data} /> : <TabSkeleton /> : null}
 
       {tab === 'attendance' ? (
-        attendance.data ? (
-          <StudentAttendanceTab attendance={attendance.data} />
+        attendance.data && profile.data ? (
+          <StudentAttendanceTab profile={profile.data} attendance={attendance.data} />
         ) : (
           <TabSkeleton />
         )
       ) : null}
 
-      {tab === 'marks' ? results.data ? <StudentMarksTab rows={results.data.rows} /> : <TabSkeleton /> : null}
+      {tab === 'marks' ? (
+        results.data && profile.data ? (
+          <StudentMarksTab profile={profile.data} rows={results.data.rows} />
+        ) : (
+          <TabSkeleton />
+        )
+      ) : null}
 
-      {tab === 'results' ? results.data ? <StudentResultsTab results={results.data} /> : <TabSkeleton /> : null}
+      {tab === 'results' ? (
+        results.data && profile.data ? (
+          <StudentResultsTab profile={profile.data} results={results.data} />
+        ) : (
+          <TabSkeleton />
+        )
+      ) : null}
 
-      {tab === 'fees' ? fees.data ? <StudentFeesTab fees={fees.data} /> : <TabSkeleton /> : null}
+      {tab === 'fees' ? (
+        fees.data && profile.data ? (
+          <StudentFeesTab profile={profile.data} fees={fees.data} />
+        ) : (
+          <TabSkeleton />
+        )
+      ) : null}
 
       {tab === 'documents' ? (
-        documents.data ? (
-          <StudentDocumentsTab documents={documents.data} />
+        documents.data && profile.data ? (
+          <StudentDocumentsTab profile={profile.data} documents={documents.data} />
         ) : (
           <TabSkeleton />
         )

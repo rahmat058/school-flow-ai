@@ -1,19 +1,37 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import { useCurrentSchool } from '@/features/school/api'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
 import { GradeBadge } from '@/features/students/components/GradeBadge'
-import { StudentPanel } from '@/features/students/components/StudentPanel'
-import type { StudentMarkRow } from '@/types/people'
+import type { StudentMarkRow, StudentProfile } from '@/types/people'
 
 interface StudentMarksTabProps {
+  profile: StudentProfile
   rows: StudentMarkRow[]
 }
 
-/** Marks: one row per paper, newest first. */
-export function StudentMarksTab({ rows }: StudentMarksTabProps) {
+/** Marks: one row per paper, newest first, with a downloadable marks sheet. */
+export function StudentMarksTab({ profile, rows }: StudentMarksTabProps) {
+  const school = useCurrentSchool()
+
   return (
-    <StudentPanel title="Marks">
-      {rows.length === 0 ? (
-        <p className="text-ink-subtle text-[13px]">No marks recorded for this student yet.</p>
-      ) : (
+    <div className="space-y-5">
+      <StudentTabHeader
+        title="Marks"
+        description="Every subject paper this student has a recorded mark for."
+        action={
+          <DownloadSheetButton
+            label="Download marks PDF"
+            disabled={rows.length === 0}
+            disabledReason="No marks to export yet"
+            run={async () => {
+              const { downloadMarksPdf } = await import('@/features/students/lib/studentPdf')
+              await downloadMarksPdf({ schoolName: school.data?.name ?? 'School', profile, rows })
+            }}
+          />
+        }
+      />
+
+      <section className="border-line bg-surface overflow-hidden rounded-xl border shadow-[var(--shadow-card)]">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -26,21 +44,27 @@ export function StudentMarksTab({ rows }: StudentMarksTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="text-ink text-[14px] font-medium">{row.subjectName}</TableCell>
-                <TableCell className="text-ink-muted">{row.examType}</TableCell>
-                <TableCell className="text-ink tabular-nums">{row.marks}</TableCell>
-                <TableCell className="text-ink-muted tabular-nums">{row.total}</TableCell>
-                <TableCell className="text-ink-muted tabular-nums">{row.percentage}%</TableCell>
-                <TableCell align="right">
-                  <GradeBadge grade={row.grade} />
-                </TableCell>
+            {rows.length === 0 ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="text-ink-subtle text-[13px]">No marks recorded for this student yet.</TableCell>
               </TableRow>
-            ))}
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="text-ink text-[14px] font-medium">{row.subjectName}</TableCell>
+                  <TableCell className="text-ink-muted">{row.examType}</TableCell>
+                  <TableCell className="text-ink tabular-nums">{row.marks}</TableCell>
+                  <TableCell className="text-ink-muted tabular-nums">{row.total}</TableCell>
+                  <TableCell className="text-ink-muted tabular-nums">{row.percentage}%</TableCell>
+                  <TableCell align="right">
+                    <GradeBadge grade={row.grade} />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
-      )}
-    </StudentPanel>
+      </section>
+    </div>
   )
 }

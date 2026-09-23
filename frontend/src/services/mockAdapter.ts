@@ -833,13 +833,13 @@ const routes: Route[] = [
   },
   {
     method: 'GET',
-    path: '/attendance/student/:id',
+    path: '/attendance/student/:studentId',
     handler: ({ params }) => {
-      if (!students.some((item) => item.id === params.id)) {
+      if (!students.some((item) => item.id === params.studentId)) {
         return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
       }
 
-      const summary = studentAttendance(String(params.id))
+      const summary = studentAttendance(String(params.studentId))
 
       return ok<StudentAttendance>(
         summary ?? { totals: { total: 0, present: 0, absent: 0, late: 0, rate: 0 }, months: [] },
@@ -848,20 +848,20 @@ const routes: Route[] = [
   },
   {
     method: 'GET',
-    path: '/results/student/:id',
+    path: '/results/student/:studentId',
     handler: ({ params }) => {
-      if (!students.some((item) => item.id === params.id)) {
+      if (!students.some((item) => item.id === params.studentId)) {
         return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
       }
 
       // A student with no papers yet gets an empty result set, not a 404.
-      return ok<StudentResults>(studentResults(String(params.id)))
+      return ok<StudentResults>(studentResults(String(params.studentId)))
     },
   },
   {
     method: 'GET',
-    path: '/fees/history/:id',
-    handler: ({ params }) => ok<StudentFees>(studentFees(String(params.id))),
+    path: '/fees/history/:studentId',
+    handler: ({ params }) => ok<StudentFees>(studentFees(String(params.studentId))),
   },
   {
     method: 'GET',

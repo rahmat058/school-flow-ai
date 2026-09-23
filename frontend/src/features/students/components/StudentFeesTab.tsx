@@ -1,19 +1,38 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { StatusBadge } from '@/components/ui/Badge'
 import { formatDate, formatPaise } from '@/lib/format'
-import { StudentPanel } from '@/features/students/components/StudentPanel'
-import type { StudentFees } from '@/types/people'
+import { useCurrentSchool } from '@/features/school/api'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
+import type { StudentFees, StudentProfile } from '@/types/people'
 
 interface StudentFeesTabProps {
+  profile: StudentProfile
   fees: StudentFees
 }
 
-/** Fee history: what has been paid, what is still owed, and every invoice behind those numbers. */
-export function StudentFeesTab({ fees }: StudentFeesTabProps) {
+/** Fee history: what has been paid, what is owed, and a downloadable statement. */
+export function StudentFeesTab({ profile, fees }: StudentFeesTabProps) {
+  const school = useCurrentSchool()
   const { summary, rows } = fees
 
   return (
     <div className="space-y-5">
+      <StudentTabHeader
+        title="Fee history"
+        description="Every invoice raised against this student, paid or otherwise."
+        action={
+          <DownloadSheetButton
+            label="Download fee statement PDF"
+            disabled={rows.length === 0}
+            disabledReason="No invoices to export yet"
+            run={async () => {
+              const { downloadFeesPdf } = await import('@/features/students/lib/studentPdf')
+              await downloadFeesPdf({ schoolName: school.data?.name ?? 'School', profile, fees })
+            }}
+          />
+        }
+      />
+
       <section className="grid gap-5 sm:grid-cols-3">
         <Tile label="Total paid" value={formatPaise(summary.paidPaise)} tone="text-success" />
         <Tile
@@ -24,23 +43,25 @@ export function StudentFeesTab({ fees }: StudentFeesTabProps) {
         <Tile label="Total billed" value={formatPaise(summary.totalPaise)} />
       </section>
 
-      <StudentPanel title="Fee history">
-        {rows.length === 0 ? (
-          <p className="text-ink-subtle text-[13px]">No invoices raised for this student yet.</p>
-        ) : (
-          <Table>
-            <TableHeader>
+      <section className="border-line bg-surface overflow-hidden rounded-xl border shadow-[var(--shadow-card)]">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Title</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Paid</TableHead>
+              <TableHead>Date paid</TableHead>
+              <TableHead>Mode</TableHead>
+              <TableHead align="right">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableHead>Title</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Paid</TableHead>
-                <TableHead>Date paid</TableHead>
-                <TableHead>Mode</TableHead>
-                <TableHead align="right">Status</TableHead>
+                <TableCell className="text-ink-subtle text-[13px]">No invoices raised for this student yet.</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
+            ) : (
+              rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="text-ink text-[14px] font-medium">{row.title}</TableCell>
                   <TableCell className="text-ink-muted tabular-nums">{formatPaise(row.amountPaise)}</TableCell>
@@ -58,11 +79,11 @@ export function StudentFeesTab({ fees }: StudentFeesTabProps) {
                     <StatusBadge status={row.status} />
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </StudentPanel>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </section>
     </div>
   )
 }

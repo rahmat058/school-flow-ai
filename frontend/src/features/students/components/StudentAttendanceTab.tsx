@@ -1,16 +1,36 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
-import type { StudentAttendance } from '@/types/people'
+import { useCurrentSchool } from '@/features/school/api'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
+import type { StudentAttendance, StudentProfile } from '@/types/people'
 
 interface StudentAttendanceTabProps {
+  profile: StudentProfile
   attendance: StudentAttendance
 }
 
-/** Attendance: the totals, then the same figures broken down by month. */
-export function StudentAttendanceTab({ attendance }: StudentAttendanceTabProps) {
+/** Attendance: the totals, the same figures by month, and a downloadable attendance sheet. */
+export function StudentAttendanceTab({ profile, attendance }: StudentAttendanceTabProps) {
+  const school = useCurrentSchool()
   const { totals, months } = attendance
 
   return (
     <div className="space-y-5">
+      <StudentTabHeader
+        title="Attendance"
+        description="Present, absent and late days, overall and month by month."
+        action={
+          <DownloadSheetButton
+            label="Download attendance PDF"
+            disabled={totals.total === 0}
+            disabledReason="No register entries to export yet"
+            run={async () => {
+              const { downloadAttendancePdf } = await import('@/features/students/lib/studentPdf')
+              await downloadAttendancePdf({ schoolName: school.data?.name ?? 'School', profile, attendance })
+            }}
+          />
+        }
+      />
+
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <Tile label="Total days" value={String(totals.total)} />
         <Tile label="Present" value={String(totals.present)} tone="text-success" />

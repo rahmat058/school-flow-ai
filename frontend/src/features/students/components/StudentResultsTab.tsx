@@ -1,22 +1,39 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
+import { useCurrentSchool } from '@/features/school/api'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
 import { GradeBadge } from '@/features/students/components/GradeBadge'
-import type { StudentResults } from '@/types/people'
+import type { StudentProfile, StudentResults } from '@/types/people'
 
 interface StudentResultsTabProps {
+  profile: StudentProfile
   results: StudentResults
 }
 
-/**
- * Results: the pass/fail summary and every paper in one table. No "Download PDF" button — there is
- * no report-card generator yet, and a button that produced nothing would be worse than its absence.
- */
-export function StudentResultsTab({ results }: StudentResultsTabProps) {
+/** Results: the pass/fail summary, the full table, and a downloadable result sheet. */
+export function StudentResultsTab({ profile, results }: StudentResultsTabProps) {
+  const school = useCurrentSchool()
   const { summary, rows } = results
 
   return (
     <div className="space-y-5">
+      <StudentTabHeader
+        title="Result sheet"
+        description="Every paper this student has a recorded mark for."
+        action={
+          <DownloadSheetButton
+            label="Download result PDF"
+            disabled={rows.length === 0}
+            disabledReason="No results to export yet"
+            run={async () => {
+              const { downloadResultPdf } = await import('@/features/students/lib/studentPdf')
+              await downloadResultPdf({ schoolName: school.data?.name ?? 'School', profile, results, rows })
+            }}
+          />
+        }
+      />
+
       <section className="grid gap-5 sm:grid-cols-3">
         <Tile label="Passed" value={String(summary.passed)} tone="text-success" />
         <Tile label="Failed" value={String(summary.failed)} tone={summary.failed > 0 ? 'text-error' : 'text-ink'} />
@@ -27,54 +44,55 @@ export function StudentResultsTab({ results }: StudentResultsTabProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead>#</TableHead>
-              <TableHead>Exam / test</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Marks</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>%</TableHead>
-              <TableHead>Grade</TableHead>
-              <TableHead>Result</TableHead>
-              <TableHead align="right">Published</TableHead>
+              <TableHead className="px-3">Exam / test</TableHead>
+              <TableHead className="px-3">Subject</TableHead>
+              <TableHead className="px-3">Type</TableHead>
+              <TableHead className="px-3">Date</TableHead>
+              <TableHead className="px-3">Marks</TableHead>
+              <TableHead className="px-3">%</TableHead>
+              <TableHead className="px-3">Grade</TableHead>
+              <TableHead className="px-3">Result</TableHead>
+              <TableHead align="right" className="px-3">
+                Published
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell className="text-ink-subtle text-[13px]">No results recorded yet.</TableCell>
+                <TableCell className="text-ink-subtle px-3 text-[13px]">No results recorded yet.</TableCell>
               </TableRow>
             ) : (
-              rows.map((row, index) => (
+              rows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell className="text-ink-subtle tabular-nums">{index + 1}</TableCell>
-                  <TableCell className="text-ink text-[14px] font-medium">{row.examName}</TableCell>
-                  <TableCell className="text-ink-muted">{row.subjectName}</TableCell>
-                  <TableCell className="text-ink-muted">{row.examType}</TableCell>
-                  <TableCell className="text-ink-muted whitespace-nowrap">
+                  <TableCell className="text-ink px-3 text-[13.5px] font-medium whitespace-nowrap">
+                    {row.examName}
+                  </TableCell>
+                  <TableCell className="text-ink-muted px-3 whitespace-nowrap">{row.subjectName}</TableCell>
+                  <TableCell className="text-ink-muted px-3">{row.examType}</TableCell>
+                  <TableCell className="text-ink-muted px-3 whitespace-nowrap">
                     {formatDate(row.date, 'dd MMM yyyy')}
                   </TableCell>
-                  <TableCell className="text-ink tabular-nums">{row.marks}</TableCell>
-                  <TableCell className="text-ink-muted tabular-nums">{row.total}</TableCell>
-                  <TableCell className="text-ink font-medium tabular-nums">{row.percentage}%</TableCell>
-                  <TableCell>
+                  <TableCell className="text-ink px-3 whitespace-nowrap tabular-nums">
+                    {row.marks} / {row.total}
+                  </TableCell>
+                  <TableCell className="text-ink px-3 font-medium tabular-nums">{row.percentage}%</TableCell>
+                  <TableCell className="px-3">
                     <GradeBadge grade={row.grade} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-3">
                     <span
-                      className={
-                        row.result === 'PASS'
-                          ? 'text-success text-[13px] font-medium'
-                          : 'text-error text-[13px] font-medium'
-                      }>
+                      className={cn(
+                        'text-[13px] font-medium whitespace-nowrap',
+                        row.result === 'PASS' ? 'text-success' : 'text-error',
+                      )}>
                       {row.result === 'PASS' ? 'Pass' : 'Fail'}
                     </span>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" className="px-3">
                     <span
                       className={cn(
-                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium',
+                        'inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap',
                         row.isPublished ? 'bg-success-soft text-success' : 'bg-canvas text-ink-muted',
                       )}>
                       {row.isPublished ? 'Published' : 'Draft'}
