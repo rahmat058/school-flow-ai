@@ -6,15 +6,22 @@ import { Spinner } from '@/components/ui/Spinner'
 import { findNavItem } from '@/lib/navigation'
 
 export function AppShell() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Small screens: an overlay drawer. Large screens: a rail that can collapse to icons only.
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [railCollapsed, setRailCollapsed] = useState(false)
   const { pathname } = useLocation()
   const current = findNavItem(pathname)
 
   return (
     <div className="bg-canvas flex min-h-screen">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} collapsed={railCollapsed} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header title={current?.label ?? 'Dashboard'} onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          title={current?.label ?? 'Dashboard'}
+          onMenuClick={() => setDrawerOpen(true)}
+          sidebarCollapsed={railCollapsed}
+          onToggleSidebar={() => setRailCollapsed((collapsed) => !collapsed)}
+        />
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-7xl">
             {/* Own boundary so a lazily-loaded page does not unmount the shell. */}

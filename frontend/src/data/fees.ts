@@ -7,7 +7,7 @@ import type {
   InvoiceStatus,
   PaymentMethod,
 } from '@/types/fees'
-import { ACADEMIC_YEAR, SCHOOL_ID, dateOffset, dateTimeOffset, rupees } from '@/data/seed'
+import { ACADEMIC_YEAR, SCHOOL_ID, dateOffset, dateTimeOffset, dollars } from '@/data/seed'
 import { classLabel, classes } from '@/data/classes'
 import { students } from '@/data/students'
 
@@ -18,10 +18,10 @@ interface HeadTemplate {
 }
 
 const HEAD_TEMPLATES: HeadTemplate[] = [
-  { name: 'Tuition', amount: 4500, frequency: 'MONTHLY' },
-  { name: 'Transport', amount: 1200, frequency: 'MONTHLY' },
-  { name: 'Laboratory', amount: 2500, frequency: 'QUARTERLY' },
-  { name: 'Examination', amount: 800, frequency: 'ANNUAL' },
+  { name: 'Tuition', amount: 450, frequency: 'MONTHLY' },
+  { name: 'Transport', amount: 120, frequency: 'MONTHLY' },
+  { name: 'Laboratory', amount: 250, frequency: 'QUARTERLY' },
+  { name: 'Examination', amount: 80, frequency: 'ANNUAL' },
 ]
 
 export const feeStructures: FeeStructure[] = classes.map((classRoom, offset) => ({
@@ -38,7 +38,7 @@ export const feeHeads: FeeHead[] = feeStructures.flatMap((structure, structureOf
     schoolId: SCHOOL_ID,
     feeStructureId: structure.id,
     name: template.name,
-    amountPaise: rupees(template.amount),
+    amountPaise: dollars(template.amount),
     frequency: template.frequency,
   })),
 )
@@ -78,7 +78,7 @@ const invoiceSeeds: InvoiceSeed[] = students.flatMap((student, studentOffset) =>
   ]
 
   return terms.map((term) => {
-    const discountPaise = studentOffset % 7 === 0 ? rupees(500) : 0
+    const discountPaise = studentOffset % 7 === 0 ? dollars(50) : 0
     const netAmount = amountPaise - discountPaise
     const paidPaise = term.status === 'PAID' ? netAmount : term.status === 'PARTIAL' ? Math.round(netAmount / 2) : 0
     const settled = paidPaise > 0
@@ -145,7 +145,7 @@ export const concessions: Concession[] = [
     feeHeadId: 'fhd_2_2',
     type: 'FIXED',
     percentage: null,
-    amountPaise: rupees(600),
+    amountPaise: dollars(60),
     reason: 'Transport not availed for one month',
     status: 'APPROVED',
     approvedById: 'usr_admin_1',

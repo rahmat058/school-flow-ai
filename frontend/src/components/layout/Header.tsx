@@ -1,19 +1,23 @@
 import { useNavigate } from 'react-router-dom'
-import { Bell, CircleHelp, LogOut, Megaphone, Menu, Search } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Bell, CircleHelp, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dropdown } from '@/components/ui/Dropdown'
 import type { DropdownItemConfig } from '@/components/ui/Dropdown'
+import { useToast } from '@/hooks/useToast'
 import { paths } from '@/routes/paths'
 import { useCurrentUser } from '@/store/auth'
 import { useLogout } from '@/features/auth/api'
-import { useToast } from '@/hooks/useToast'
 
 interface HeaderProps {
   title: string
   onMenuClick: () => void
+  /** Desktop rail state — ignored on small screens, where the sidebar is a drawer instead. */
+  sidebarCollapsed: boolean
+  onToggleSidebar: () => void
 }
 
-export function Header({ title, onMenuClick }: HeaderProps) {
+export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }: HeaderProps) {
   const user = useCurrentUser()
   const logout = useLogout()
   const navigate = useNavigate()
@@ -42,13 +46,38 @@ export function Header({ title, onMenuClick }: HeaderProps) {
 
   return (
     <header className="border-line bg-surface/90 sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b px-4 backdrop-blur-md lg:h-[72px] lg:px-8">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <button
           type="button"
           onClick={onMenuClick}
           className="text-ink-muted hover:bg-canvas hover:text-ink inline-flex size-9 items-center justify-center rounded-md lg:hidden"
           aria-label="Open navigation">
           <Menu className="size-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-pressed={sidebarCollapsed}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="text-ink-muted hover:bg-canvas hover:text-ink hidden size-9 items-center justify-center rounded-md transition-colors lg:inline-flex">
+          {/* Crossfade rather than a hard icon swap, so the toggle reads as one control. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={sidebarCollapsed ? 'expand' : 'collapse'}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="inline-flex">
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="size-[18px]" strokeWidth={1.75} />
+              ) : (
+                <PanelLeftClose className="size-[18px]" strokeWidth={1.75} />
+              )}
+            </motion.span>
+          </AnimatePresence>
         </button>
 
         <label className="relative w-full max-w-[380px]">

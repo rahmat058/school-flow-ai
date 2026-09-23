@@ -8,7 +8,7 @@ export interface GradeBand {
 
 export interface SchoolSettings {
   academicYear: string
-  currency: 'INR'
+  currency: 'USD'
   timezone: string
   gradingScheme: GradeBand[]
 }

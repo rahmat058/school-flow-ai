@@ -25,14 +25,17 @@ interface TooltipProps {
   side?: TooltipSide
   delay?: number
   className?: string
+  /** Suppresses the tooltip — used for a nav rail that is only icon-only while collapsed. */
+  disabled?: boolean
 }
 
-export function Tooltip({ content, children, side = 'top', delay = 150, className }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', delay = 150, disabled = false, className }: TooltipProps) {
   const tooltipId = useId()
   const [open, setOpen] = useState(false)
   const timeoutRef = useRef<number | null>(null)
 
   function show() {
+    if (disabled) return
     timeoutRef.current = window.setTimeout(() => setOpen(true), delay)
   }
 

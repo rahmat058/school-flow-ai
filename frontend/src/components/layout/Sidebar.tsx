@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { BRAND } from '@/lib/brand'
 import { cn } from '@/lib/cn'
 import { humanizeEnum } from '@/lib/format'
 import { navItemsForRole } from '@/lib/navigation'
@@ -11,13 +13,18 @@ import { useCurrentSchool } from '@/features/school/api'
 interface SidebarProps {
   open: boolean
   onClose: () => void
+  /** Desktop rail mode: 240px ↔ 76px, labels collapse away. */
+  collapsed: boolean
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
   const user = useCurrentUser()
   const school = useCurrentSchool()
   const logout = useLogout()
   const items = navItemsForRole(user?.role)
+
+  const schoolName = school.data?.name ?? BRAND.name
+  const schoolMeta = school.data ? `Academic year ${school.data.settings.academicYear}` : 'School management'
 
   return (
     <>
@@ -32,16 +39,29 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r transition-transform duration-200 lg:static lg:translate-x-0',
+          // Mobile: an overlay drawer that slides in. Desktop: a static rail whose width animates.
+          'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r',
+          'transition-[width,transform] duration-200 ease-out lg:static lg:translate-x-0',
+          collapsed ? 'lg:w-[76px]' : 'lg:w-60',
           open ? 'translate-x-0' : '-translate-x-full',
         )}>
-        <div className="px-6 pt-7 pb-6">
-          <p className="font-display text-ink text-[18px] leading-tight font-semibold tracking-[-0.03em]">
-            {school.data?.name ?? 'School Flow AI'}
-          </p>
-          <p className="text-ink-subtle mt-1 text-[12px]">
-            {school.data ? `Academic year ${school.data.settings.academicYear}` : 'School management'}
-          </p>
+        <div
+          className={cn(
+            'flex items-center gap-3 pt-7 pb-6 transition-[padding] duration-200 ease-out',
+            collapsed ? 'lg:justify-center lg:px-3' : 'lg:px-6',
+          )}>
+          <img src={BRAND.mark} alt={BRAND.name} className="size-9 shrink-0 rounded-lg object-contain" />
+
+          <div
+            className={cn(
+              'min-w-0 overflow-hidden transition-[max-width,opacity] duration-200 ease-out',
+              collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[168px] lg:opacity-100',
+            )}>
+            <p className="font-display text-ink truncate text-[16px] leading-tight font-semibold tracking-[-0.03em]">
+              {schoolName}
+            </p>
+            <p className="text-ink-subtle mt-1 truncate text-[12px]">{schoolMeta}</p>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto pb-4" aria-label="Primary">
@@ -49,36 +69,53 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             const Icon = item.icon
 
             return (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                end={item.href === '/'}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  cn(
-                    'relative mx-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition-colors',
-                    isActive ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-canvas hover:text-ink',
-                  )
-                }>
-                {({ isActive }) => (
-                  <>
-                    <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
-                    <span>{item.label}</span>
-                    {isActive ? (
-                      <span className="bg-primary absolute inset-y-1.5 -right-3 w-[3px] rounded-l-full" />
-                    ) : null}
-                  </>
-                )}
-              </NavLink>
+              <Tooltip key={item.href} content={item.label} side="right" disabled={!collapsed} className="block w-full">
+                <NavLink
+                  to={item.href}
+                  end={item.href === '/'}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'relative mx-3 flex items-center rounded-lg py-2.5 text-[14px] font-medium transition-colors',
+                      collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : 'lg:gap-3 lg:px-3',
+                      isActive ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-canvas hover:text-ink',
+                    )
+                  }>
+                  {({ isActive }) => (
+                    <>
+                      <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
+                      {/* Kept in the DOM when collapsed so the link still has an accessible name. */}
+                      <span
+                        className={cn(
+                          'truncate transition-[max-width,opacity] duration-200 ease-out',
+                          collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[140px] lg:opacity-100',
+                        )}>
+                        {item.label}
+                      </span>
+                      {isActive ? (
+                        <span className="bg-primary absolute inset-y-1.5 -right-3 w-[3px] rounded-l-full" />
+                      ) : null}
+                    </>
+                  )}
+                </NavLink>
+              </Tooltip>
             )
           })}
         </nav>
 
-        <div className="border-line mt-auto border-t px-4 py-4">
+        <div
+          className={cn(
+            'border-line mt-auto border-t py-4 transition-[padding] duration-200 ease-out',
+            collapsed ? 'lg:px-2' : 'lg:px-4',
+          )}>
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className={cn('flex items-center gap-3', collapsed && 'lg:justify-center lg:gap-2')}>
               <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
-              <div className="min-w-0 flex-1">
+              <div
+                className={cn(
+                  'min-w-0 flex-1 overflow-hidden transition-[max-width,opacity] duration-200 ease-out',
+                  collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[150px] lg:opacity-100',
+                )}>
                 <p className="text-ink truncate text-[13px] font-medium">
                   {user.firstName} {user.lastName}
                 </p>

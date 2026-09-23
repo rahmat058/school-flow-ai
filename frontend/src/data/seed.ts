@@ -9,8 +9,8 @@
 export const SCHOOL_ID = 'sch_brightfuture'
 export const ACADEMIC_YEAR = '2026'
 
-/** Money is integer paise everywhere — this is just so the seed files read like rupees. */
-export function rupees(amount: number): number {
+/** Amounts are held in integer minor units (×100) — this is just so the seed files read as dollars. */
+export function dollars(amount: number): number {
   return Math.round(amount * 100)
 }
 

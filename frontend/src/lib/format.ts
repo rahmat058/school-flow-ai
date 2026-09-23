@@ -1,24 +1,26 @@
 import { format, parseISO } from 'date-fns'
 
-const rupeesFormatter = new Intl.NumberFormat('en-IN', {
+const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
-  currency: 'INR',
+  currency: 'USD',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
 
-/** Money is stored as integer paise (see `docs/backend/Design.md`) — format at the edge only. */
+/**
+ * Amounts are stored as integer minor units (×100) — format at the edge only.
+ * Displayed in USD; see `docs/frontend/Memory.md` for the storage-unit caveat.
+ */
 export function formatPaise(paise: number): string {
-  return rupeesFormatter.format(paise / 100)
+  return currencyFormatter.format(paise / 100)
 }
 
-/** Compact form for charts and stat values: ₹4.5L, ₹1.2Cr. */
+/** Compact form for charts and stat values: $4.5M, $120k. */
 export function formatPaiseCompact(paise: number): string {
   const value = paise / 100
-  if (value >= 1_00_00_000) return `₹${(value / 1_00_00_000).toFixed(1)}Cr`
-  if (value >= 1_00_000) return `₹${(value / 1_00_000).toFixed(1)}L`
-  if (value >= 1_000) return `₹${(value / 1_000).toFixed(0)}k`
-  return `₹${value.toFixed(0)}`
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`
+  return `$${value.toFixed(0)}`
 }
 
 export function formatDate(value: string | null, pattern = 'dd MMM yyyy'): string {

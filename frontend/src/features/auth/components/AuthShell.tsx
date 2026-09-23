@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { GraduationCap } from 'lucide-react'
+import { BRAND } from '@/lib/brand'
 import { env } from '@/lib/env'
 import { activeSchool } from '@/data/school'
 import { demoAccounts } from '@/data/users'
@@ -17,16 +17,11 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
     <div className="bg-canvas flex min-h-screen items-center justify-center px-4 py-10">
       <div className="grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="bg-primary-soft text-primary inline-flex size-9 items-center justify-center rounded-lg">
-              <GraduationCap className="size-[18px]" strokeWidth={1.75} />
-            </span>
-            <div>
-              <p className="font-display text-ink text-[16px] font-semibold tracking-[-0.02em]">School Flow AI</p>
-              <p className="text-ink-subtle text-[12px]">
-                {activeSchool.name} · {activeSchool.settings.academicYear}
-              </p>
-            </div>
+          <div className="mb-6">
+            <img src={BRAND.wordmark} alt={BRAND.name} className="h-10 w-auto max-w-[220px] object-contain" />
+            <p className="text-ink-subtle mt-3 text-[12px]">
+              {activeSchool.name} · {activeSchool.settings.academicYear}
+            </p>
           </div>
 
           <div className="border-line bg-surface rounded-xl border p-6">

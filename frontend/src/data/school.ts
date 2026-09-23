@@ -13,7 +13,7 @@ export const activeSchool: School = {
   subscriptionStatus: 'ACTIVE',
   settings: {
     academicYear: ACADEMIC_YEAR,
-    currency: 'INR',
+    currency: 'USD',
     timezone: 'Asia/Dhaka',
     gradingScheme: [
       { grade: 'A+', minPercentage: 80 },
