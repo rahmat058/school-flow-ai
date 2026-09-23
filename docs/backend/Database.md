@@ -16,7 +16,7 @@ subsection per table with a metadata tag, its full column list, its **keys**, it
 column list is the column table immediately above each diagram.
 
 Two consolidated references close the document: §13 **Foreign Key Map** (every FK with its `on delete`
-action) and §14 **Index Plan** (every index, per table).
+action) and §14 **Index Plan** (every index, per table). For the whole schema in one diagram, see §19.
 
 ## 1. Conventions
 
@@ -1875,3 +1875,338 @@ writing migrations:
     `events` uses only the `audience` array. Add `event_classes` if events need class scoping.
 13. **Super-admin / multi-school staff** — no platform-level role exists above `schools`; every user is
     bound to one school.
+
+## 19. Full Schema ERD
+
+The whole database in one diagram — all 33 tables, all 86 foreign keys (§13) plus the 2 logical links,
+themed to the design tokens in [`Design.md`](./Design.md) (indigo primary, `ink` text, `line` rules).
+Identity, foreign-key, and unique-key columns only; full column lists live in the per-table sections
+above.
+
+It is dense by construction — `schools` alone fans out to 31 tables — so the per-feature ERDs in §3–§12
+remain the readable view. This one is the map: every table and every relationship in a single frame.
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#eef2ff','primaryTextColor':'#0a0a0a','primaryBorderColor':'#6366f1','lineColor':'#9c9c9c','textColor':'#0a0a0a','fontFamily':'DM Sans, ui-sans-serif, system-ui, sans-serif','fontSize':'13px','attributeBackgroundColorOdd':'#ffffff','attributeBackgroundColorEven':'#fafafa'}}}%%
+erDiagram
+  schools ||--o{ users : "scopes"
+  schools ||--o{ otps : "scopes"
+  schools ||--o{ teachers : "scopes"
+  schools ||--o{ students : "scopes"
+  schools ||--o{ parents : "scopes"
+  schools ||--o{ parent_students : "scopes"
+  schools ||--o{ classes : "scopes"
+  schools ||--o{ subjects : "scopes"
+  schools ||--o{ attendance : "scopes"
+  schools ||--o{ homework : "scopes"
+  schools ||--o{ homework_submissions : "scopes"
+  schools ||--o{ study_materials : "scopes"
+  schools ||--o{ timetables : "scopes"
+  schools ||--o{ periods : "scopes"
+  schools ||--o{ fee_structures : "scopes"
+  schools ||--o{ fee_heads : "scopes"
+  schools ||--o{ fee_invoices : "scopes"
+  schools ||--o{ fee_payments : "scopes"
+  schools ||--o{ concessions : "scopes"
+  schools ||--o{ receipt_sequences : "scopes"
+  schools ||--o{ exams : "scopes"
+  schools ||--o{ exam_subjects : "scopes"
+  schools ||--o{ results : "scopes"
+  schools ||--o{ report_cards : "scopes"
+  schools ||--o{ conversations : "scopes"
+  schools ||--o{ conversation_participants : "scopes"
+  schools ||--o{ messages : "scopes"
+  schools ||--o{ notices : "scopes"
+  schools ||--o{ notice_classes : "scopes"
+  schools ||--o{ events : "scopes"
+  schools ||--o{ ai_conversations : "scopes"
+  users ||--|| teachers : "profile"
+  users ||--|| students : "profile"
+  users ||--|| parents : "profile"
+  users ||--o{ refresh_tokens : "issues"
+  users ||--o{ attendance : "marks"
+  users ||--o{ homework_submissions : "grades"
+  users ||--o{ study_materials : "uploads"
+  users ||--o{ fee_payments : "records"
+  users ||--o{ concessions : "approves"
+  users ||--o{ results : "enters"
+  users ||--o{ conversations : "opens"
+  users ||--o{ conversation_participants : "joins"
+  users ||--o{ messages : "sends"
+  users ||--o{ notices : "authors"
+  users ||--o{ events : "creates"
+  users ||--o{ ai_conversations : "starts"
+  users ||..o{ otps : "matched by email"
+  classes ||--o{ students : "rosters"
+  classes ||--o{ subjects : "offers"
+  classes ||--o{ attendance : "registers"
+  classes ||--o{ homework : "is assigned"
+  classes ||--o{ study_materials : "is for"
+  classes ||--o{ timetables : "has"
+  classes ||--o{ fee_structures : "applies to"
+  classes ||--o{ exams : "sits"
+  classes ||--o{ notice_classes : "is targeted"
+  teachers ||--o{ classes : "leads"
+  teachers ||--o{ subjects : "teaches"
+  teachers ||--o{ homework : "creates"
+  teachers ||--o{ periods : "teaches"
+  students ||--o{ parent_students : "has guardians"
+  students ||--o{ attendance : "is marked in"
+  students ||--o{ homework_submissions : "submits"
+  students ||--o{ fee_invoices : "is billed"
+  students ||--o{ fee_payments : "pays"
+  students ||--o{ concessions : "is granted"
+  students ||--o{ results : "achieves"
+  students ||--o{ report_cards : "receives"
+  parents ||--o{ parent_students : "has children"
+  subjects ||--o{ homework : "covers"
+  subjects ||--o{ study_materials : "is for"
+  subjects ||--o{ periods : "scheduled"
+  subjects ||--o{ exam_subjects : "is examined"
+  subjects ||--o{ results : "is scored in"
+  homework ||--o{ homework_submissions : "receives"
+  timetables ||--o{ periods : "contains"
+  fee_structures ||--o{ fee_heads : "composed of"
+  fee_structures ||--o{ fee_invoices : "generates"
+  fee_heads ||--o{ concessions : "discounts"
+  fee_invoices ||--o{ fee_payments : "is settled by"
+  receipt_sequences ||..o{ fee_invoices : "numbers"
+  exams ||--o{ exam_subjects : "schedules"
+  exams ||--o{ results : "records"
+  exams ||--o{ report_cards : "issues"
+  conversations ||--o{ conversation_participants : "includes"
+  conversations ||--o{ messages : "contains"
+  notices ||--o{ notice_classes : "targets"
+  schools {
+    uuid id PK
+    text slug UK
+  }
+  users {
+    uuid id PK
+    uuid school_id FK
+    text email UK
+  }
+  otps {
+    uuid id PK
+    uuid school_id FK
+    text email
+    otp_purpose purpose
+  }
+  refresh_tokens {
+    uuid id PK
+    uuid user_id FK
+    text token_hash UK
+  }
+  teachers {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+    text employee_no UK
+  }
+  students {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+    uuid class_id FK
+    text admission_no UK
+  }
+  parents {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+  }
+  parent_students {
+    uuid id PK
+    uuid school_id FK
+    uuid parent_id FK
+    uuid student_id FK
+    parent_relation relation
+  }
+  classes {
+    uuid id PK
+    uuid school_id FK
+    uuid class_teacher_id FK
+    text academic_year
+  }
+  subjects {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    uuid teacher_id FK
+    text code
+  }
+  attendance {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    uuid student_id FK
+    uuid marked_by_id FK
+    date attendance_date
+  }
+  homework {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    uuid subject_id FK
+    uuid teacher_id FK
+    date due_date
+  }
+  homework_submissions {
+    uuid id PK
+    uuid school_id FK
+    uuid homework_id FK
+    uuid student_id FK
+    uuid graded_by_id FK
+    boolean is_late
+  }
+  study_materials {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    uuid subject_id FK
+    uuid uploaded_by_id FK
+    material_type type
+  }
+  timetables {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    weekday day
+  }
+  periods {
+    uuid id PK
+    uuid school_id FK
+    uuid timetable_id FK
+    uuid subject_id FK
+    uuid teacher_id FK
+    time start_time
+  }
+  fee_structures {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    text academic_year
+  }
+  fee_heads {
+    uuid id PK
+    uuid school_id FK
+    uuid fee_structure_id FK
+    integer amount_paise
+    fee_frequency frequency
+  }
+  fee_invoices {
+    uuid id PK
+    uuid school_id FK
+    uuid student_id FK
+    uuid fee_structure_id FK
+    invoice_status status
+    text receipt_no
+  }
+  fee_payments {
+    uuid id PK
+    uuid school_id FK
+    uuid invoice_id FK
+    uuid student_id FK
+    uuid recorded_by_id FK
+    payment_provider provider
+    payment_status status
+  }
+  concessions {
+    uuid id PK
+    uuid school_id FK
+    uuid student_id FK
+    uuid fee_head_id FK
+    uuid approved_by_id FK
+    concession_type type
+    concession_status status
+  }
+  receipt_sequences {
+    uuid id PK
+    uuid school_id FK
+    text fiscal_year
+    integer last_number
+  }
+  exams {
+    uuid id PK
+    uuid school_id FK
+    uuid class_id FK
+    exam_type type
+    boolean is_published
+  }
+  exam_subjects {
+    uuid id PK
+    uuid school_id FK
+    uuid exam_id FK
+    uuid subject_id FK
+    integer max_marks
+  }
+  results {
+    uuid id PK
+    uuid school_id FK
+    uuid exam_id FK
+    uuid student_id FK
+    uuid subject_id FK
+    uuid entered_by_id FK
+    numeric obtained_marks
+  }
+  report_cards {
+    uuid id PK
+    uuid school_id FK
+    uuid exam_id FK
+    uuid student_id FK
+    numeric percentage
+    text grade
+    integer rank
+  }
+  conversations {
+    uuid id PK
+    uuid school_id FK
+    uuid created_by_id FK
+    timestamptz last_message_at
+  }
+  conversation_participants {
+    uuid id PK
+    uuid school_id FK
+    uuid conversation_id FK
+    uuid user_id FK
+    timestamptz last_read_at
+  }
+  messages {
+    uuid id PK
+    uuid school_id FK
+    uuid conversation_id FK
+    uuid sender_id FK
+    text body
+    timestamptz read_at
+  }
+  notices {
+    uuid id PK
+    uuid school_id FK
+    uuid published_by_id FK
+    notice_audience audience
+    timestamptz published_at
+  }
+  notice_classes {
+    uuid notice_id PK, FK
+    uuid class_id PK, FK
+    uuid school_id FK
+  }
+  events {
+    uuid id PK
+    uuid school_id FK
+    uuid created_by_id FK
+    date event_date
+    notice_audience audience
+  }
+  ai_conversations {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+    ai_feature feature
+    jsonb messages
+  }
+```
+
+**Reading it:** solid lines are enforced foreign keys; dotted lines are the two logical-only links (`otps`
+matched by email, `fee_invoices` numbered from `receipt_sequences`). `||` marks the one side and `}o`
+marks the many side, so `schools ||--o{ users` reads "one school has many users".
