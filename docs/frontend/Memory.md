@@ -5,6 +5,7 @@
 - 2026-09-21 — Project scaffold: Vite + React 19 + TS + Tailwind 4, dashboard shell components (AppShell, Header, Sidebar, StatCard, StatGrid, RevenueChart, TransactionsTable, InsightsCard) with mock data in `src/data/dashboard.ts`
 - 2026-09-21 — Docs scaffolded per vibe-coding structure (PRD, Architecture, Rules, Phases, Design, Memory)
 - 2026-09-23 — Added frontend dependencies: zustand, framer-motion, date-fns, @react-pdf/renderer. Docs (Architecture tech stack, Memory decisions) updated to record them.
+- 2026-09-23 — Adopted TanStack Query 5 (`@tanstack/react-query`) for all server state. Docs updated: Architecture (tech stack + data layer), Rules (Use/Avoid), CODE_REVIEWER (frontend checklist), this file. Not yet wired in `src/` — `QueryClientProvider` and the first query hooks land with the Phase 1 API client.
 
 ## Currently working on
 
@@ -16,7 +17,8 @@
 
 - Backend is NestJS + PostgreSQL via Supabase — all API calls target `/api/v1`
 - Recharts (not Chart.js) for charts — already installed
-- State: Zustand for global state (auth/session, school context) — no Redux
+- State: Zustand for client-only global state (auth/session, school context) — no Redux
+- Server state: TanStack Query 5 for all `/api/v1` data — query/mutation hooks in feature `api.ts` with cache + invalidation; never cache API responses in Zustand
 - Animations: framer-motion for UI transitions
 - Dates: date-fns for formatting and academic-calendar helpers
 - Reports: @react-pdf/renderer for PDF export (report cards, invoices)

@@ -4,7 +4,7 @@
 
 Login (JWT) → role-based redirect → role dashboard shell (AppShell + Sidebar + Header) → feature pages calling `api/v1` REST endpoints → Socket.io channel for chat/notifications alongside REST.
 
-Layers: **Pages → Components → API client (services) → Backend API**. Auth state and session live in a React context; tokens stored in memory + httpOnly refresh cookie.
+Layers: **Pages → Components → API client (services) → Backend API**. Auth state and session live in a React context; tokens stored in memory + httpOnly refresh cookie. Server state is owned by **TanStack Query**: feature `api.ts` modules expose `useQuery`/`useMutation` hooks, and components never call the API client directly.
 
 ## Folder structure
 
@@ -43,7 +43,8 @@ frontend/
 - **React 19 + TypeScript** — UI
 - **React Router 7** — routing with role-based route guards
 - **Tailwind CSS 4** (`@tailwindcss/vite`) — styling, theme tokens in CSS
-- **Zustand** — global state (auth/session, school context) — no Redux
+- **Zustand** — client-only global state (auth/session, school context) — no Redux
+- **TanStack Query 5** (`@tanstack/react-query`) — server state: query/mutation hooks, caching, and invalidation for all `/api/v1` data
 - **framer-motion** — UI animations and transitions
 - **date-fns** — date formatting and academic-calendar helpers
 - **@react-pdf/renderer** — PDF report cards / invoices from shared data

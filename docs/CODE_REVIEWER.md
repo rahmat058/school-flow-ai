@@ -29,7 +29,8 @@ Apply this checklist to every change before it is considered done. Review the **
 ## 4. Frontend conventions (React + Tailwind)
 
 - [ ] Tailwind utilities only; `cn()` for conditionals; no hardcoded colors — tokens from `docs/frontend/Design.md`
-- [ ] Data fetching goes through `src/services/` or feature `api.ts` — never raw fetch in components
+- [ ] Server state goes through TanStack Query hooks in `src/services/` or feature `api.ts` — never raw fetch or `useEffect` fetching in components
+- [ ] Mutations invalidate the queries they affect; `queryKey` arrays are consistent and colocated with the feature that owns them
 - [ ] Icons from `lucide-react`; charts from Recharts only
 - [ ] Components typed (props + API data); loading, empty, and error states present
 - [ ] New features live in `src/features/<name>/`; pages in `src/pages/<role>/`

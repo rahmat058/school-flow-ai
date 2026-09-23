@@ -8,13 +8,16 @@
 - Recharts for all charts — never mix in another chart library
 - Function components + hooks; TypeScript strict types for all props and API data
 - Design-system primitives from `src/components/ui/` before writing one-off markup
+- TanStack Query (`@tanstack/react-query`) for all server state — `useQuery`/`useMutation` hooks live in the feature `api.ts`; components consume hooks, never the API client
+- Zustand for client-only state (auth/session, school context) only — never as a cache for API responses
 - Prettier + ESLint: run `npm run lint` and `npm run typecheck` before finishing any task
 
 ## Avoid
 
 - New UI libraries (no MUI, Chakra, Ant Design, shadcn full-install)
 - CSS-in-JS or styled-components — Tailwind only
-- Fetching data directly inside components — go through `src/services/` or feature `api.ts`
+- Fetching data directly inside components — go through `src/services/` or TanStack Query hooks in a feature `api.ts`
+- `useEffect` + `useState` fetch/loading/error patterns where TanStack Query covers the case
 - Over-abstracting one-off helpers into shared utilities
 - Editing files outside the requested scope
 - Hardcoded colors — use palette tokens from `docs/frontend/Design.md`
