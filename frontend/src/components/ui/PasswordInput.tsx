@@ -25,7 +25,7 @@ export function PasswordInput(props: PasswordInputProps) {
           aria-label={visible ? 'Hide password' : 'Show password'}
           aria-pressed={visible}
           title={visible ? 'Hide password' : 'Show password'}
-          className="text-ink-subtle hover:bg-canvas hover:text-ink inline-flex size-8 items-center justify-center rounded-md transition-colors">
+          className="text-ink-subtle hover:bg-primary-soft hover:text-ink inline-flex size-8 items-center justify-center rounded-md transition-colors">
           <ToggleIcon className="size-4" strokeWidth={1.75} />
         </button>
       }

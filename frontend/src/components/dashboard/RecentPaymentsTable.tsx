@@ -30,7 +30,9 @@ export function RecentPaymentsTable({ payments }: RecentPaymentsTableProps) {
           </thead>
           <tbody>
             {payments.map((payment) => (
-              <tr key={payment.id} className="border-line hover:bg-canvas border-b transition-colors last:border-b-0">
+              <tr
+                key={payment.id}
+                className="border-line hover:bg-primary-soft border-b transition-colors last:border-b-0">
                 <td className="text-ink-muted px-6 py-4 text-[14px]">{formatDate(payment.paidAt)}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">

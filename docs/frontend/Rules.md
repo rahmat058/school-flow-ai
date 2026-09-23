@@ -16,6 +16,7 @@
 - Password fields use `PasswordInput` (masked by default, eye toggle in `Input`'s `trailing` slot) — never `type="password"` on a bare `Input`; `Input`'s `trailing` slot is the place for any other end-of-field adornment
 - Brand artwork comes from `src/lib/brand.ts` (`public/` assets) — never hardcode a logo path, and keep the collapsed rail's mark and the auth wordmark distinct
 - Wrap main content in the `page-container` utility (`src/styles/index.css`) — never re-declare `mx-auto max-w-* px-*` in a page or section
+- Interactive hover is `hover:bg-primary-soft`, everywhere (buttons, nav, table rows, icon buttons, menu/option highlights) — don't introduce another hover background; solid fills darken instead and destructive items keep the error tint
 - Import environment values from `src/lib/env.ts`; route strings from `src/routes/paths.ts`; nav items from `src/lib/navigation.ts` — no inline `import.meta.env` or path strings
 - Feature `api.ts` modules are the only callers of `src/services/apiClient.ts`; every request goes through it so the mock adapter, JWT attach and error envelope apply consistently
 - Prettier + ESLint: run `npm run lint` and `npm run typecheck` before finishing any task

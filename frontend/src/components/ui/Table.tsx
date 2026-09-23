@@ -22,7 +22,7 @@ export function TableFooter({ className, ...props }: HTMLAttributes<HTMLTableSec
 }
 
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn('hover:bg-canvas transition-colors', className)} {...props} />
+  return <tr className={cn('hover:bg-primary-soft transition-colors', className)} {...props} />
 }
 
 export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {

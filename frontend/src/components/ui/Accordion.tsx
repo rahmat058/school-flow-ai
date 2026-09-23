@@ -42,7 +42,7 @@ export function Accordion({ items, allowMultiple = false, defaultOpenIds = [], c
               disabled={item.disabled}
               aria-expanded={isOpen}
               aria-controls={`${baseId}-panel-${item.id}`}
-              className="hover:bg-canvas flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50">
+              className="hover:bg-primary-soft flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50">
               <span className="text-ink text-[14px] font-medium">{item.title}</span>
               <motion.span
                 animate={{ rotate: isOpen ? 180 : 0 }}

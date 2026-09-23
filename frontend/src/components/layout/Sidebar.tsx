@@ -83,7 +83,7 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
                     cn(
                       'relative mx-3 flex items-center rounded-lg py-2.5 text-[14px] font-medium transition-colors',
                       collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : 'lg:gap-3 lg:px-3',
-                      isActive ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-canvas hover:text-ink',
+                      isActive ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-primary-soft hover:text-ink',
                     )
                   }>
                   {({ isActive }) => (
@@ -132,7 +132,7 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
                 disabled={logout.isPending}
                 aria-label="Sign out"
                 title="Sign out"
-                className="text-ink-subtle hover:bg-canvas hover:text-ink inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
+                className="text-ink-subtle hover:bg-primary-soft hover:text-ink inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
                 <LogOut className="size-4" strokeWidth={1.75} />
               </button>
             </div>
