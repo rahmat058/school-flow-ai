@@ -7,6 +7,7 @@
 - 2026-09-23 — Added frontend dependencies: zustand, framer-motion, date-fns, @react-pdf/renderer. Docs (Architecture tech stack, Memory decisions) updated to record them.
 - 2026-09-23 — Adopted TanStack Query 5 (`@tanstack/react-query`) for all server state. Docs updated: Architecture (tech stack + data layer), Rules (Use/Avoid), CODE_REVIEWER (frontend checklist), this file. Not yet wired in `src/` — `QueryClientProvider` and the first query hooks land with the Phase 1 API client.
 - 2026-09-23 — Added `motion` v13 for animations; docs updated (Architecture tech stack, Rules). Not yet used in `src/`. `framer-motion` remains a direct dependency but is redundant — `motion` depends on it, and `framer-motion` 13.4.x is the same library under its legacy name.
+- 2026-09-23 — Built the design-system primitives in `src/components/ui/`: Input, Textarea, Select, Checkbox, Radio, Switch, Card, Modal + ConfirmDialog, Tabs, Table, DataTable, Pagination, Dropdown, Tooltip, Alert, Progress, Avatar, Skeleton, Spinner, EmptyState, Accordion. Raw HTML + Tailwind + `motion` only — no new packages. `Button` gained the `destructive` variant from Design.md; added `src/hooks/useControllableState.ts` and `MotionConfig reducedMotion="user"` in `main.tsx`. Not yet consumed by any page.
 
 ## Currently working on
 
@@ -25,3 +26,4 @@
 - Reports: @react-pdf/renderer for PDF export (report cards, invoices)
 - Mock data in `src/data/` is temporary; replace with API calls per phase
 - Design tokens follow `docs/frontend/Design.md` — indigo primary, 4px grid
+- UI primitives are hand-rolled from raw HTML + Tailwind in `src/components/ui/` — no component library (no Radix/Headless UI/shadcn). `motion` (`motion/react`) provides all animation, and `MotionConfig reducedMotion="user"` in `main.tsx` makes it respect OS reduced-motion settings.

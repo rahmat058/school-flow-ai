@@ -40,3 +40,6 @@
 - Frontend animations: **`motion`** (v13) is the animation library — the current package that supersedes `framer-motion`; React APIs are imported from `motion/react` and `framer-motion` (legacy name for the same library) must not be imported directly. Confidence: 0.85
 - Frontend date utilities: **date-fns** for date formatting and academic-calendar helpers. Confidence: 0.9
 - Frontend PDF generation: **@react-pdf/renderer** for exporting report cards and invoices. Confidence: 0.85
+- Prefers UI components hand-rolled from raw HTML + Tailwind + React — explicitly **no third-party component library** (no Radix, Headless UI, shadcn, etc.); primitives are built in-house. Confidence: 0.85
+- Wants reusable UI components centralized under `components/ui/` (tab, select, radio, checkbox, card, modal, table, data-table, etc.). Confidence: 0.7
+- Wants design-system components to follow the project's own style guide (Design.md — color tokens, border radii, type scale, focus treatment) rather than generic/default styling. Confidence: 0.6

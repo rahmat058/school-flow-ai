@@ -21,7 +21,7 @@ frontend/
 │   ├── components/
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   ├── dashboard/        # StatCard, StatGrid, RevenueChart, …
-│   │   └── ui/               # Button, Badge, Input, Modal (design-system primitives)
+│   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, …)
 │   ├── features/             # attendance/, fees/, homework/, exams/, chat/ …
 │   │                         # each: components + hooks + api.ts
 │   ├── services/             # api client (fetch wrapper), socket client
