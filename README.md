@@ -89,6 +89,8 @@ school-flow-ai/
 
 Deep dive: **[docs/frontend/Architecture.md](./docs/frontend/Architecture.md)** · **[docs/backend/Architecture.md](./docs/backend/Architecture.md)** · Review checklist: **[docs/CODE_REVIEWER.md](./docs/CODE_REVIEWER.md)**
 
+Per-side guides: **[frontend/README.md](./frontend/README.md)** · **[backend/README.md](./backend/README.md)**
+
 ---
 
 ## ⚡ Built with

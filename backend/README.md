@@ -1,0 +1,139 @@
+# School Flow AI — Backend
+
+NestJS + Prisma + PostgreSQL (Supabase) API for School Flow AI — auth, schools,
+users, and the attendance, fees, homework, exams, chat, notices, AI, and reports
+modules that serve the frontend over `/api/v1`.
+
+Part of the [school-flow-ai](../README.md) monorepo. The backend docs in
+[`../docs/backend/`](../docs/backend) are the source of truth.
+
+---
+
+## Quick start
+
+```bash
+cd backend
+npm install
+cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
+npx prisma migrate dev
+npm run start:dev
+```
+
+Validate before finishing any task:
+
+```bash
+npm run lint && npm run build
+```
+
+---
+
+## Folder structure
+
+```text
+backend/
+├── prisma/
+│   └── schema.prisma         # single source of truth for the DB
+├── src/
+│   ├── main.ts               # bootstrap: /api/v1 prefix, pipes, filters, helmet, CORS
+│   ├── app.module.ts
+│   ├── prisma/               # PrismaModule + PrismaService (global)
+│   ├── common/
+│   │   ├── guards/           # jwt-auth, roles, tenant
+│   │   ├── decorators/       # @Roles, @CurrentUser, @SchoolId
+│   │   ├── filters/          # global exception filter
+│   │   ├── interceptors/     # response envelope, logging
+│   │   └── pipes/            # validation helpers
+│   ├── auth/                 # strategies, guards, dto
+│   ├── schools/              # registration, OTP, settings
+│   ├── users/                # teachers, students, parents
+│   ├── classes/              # classes + subjects
+│   ├── attendance/
+│   ├── fees/                 # structures, invoices, payments, concessions
+│   ├── homework/
+│   ├── timetables/
+│   ├── exams/                # exams, results, report cards
+│   ├── chat/                 # gateway + conversations + messages
+│   ├── notices/              # notices + events
+│   ├── ai/                   # AI assistant features
+│   ├── materials/            # study material uploads
+│   ├── reports/              # analytics + CSV export
+│   └── mail/                 # mailer + handlebars templates
+├── package.json
+└── .env                      # not committed
+```
+
+Each feature module owns its routes under `/api/v1/<feature>` and follows the
+same internal layout:
+
+```text
+<feature>/
+├── <feature>.module.ts
+├── <feature>.controller.ts
+├── <feature>.service.ts
+├── dto/                      # create-*.dto.ts / update-*.dto.ts
+└── <feature>.gateway.ts      # only for real-time modules (chat)
+```
+
+---
+
+## Stack
+
+- [NestJS](https://nestjs.com/) — modular framework with dependency injection
+- [Prisma](https://www.prisma.io/) + [PostgreSQL (Supabase)](https://supabase.com/) — ORM and database (Supabase pooler for runtime, direct URL for migrations)
+- [Passport.js + JWT](https://www.passportjs.org/) — access (15m) + refresh (7d) auth
+- [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
+- [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
+- [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
+- [Razorpay](https://razorpay.com/) — payments; [Nodemailer](https://nodemailer.com/) — email; [Cloudinary](https://cloudinary.com/) — file storage
+- `@nestjs/throttler` — rate limiting; `helmet` — security headers
+
+---
+
+## Scripts
+
+| Command              | Description                         |
+| -------------------- | ----------------------------------- |
+| `npm run start:dev`  | Dev server with watch               |
+| `npm run build`      | `nest build`                        |
+| `npm run start:prod` | Run the built server                |
+| `npm run lint`       | ESLint                              |
+| `npm test`           | Jest (`test:watch` to watch)        |
+| `npm run migrate`    | `prisma migrate dev`                |
+| `npm run format`     | Prettier (`format:check` to verify) |
+
+---
+
+## Conventions
+
+- **Layers:** Controller → Service → PrismaService → PostgreSQL. Controllers stay
+  thin; services never touch HTTP objects.
+- **Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`;
+  DTOs in per-module `dto/` as `create-*.dto.ts` / `update-*.dto.ts`.
+- **Tenancy:** every table carries `schoolId`, and every query is scoped to it —
+  no unscoped reads.
+- **Transparency:** all DB access goes through the global `PrismaService`; use
+  `$transaction` for multi-write operations; raw SQL (`$queryRaw`) only for
+  heavy reports and always parameterized.
+- **Responses:** the global interceptor/filter shape the response envelope;
+  services throw `HttpException` subclasses and never build HTTP responses.
+- **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.
+- **Money:** store as integer paise, never floats.
+- Run lint + build before finishing, and add a Prisma migration for every schema
+  change.
+
+---
+
+## Docs
+
+| File                                                                 | Purpose                                 |
+| -------------------------------------------------------------------- | --------------------------------------- |
+| [`../docs/backend/PRD.md`](../docs/backend/PRD.md)                   | What to build and for whom              |
+| [`../docs/backend/Architecture.md`](../docs/backend/Architecture.md) | Structure, flow, stack                  |
+| [`../docs/backend/Rules.md`](../docs/backend/Rules.md)               | Constraints — use / avoid               |
+| [`../docs/backend/Phases.md`](../docs/backend/Phases.md)             | Delivery order                          |
+| [`../docs/backend/Design.md`](../docs/backend/Design.md)             | API contract (envelopes, naming, paise) |
+| [`../docs/backend/Memory.md`](../docs/backend/Memory.md)             | Session state                           |
+
+Full repo workflow: [`../AGENTS.md`](../AGENTS.md). Client side:
+[`../frontend/README.md`](../frontend/README.md). Security policy:
+[`../SECURITY.md`](../SECURITY.md).
