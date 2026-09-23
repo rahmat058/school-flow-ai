@@ -1,6 +1,16 @@
 import { Alert } from '@/components/ui/Alert'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { AiInsightsCard, CollectionChart, OverviewHeader, RecentPaymentsTable, StatGrid } from '@/components/dashboard'
+import {
+  AttendanceChart,
+  ClassPerformanceChart,
+  CollectionChart,
+  OverviewHeader,
+  PendingFeesCard,
+  RecentActivityCard,
+  SchoolCalendarCard,
+  StatGrid,
+  UpcomingExamsCard,
+} from '@/components/dashboard'
 import { useDashboardSummary } from '@/features/dashboard/api'
 import { ApiError } from '@/services/apiClient'
 
@@ -21,8 +31,12 @@ export function DashboardPage() {
 
       <StatGrid stats={data?.stats ?? []} loading={isPending} />
 
+      {/* Side by side: attendance health and money, the two things an admin checks daily. */}
       <section className="grid grid-cols-12 gap-5">
-        <div className="col-span-12 xl:col-span-8">
+        <div className="col-span-12 xl:col-span-6">
+          {data ? <AttendanceChart trend={data.attendanceTrend} /> : <Skeleton className="h-105 rounded-xl" />}
+        </div>
+        <div className="col-span-12 xl:col-span-6">
           {data ? (
             <CollectionChart
               monthly={data.collectionTrend}
@@ -30,15 +44,37 @@ export function DashboardPage() {
               highlightedMonth={data.highlightedMonth}
             />
           ) : (
-            <Skeleton className="h-[420px] rounded-xl" />
+            <Skeleton className="h-105 rounded-xl" />
           )}
-        </div>
-        <div className="col-span-12 xl:col-span-4">
-          {data ? <AiInsightsCard insight={data.insight} /> : <Skeleton className="h-[420px] rounded-xl" />}
         </div>
       </section>
 
-      {data ? <RecentPaymentsTable payments={data.recentPayments} /> : null}
+      {/* How the classes are doing, beside what has just happened. */}
+      <section className="grid grid-cols-12 gap-5">
+        <div className="col-span-12 xl:col-span-8">
+          {data ? (
+            <ClassPerformanceChart performance={data.classPerformance} />
+          ) : (
+            <Skeleton className="h-105 rounded-xl" />
+          )}
+        </div>
+        <div className="col-span-12 xl:col-span-4">
+          {data ? <RecentActivityCard items={data.recentActivity} /> : <Skeleton className="h-105 rounded-xl" />}
+        </div>
+      </section>
+
+      {/* What is coming up, what is owed, and the dates behind both. */}
+      <section className="grid grid-cols-12 gap-5">
+        <div className="col-span-12 xl:col-span-4">
+          {data ? <UpcomingExamsCard exams={data.upcomingExams} /> : <Skeleton className="h-105 rounded-xl" />}
+        </div>
+        <div className="col-span-12 xl:col-span-4">
+          {data ? <PendingFeesCard fees={data.pendingFees} /> : <Skeleton className="h-105 rounded-xl" />}
+        </div>
+        <div className="col-span-12 xl:col-span-4">
+          {data ? <SchoolCalendarCard entries={data.calendarEntries} /> : <Skeleton className="h-105 rounded-xl" />}
+        </div>
+      </section>
     </div>
   )
 }

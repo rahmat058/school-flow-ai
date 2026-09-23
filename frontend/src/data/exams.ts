@@ -7,22 +7,37 @@ import { subjectsForClass } from '@/data/subjects'
 const MAX_MARKS = 100
 const PASS_MARKS = 40
 
-/** One mid-term exam per class; the first three are already published. */
-export const exams: Exam[] = classes.map((classRoom, offset) => {
-  const isPublished = offset < 3
+const TODAY = dateOffset(0)
 
-  return {
+/**
+ * Every assessment on record. The mid terms are history (the first three classes already published),
+ * while the unit tests are still ahead — which is what makes the dashboard's upcoming list real
+ * rather than invented.
+ */
+export const exams: Exam[] = [
+  ...classes.map((classRoom, offset) => ({
     id: `exam_${offset + 1}`,
     schoolId: SCHOOL_ID,
     classId: classRoom.id,
     name: 'Mid Term Examination',
-    type: 'MID',
+    type: 'MID' as const,
     startDate: dateOffset(-21),
     endDate: dateOffset(-15),
-    isPublished,
-    publishedAt: isPublished ? dateTimeOffset(-10, 14, 0) : null,
-  }
-})
+    isPublished: offset < 3,
+    publishedAt: offset < 3 ? dateTimeOffset(-10, 14, 0) : null,
+  })),
+  ...classes.map((classRoom, offset) => ({
+    id: `exam_unit_${offset + 1}`,
+    schoolId: SCHOOL_ID,
+    classId: classRoom.id,
+    name: 'Unit Test 2',
+    type: 'UNIT' as const,
+    startDate: dateOffset(7),
+    endDate: dateOffset(19),
+    isPublished: false,
+    publishedAt: null as string | null,
+  })),
+]
 
 export const examSubjects: ExamSubject[] = exams.flatMap((exam, examOffset) =>
   subjectsForClass(exam.classId).map((subject, subjectOffset) => ({
@@ -30,7 +45,7 @@ export const examSubjects: ExamSubject[] = exams.flatMap((exam, examOffset) =>
     schoolId: SCHOOL_ID,
     examId: exam.id,
     subjectId: subject.id,
-    examDate: dateOffset(-21 + subjectOffset),
+    examDate: exam.type === 'UNIT' ? dateOffset(7 + subjectOffset * 2) : dateOffset(-21 + subjectOffset),
     maxMarks: MAX_MARKS,
     passMarks: PASS_MARKS,
   })),
@@ -43,26 +58,29 @@ function marksFor(studentOffset: number, subjectOffset: number): { obtained: num
   return { obtained: 42 + ((studentOffset * 7 + subjectOffset * 11) % 55), isAbsent: false }
 }
 
-export const examResults: ExamResult[] = exams.flatMap((exam, examOffset) =>
-  students
-    .filter((student) => student.classId === exam.classId)
-    .flatMap((student, studentOffset) =>
-      subjectsForClass(exam.classId).map((subject, subjectOffset) => {
-        const { obtained, isAbsent } = marksFor(studentOffset + examOffset, subjectOffset)
+/** Marks only exist for papers that have been sat — a future unit test has no results yet. */
+export const examResults: ExamResult[] = exams
+  .filter((exam) => exam.startDate <= TODAY)
+  .flatMap((exam, examOffset) =>
+    students
+      .filter((student) => student.classId === exam.classId)
+      .flatMap((student, studentOffset) =>
+        subjectsForClass(exam.classId).map((subject, subjectOffset) => {
+          const { obtained, isAbsent } = marksFor(studentOffset + examOffset, subjectOffset)
 
-        return {
-          id: `res_${examOffset + 1}_${student.id}_${subjectOffset + 1}`,
-          schoolId: SCHOOL_ID,
-          examId: exam.id,
-          studentId: student.id,
-          subjectId: subject.id,
-          obtainedMarks: obtained,
-          isAbsent,
-          enteredById: subject.teacherId ? `usr_${subject.teacherId}` : null,
-        }
-      }),
-    ),
-)
+          return {
+            id: `res_${examOffset + 1}_${student.id}_${subjectOffset + 1}`,
+            schoolId: SCHOOL_ID,
+            examId: exam.id,
+            studentId: student.id,
+            subjectId: subject.id,
+            obtainedMarks: obtained,
+            isAbsent,
+            enteredById: subject.teacherId ? `usr_${subject.teacherId}` : null,
+          }
+        }),
+      ),
+  )
 
 function gradeFor(percentage: number): string {
   if (percentage >= 80) return 'A+'

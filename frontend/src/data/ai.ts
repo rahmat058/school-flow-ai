@@ -1,4 +1,4 @@
-import type { AiConversation, AiInsight } from '@/types/ai'
+import type { AiConversation } from '@/types/ai'
 import { SCHOOL_ID, dateTimeOffset } from '@/data/seed'
 
 /** History per user per feature (the backend stores turns as JSONB). */
@@ -44,10 +44,3 @@ export const aiConversations: AiConversation[] = [
     updatedAt: dateTimeOffset(-1, 20, 24),
   },
 ]
-
-/** Powers the dashboard insight card — grounded in the aggregate numbers, per the AI contract. */
-export const dashboardInsight: AiInsight = {
-  title: 'Fee collection is trending up',
-  body: 'Collection is 12% ahead of last term, but 6 invoices are overdue and overdue balances sit with classes 7A and 7B. Attendance dipped slightly on Tuesday.',
-  prompt: 'Summarise fee collection and attendance risks for this term',
-}

@@ -59,6 +59,7 @@ frontend/
 - **date-fns** — date formatting and academic-calendar helpers
 - **@react-pdf/renderer** — PDF report cards / invoices from shared data
 - **Recharts** — dashboard/report charts
+- **react-day-picker** (v10) — the dashboard's month calendar; themed through its CSS variables from `src/styles/index.css`, never by overriding its classes (see `Rules.md`)
 - **lucide-react** — icons
 - **Socket.io-client** — real-time chat & notifications (to add with chat phase)
 - Deployed on **Vercel**

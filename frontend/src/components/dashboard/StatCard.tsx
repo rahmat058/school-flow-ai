@@ -1,13 +1,7 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { iconToneStyles } from '@/components/dashboard/iconTone'
 import type { StatMetric } from '@/types/dashboard'
-
-const iconToneStyles = {
-  primary: 'bg-primary-soft text-primary',
-  success: 'bg-success-soft text-success',
-  error: 'bg-error-soft text-error',
-  warning: 'bg-orange-soft text-warning',
-} as const
 
 interface StatCardProps {
   metric: StatMetric

@@ -398,7 +398,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `GET /api/v1/reports/financial?from=&to=` — collected/pending/concessions `(admin)`
 - [ ] `GET /api/v1/reports/students/:id` — academic profile report `(admin, teacher, parent of child)`
 - [ ] `GET /api/v1/reports/export?type=&format=csv` — streaming CSV of any report above `(admin)`
-- [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance today, chart series (Recharts-ready: plain labelled series, no chart config) `(admin)`
+- [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance rate plus its per-day trend, class performance per class, a recent-activity feed merged from payments/submissions/notices, upcoming exams (dated today or later), invoices with an outstanding balance, and dated calendar entries (events + exam days); chart series (Recharts-ready: plain labelled series, no chart config) `(admin)`
 
 **Behavior**
 
