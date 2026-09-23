@@ -43,6 +43,10 @@ frontend/
 - **React 19 + TypeScript** — UI
 - **React Router 7** — routing with role-based route guards
 - **Tailwind CSS 4** (`@tailwindcss/vite`) — styling, theme tokens in CSS
+- **Zustand** — global state (auth/session, school context) — no Redux
+- **framer-motion** — UI animations and transitions
+- **date-fns** — date formatting and academic-calendar helpers
+- **@react-pdf/renderer** — PDF report cards / invoices from shared data
 - **Recharts** — dashboard/report charts
 - **lucide-react** — icons
 - **Socket.io-client** — real-time chat & notifications (to add with chat phase)
