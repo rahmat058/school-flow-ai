@@ -22,8 +22,8 @@ export function AppShell() {
           sidebarCollapsed={railCollapsed}
           onToggleSidebar={() => setRailCollapsed((collapsed) => !collapsed)}
         />
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1">
+          <div className="page-container py-6 lg:py-8">
             {/* Own boundary so a lazily-loaded page does not unmount the shell. */}
             <Suspense fallback={<PageLoading />}>
               <Outlet />

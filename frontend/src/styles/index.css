@@ -33,6 +33,22 @@
   --shadow-card: 0 1px 2px rgb(10 10 10 / 0.04), 0 8px 24px rgb(10 10 10 / 0.04);
 }
 
+/*
+ * The one content container every main section shares: centred, capped at the 1280px container
+ * width from Design.md, with 16px inline padding rising to 32px from the `lg` breakpoint.
+ * Use this instead of re-declaring `mx-auto max-w-* px-*` in a shell or page.
+ */
+@utility page-container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  width: 100%;
+  max-width: 80rem;
+
+  @media (min-width: 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
 @layer base {
   html,
   body,

@@ -46,7 +46,8 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 ## Spacing & radius
 
 - 4px base grid: 4, 8, 12, 16, 20, 24, 32, 48, 64
-- Section spacing: 32 mobile / 48 tablet / 64 desktop; container max 1280px
+- Section spacing: 32 mobile / 48 tablet / 64 desktop
+- Container: the `page-container` utility (1280px max, centred, 16px inline padding rising to 32px from `lg`) — the single wrapper for main content, never re-declared per page
 - Radius: 4px chips · 6px buttons/inputs · 8px panels · 12px cards · full for avatars/status dots
 
 ## Do's and Don'ts

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, School } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { BRAND } from '@/lib/brand'
@@ -43,7 +43,7 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
           // pinned while the main column scrolls, so the account block never scrolls out of view.
           'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r',
           'transition-[width,transform] duration-200 ease-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
-          collapsed ? 'lg:w-[76px]' : 'lg:w-60',
+          collapsed ? 'lg:w-19' : 'lg:w-60',
           open ? 'translate-x-0' : '-translate-x-full',
         )}>
         <div
@@ -51,12 +51,16 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
             'flex items-center gap-3 pt-7 pb-6 transition-[padding] duration-200 ease-out',
             collapsed ? 'lg:justify-center lg:px-3' : 'lg:px-6',
           )}>
-          <img src={BRAND.mark} alt={BRAND.name} className="size-9 shrink-0 rounded-lg object-contain" />
+          <span
+            aria-hidden="true"
+            className="bg-primary-soft text-primary inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <School className="size-4.5" strokeWidth={1.75} />
+          </span>
 
           <div
             className={cn(
               'min-w-0 overflow-hidden transition-[max-width,opacity] duration-200 ease-out',
-              collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[168px] lg:opacity-100',
+              collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-42 lg:opacity-100',
             )}>
             <p className="font-display text-ink truncate text-[16px] leading-tight font-semibold tracking-[-0.03em]">
               {schoolName}
@@ -84,17 +88,17 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
                   }>
                   {({ isActive }) => (
                     <>
-                      <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />
+                      <Icon className="size-4.5 shrink-0" strokeWidth={1.75} />
                       {/* Kept in the DOM when collapsed so the link still has an accessible name. */}
                       <span
                         className={cn(
                           'truncate transition-[max-width,opacity] duration-200 ease-out',
-                          collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[140px] lg:opacity-100',
+                          collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-35 lg:opacity-100',
                         )}>
                         {item.label}
                       </span>
                       {isActive ? (
-                        <span className="bg-primary absolute inset-y-1.5 -right-3 w-[3px] rounded-l-full" />
+                        <span className="bg-primary absolute inset-y-1.5 -right-3 w-0.75 rounded-l-full" />
                       ) : null}
                     </>
                   )}
@@ -115,7 +119,7 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
               <div
                 className={cn(
                   'min-w-0 flex-1 overflow-hidden transition-[max-width,opacity] duration-200 ease-out',
-                  collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-[150px] lg:opacity-100',
+                  collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-37.5 lg:opacity-100',
                 )}>
                 <p className="text-ink truncate text-[13px] font-medium">
                   {user.firstName} {user.lastName}

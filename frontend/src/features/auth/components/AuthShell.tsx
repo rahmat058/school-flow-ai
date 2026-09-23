@@ -14,26 +14,34 @@ interface AuthShellProps {
 /** Shared frame for the public auth screens: flat bordered card on the canvas, per Design.md. */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="bg-canvas flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="mx-auto w-full max-w-md">
-          <div className="mb-6">
-            <img src={BRAND.wordmark} alt={BRAND.name} className="h-10 w-auto max-w-80 object-cover" />
-            <p className="text-ink-subtle mt-3 text-[12px]">
-              {activeSchool.name} · {activeSchool.settings.academicYear}
-            </p>
+    <div className="bg-canvas flex min-h-screen items-center justify-center py-10">
+      <div className="page-container">
+        <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="mx-auto w-full max-w-md">
+            <div className="mb-6">
+              {/*
+              `school-flow.png` is a 2172×724 canvas but its artwork only spans 1979×430 — roughly
+              40% of the file height is transparent padding, so sizing by height alone (h-10) renders
+              the wordmark at 24px. A box at the artwork's own 4.6:1 ratio with `object-cover` crops
+              that padding away and lets the logo fill the card.
+            */}
+              <img src={BRAND.wordmark} alt={BRAND.name} className="h-14 w-45 object-cover" />
+              <p className="text-ink-subtle mt-3 text-[12px]">
+                {activeSchool.name} · {activeSchool.settings.academicYear}
+              </p>
+            </div>
+
+            <div className="border-line bg-surface rounded-xl border p-6">
+              <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
+              <p className="text-ink-muted mt-1 text-[13px]">{subtitle}</p>
+              <div className="mt-6">{children}</div>
+            </div>
+
+            {footer ? <div className="text-ink-muted mt-5 text-center text-[13px]">{footer}</div> : null}
           </div>
 
-          <div className="border-line bg-surface rounded-xl border p-6">
-            <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
-            <p className="text-ink-muted mt-1 text-[13px]">{subtitle}</p>
-            <div className="mt-6">{children}</div>
-          </div>
-
-          {footer ? <div className="text-ink-muted mt-5 text-center text-[13px]">{footer}</div> : null}
+          {env.enableMocks ? <DemoAccountsPanel /> : null}
         </div>
-
-        {env.enableMocks ? <DemoAccountsPanel /> : null}
       </div>
     </div>
   )
