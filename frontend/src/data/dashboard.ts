@@ -1,121 +1,112 @@
-import { BarChart3, FileText, Folder, LayoutDashboard, Settings, TrendingDown, Users, Wallet } from 'lucide-react'
-import type { ChartPoint, NavItem, StatMetric, Transaction } from '@/types/dashboard'
+import { BarChart3, CalendarCheck, TrendingUp, Wallet } from 'lucide-react'
+import type { ChartPoint, DashboardSummary, RecentPayment, StatMetric } from '@/types/dashboard'
+import { dateTimeOffset } from '@/data/seed'
+import { students } from '@/data/students'
+import { attendance, registerDays } from '@/data/attendance'
+import { feeInvoices, feePayments } from '@/data/fees'
+import { dashboardInsight } from '@/data/ai'
+import { formatPaise } from '@/lib/format'
+import { initialsOf } from '@/lib/format'
+import { findStudent } from '@/data/students'
 
-export const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'Reports', href: '/reports', icon: FileText },
-  { label: 'Files', href: '/files', icon: Folder },
-  { label: 'Settings', href: '/settings', icon: Settings },
-]
+const MONTH_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-export const stats: StatMetric[] = [
+/** Attendance on the most recent register day. */
+function latestAttendancePercentage(): number {
+  const latest = registerDays[0]
+  const records = attendance.filter((record) => record.attendanceDate === latest)
+  if (records.length === 0) return 0
+  const present = records.filter((record) => record.status === 'PRESENT' || record.status === 'LATE').length
+  return Number(((present / records.length) * 100).toFixed(1))
+}
+
+const collectedPaise = feeInvoices.reduce((total, invoice) => total + invoice.paidPaise, 0)
+const pendingPaise = feeInvoices.reduce(
+  (total, invoice) => total + Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0),
+  0,
+)
+const overdueCount = feeInvoices.filter((invoice) => invoice.status === 'OVERDUE').length
+
+const stats: StatMetric[] = [
   {
-    id: 'revenue',
-    label: 'Total Revenue',
-    value: '$482,900',
-    delta: '+8.2%',
+    id: 'students',
+    label: 'Students enrolled',
+    value: students.length.toString(),
+    delta: '+2 this term',
+    direction: 'up',
+    icon: BarChart3,
+    iconTone: 'primary',
+  },
+  {
+    id: 'attendance',
+    label: 'Attendance today',
+    value: `${latestAttendancePercentage()}%`,
+    delta: '+1.2%',
+    direction: 'up',
+    icon: CalendarCheck,
+    iconTone: 'success',
+  },
+  {
+    id: 'collected',
+    label: 'Fees collected',
+    value: formatPaise(collectedPaise),
+    delta: '+12.4%',
     direction: 'up',
     icon: Wallet,
     iconTone: 'primary',
   },
   {
-    id: 'subscriptions',
-    label: 'Active Subscriptions',
-    value: '12,402',
-    delta: '+12%',
-    direction: 'up',
-    icon: Users,
-    iconTone: 'success',
-  },
-  {
-    id: 'churn',
-    label: 'Churn Rate',
-    value: '1.42%',
-    delta: '-2.1%',
+    id: 'pending',
+    label: 'Fees pending',
+    value: formatPaise(pendingPaise),
+    delta: `${overdueCount} overdue`,
     direction: 'down',
-    icon: TrendingDown,
+    icon: TrendingUp,
     iconTone: 'error',
   },
-  {
-    id: 'mrr',
-    label: 'Average MRR',
-    value: '$38.50',
-    delta: '+4.5%',
-    direction: 'up',
-    icon: BarChart3,
-    iconTone: 'warning',
-  },
 ]
 
-export const monthlyTrends: ChartPoint[] = [
-  { label: 'JAN', value: 31200 },
-  { label: 'FEB', value: 28400 },
-  { label: 'MAR', value: 36800 },
-  { label: 'APR', value: 40100 },
-  { label: 'MAY', value: 34600 },
-  { label: 'JUN', value: 45200 },
-  { label: 'JUL', value: 61800 },
-  { label: 'AUG', value: 42900 },
-  { label: 'SEP', value: 48700 },
-  { label: 'OCT', value: 53400 },
-  { label: 'NOV', value: 47600 },
-  { label: 'DEC', value: 51200 },
+/** Twelve months of collection, closing on the current month. */
+const collectionTrend: ChartPoint[] = (() => {
+  const month = new Date().getMonth()
+  const base = 1_180_000
+
+  return Array.from({ length: 12 }, (_, offset) => {
+    const label = MONTH_LABELS[(month - 11 + offset + 24) % 12]
+    return { label, value: base + ((offset * 97_000) % 520_000) }
+  })
+})()
+
+const quarterlyTrend: ChartPoint[] = [
+  { label: 'Q1', value: 3_540_000 },
+  { label: 'Q2', value: 4_020_000 },
+  { label: 'Q3', value: 4_610_000 },
+  { label: 'Q4', value: 4_350_000 },
 ]
 
-export const quarterlyTrends: ChartPoint[] = [
-  { label: 'Q1', value: 96400 },
-  { label: 'Q2', value: 119900 },
-  { label: 'Q3', value: 153400 },
-  { label: 'Q4', value: 152200 },
-]
+const recentPayments: RecentPayment[] = [...feePayments]
+  .sort((left, right) => (right.paidAt ?? '').localeCompare(left.paidAt ?? ''))
+  .slice(0, 5)
+  .map((payment) => {
+    const student = findStudent(payment.studentId)
+    const name = student ? `${student.firstName} ${student.lastName}` : 'Unknown student'
 
-export const highlightedMonth = 'JUL'
+    return {
+      id: payment.id,
+      studentName: name,
+      initials: initialsOf(name),
+      amountPaise: payment.amountPaise,
+      status: 'PAID',
+      method: payment.method,
+      paidAt: payment.paidAt ?? dateTimeOffset(0),
+    }
+  })
 
-export const transactions: Transaction[] = [
-  {
-    id: 'txn-1',
-    date: 'Oct 24, 2023',
-    customer: 'Stellar Corp',
-    initials: 'SC',
-    amount: '$1,200.00',
-    status: 'completed',
-    plan: 'Enterprise',
-  },
-  {
-    id: 'txn-2',
-    date: 'Oct 23, 2023',
-    customer: 'Nova Media',
-    initials: 'NM',
-    amount: '$850.00',
-    status: 'completed',
-    plan: 'Business',
-  },
-  {
-    id: 'txn-3',
-    date: 'Oct 22, 2023',
-    customer: 'Apex Labs',
-    initials: 'AL',
-    amount: '$2,400.00',
-    status: 'pending',
-    plan: 'Enterprise',
-  },
-  {
-    id: 'txn-4',
-    date: 'Oct 21, 2023',
-    customer: 'Kinetic Labs',
-    initials: 'KL',
-    amount: '$340.00',
-    status: 'completed',
-    plan: 'Pro',
-  },
-  {
-    id: 'txn-5',
-    date: 'Oct 20, 2023',
-    customer: 'Vertex Inc',
-    initials: 'VI',
-    amount: '$1,890.00',
-    status: 'completed',
-    plan: 'Business',
-  },
-]
+export const dashboardSummary: DashboardSummary = {
+  stats,
+  collectionTrend,
+  quarterlyTrend,
+  highlightedMonth: MONTH_LABELS[new Date().getMonth()],
+  recentPayments,
+  insight: dashboardInsight,
+}

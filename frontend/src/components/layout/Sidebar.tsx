@@ -1,6 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { navItems } from '@/data/dashboard'
+import { LogOut } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
 import { cn } from '@/lib/cn'
+import { humanizeEnum } from '@/lib/format'
+import { navItemsForRole } from '@/lib/navigation'
+import { useCurrentUser } from '@/store/auth'
+import { useLogout } from '@/features/auth/api'
+import { useCurrentSchool } from '@/features/school/api'
 
 interface SidebarProps {
   open: boolean
@@ -8,6 +14,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose }: SidebarProps) {
+  const user = useCurrentUser()
+  const school = useCurrentSchool()
+  const logout = useLogout()
+  const items = navItemsForRole(user?.role)
+
   return (
     <>
       <div
@@ -24,13 +35,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           'border-line bg-surface fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r transition-transform duration-200 lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}>
-        <div className="px-6 pt-7 pb-8">
-          <p className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">Curator Pro</p>
-          <p className="text-ink-subtle mt-0.5 text-[13px]">SaaS Analytics</p>
+        <div className="px-6 pt-7 pb-6">
+          <p className="font-display text-ink text-[18px] leading-tight font-semibold tracking-[-0.03em]">
+            {school.data?.name ?? 'School Flow AI'}
+          </p>
+          <p className="text-ink-subtle mt-1 text-[12px]">
+            {school.data ? `Academic year ${school.data.settings.academicYear}` : 'School management'}
+          </p>
         </div>
 
-        <nav className="flex-1 space-y-1" aria-label="Primary">
-          {navItems.map((item) => {
+        <nav className="flex-1 space-y-1 overflow-y-auto pb-4" aria-label="Primary">
+          {items.map((item) => {
             const Icon = item.icon
 
             return (
@@ -59,24 +74,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
         </nav>
 
-        <div className="mt-auto space-y-5 px-4 pt-4 pb-6">
-          <button
-            type="button"
-            className="from-primary to-primary-hover flex h-[38px] w-full items-center justify-center rounded-md bg-gradient-to-r text-[14px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-primary)]">
-            Upgrade Plan
-          </button>
-
-          <div className="flex items-center gap-3 px-1">
-            <img
-              src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&h=80&q=80"
-              alt="Alex Rivera"
-              className="size-9 rounded-full object-cover"
-            />
-            <div className="min-w-0">
-              <p className="text-ink truncate text-[14px] font-medium">Alex Rivera</p>
-              <p className="text-ink-subtle text-[12px]">Pro Admin</p>
+        <div className="border-line mt-auto border-t px-4 py-4">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="text-ink truncate text-[13px] font-medium">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-ink-subtle text-[11px]">{humanizeEnum(user.role)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout.mutate()}
+                disabled={logout.isPending}
+                aria-label="Sign out"
+                title="Sign out"
+                className="text-ink-subtle hover:bg-canvas hover:text-ink inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
+                <LogOut className="size-4" strokeWidth={1.75} />
+              </button>
             </div>
-          </div>
+          ) : null}
         </div>
       </aside>
     </>

@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
+import type { Role } from '@/types/auth'
+import type { InvoiceStatus } from '@/types/fees'
+import type { PaymentMethod } from '@/types/fees'
+import type { AiInsight } from '@/types/ai'
 
 export type TrendDirection = 'up' | 'down'
-
-export type TransactionStatus = 'completed' | 'pending'
-
-export type ChartPeriod = 'monthly' | 'quarterly'
+export type IconTone = 'primary' | 'success' | 'error' | 'warning'
 
 export interface StatMetric {
   id: string
@@ -13,7 +14,7 @@ export interface StatMetric {
   delta: string
   direction: TrendDirection
   icon: LucideIcon
-  iconTone: 'primary' | 'success' | 'error' | 'warning'
+  iconTone: IconTone
 }
 
 export interface ChartPoint {
@@ -21,18 +22,29 @@ export interface ChartPoint {
   value: number
 }
 
-export interface Transaction {
-  id: string
-  date: string
-  customer: string
-  initials: string
-  amount: string
-  status: TransactionStatus
-  plan: string
-}
-
+/** Nav is configuration, not server data — see `src/lib/navigation.ts`. */
 export interface NavItem {
   label: string
   href: string
   icon: LucideIcon
+  roles: Role[]
+}
+
+export interface RecentPayment {
+  id: string
+  studentName: string
+  initials: string
+  amountPaise: number
+  status: InvoiceStatus
+  method: PaymentMethod
+  paidAt: string
+}
+
+export interface DashboardSummary {
+  stats: StatMetric[]
+  collectionTrend: ChartPoint[]
+  quarterlyTrend: ChartPoint[]
+  highlightedMonth: string
+  recentPayments: RecentPayment[]
+  insight: AiInsight
 }

@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { cn } from '@/lib/cn'
-import { highlightedMonth, monthlyTrends, quarterlyTrends } from '@/data/dashboard'
-import type { ChartPeriod } from '@/types/dashboard'
+import { formatPaise } from '@/lib/format'
+import type { ChartPoint } from '@/types/dashboard'
 
-const periods: Array<{ id: ChartPeriod; label: string }> = [
+type Period = 'monthly' | 'quarterly'
+
+const periods: Array<{ id: Period; label: string }> = [
   { id: 'monthly', label: 'Monthly' },
   { id: 'quarterly', label: 'Quarterly' },
 ]
@@ -33,20 +35,31 @@ function TrendBar({ x = 0, y = 0, width = 0, height = 0, payload, highlightLabel
   )
 }
 
-export function RevenueChart() {
-  const [period, setPeriod] = useState<ChartPeriod>('monthly')
-  const data = period === 'monthly' ? monthlyTrends : quarterlyTrends
-  const peakLabel = useMemo(() => {
-    if (period === 'monthly') return highlightedMonth
-    return data.reduce((highest, point) => (point.value > highest.value ? point : highest)).label
-  }, [data, period])
+interface CollectionChartProps {
+  monthly: ChartPoint[]
+  quarterly: ChartPoint[]
+  highlightedMonth: string
+}
+
+/** Fee collection over time. Values arrive in paise and are formatted at the edge. */
+export function CollectionChart({ monthly, quarterly, highlightedMonth }: CollectionChartProps) {
+  const [period, setPeriod] = useState<Period>('monthly')
+
+  const data = period === 'monthly' ? monthly : quarterly
+  const peakLabel = useMemo(
+    () =>
+      period === 'monthly'
+        ? highlightedMonth
+        : data.reduce((high, point) => (point.value > high.value ? point : high)).label,
+    [data, period, highlightedMonth],
+  )
 
   return (
     <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)] lg:p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">MRR Trends</h2>
-          <p className="text-ink-muted mt-1 text-[13px]">Revenue growth over the last 12 months</p>
+          <h2 className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">Fee collection</h2>
+          <p className="text-ink-muted mt-1 text-[13px]">Collected across the last 12 months</p>
         </div>
 
         <div className="bg-canvas inline-flex rounded-lg p-1">
@@ -86,7 +99,7 @@ export function RevenueChart() {
                 return (
                   <div className="border-line bg-surface rounded-lg border px-3 py-2 text-[13px] shadow-lg">
                     <p className="text-ink-muted">{payload[0].payload.label}</p>
-                    <p className="text-ink font-medium">${value.toLocaleString()}</p>
+                    <p className="text-ink font-medium">{formatPaise(value)}</p>
                   </div>
                 )
               }}
@@ -101,6 +114,8 @@ export function RevenueChart() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      <p className="text-ink-subtle mt-4 text-[12px]">Peak month is highlighted. Hover a bar for the exact amount.</p>
     </article>
   )
 }

@@ -2,12 +2,16 @@
 
 ## Phase 1: Foundation & Auth
 
-- [ ] App shell (Sidebar, Header, AppShell) with role-aware navigation
-- [ ] Login, OTP verification, forgot/reset password screens
-- [ ] Auth context + protected routes per role
-- [ ] API client service with JWT attach + error envelope handling
+- [x] App shell (Sidebar, Header, AppShell) with role-aware navigation
+- [x] Login, OTP verification, forgot/reset password screens
+- [x] Auth session store + protected routes per role
+- [x] API client service with JWT attach + error envelope handling
 
 **Done when:** a user can log in and land on a role-correct dashboard shell.
+
+> Complete on demo data. The backend is not implemented yet, so `src/services/mockAdapter.ts` answers
+> every endpoint from `src/data/`. Switching to the live API is `VITE_ENABLE_MOCKS=false` — no
+> component or hook changes.
 
 ## Phase 2: Admin Core
 

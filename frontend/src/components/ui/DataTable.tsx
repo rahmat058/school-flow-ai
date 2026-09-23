@@ -31,6 +31,15 @@ interface DataTableProps<T> {
   pageSize?: number
   onRowClick?: (row: T) => void
   className?: string
+  /**
+   * Controlled pagination for server-paged endpoints. With `onPageChange` set, `data` is treated as
+   * the current page (`pageCount`/`total` come from the API's `meta`) and no local slicing happens.
+   * Leave it out and the table pages and slices `data` itself.
+   */
+  page?: number
+  pageCount?: number
+  total?: number
+  onPageChange?: (page: number) => void
 }
 
 const alignStyles = {
@@ -51,9 +60,15 @@ export function DataTable<T>({
   pageSize = 10,
   onRowClick,
   className,
+  page,
+  pageCount,
+  total,
+  onPageChange,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<{ id: string; direction: SortDirection } | null>(null)
-  const [page, setPage] = useState(1)
+  const [internalPage, setInternalPage] = useState(1)
+
+  const isServerPaged = onPageChange !== undefined
 
   const sortedData = useMemo(() => {
     if (!sort) return data
@@ -75,18 +90,26 @@ export function DataTable<T>({
     })
   }, [columns, data, sort])
 
-  const pageCount = Math.max(1, Math.ceil(sortedData.length / pageSize))
-  const currentPage = Math.min(page, pageCount)
+  const internalPageCount = Math.max(1, Math.ceil(sortedData.length / pageSize))
+  const resolvedPageCount = isServerPaged ? Math.max(1, pageCount ?? 1) : internalPageCount
+  const currentPage = isServerPaged ? Math.max(1, page ?? 1) : Math.min(internalPage, internalPageCount)
+  const totalRows = isServerPaged ? (total ?? data.length) : sortedData.length
+
   const rangeStart = (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, sortedData.length)
+  const rangeEnd = Math.min(currentPage * pageSize, totalRows)
 
   const pageRows = useMemo(
-    () => sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [currentPage, pageSize, sortedData],
+    () => (isServerPaged ? sortedData : sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize)),
+    [currentPage, isServerPaged, pageSize, sortedData],
   )
 
+  function goToPage(nextPage: number) {
+    if (isServerPaged) onPageChange?.(nextPage)
+    else setInternalPage(nextPage)
+  }
+
   function toggleSort(columnId: string) {
-    setPage(1)
+    goToPage(1)
     setSort((current) => {
       if (!current || current.id !== columnId) return { id: columnId, direction: 'asc' }
       if (current.direction === 'asc') return { id: columnId, direction: 'desc' }
@@ -155,12 +178,12 @@ export function DataTable<T>({
         </TableBody>
       </Table>
 
-      {!loading && pageCount > 1 ? (
+      {!loading && resolvedPageCount > 1 ? (
         <div className="border-line flex items-center justify-between gap-4 border-t px-4 py-3">
           <p className="text-ink-subtle text-[12px]">
-            Showing {rangeStart}–{rangeEnd} of {sortedData.length}
+            Showing {rangeStart}–{rangeEnd} of {totalRows}
           </p>
-          <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
+          <Pagination page={currentPage} pageCount={resolvedPageCount} onPageChange={goToPage} />
         </div>
       ) : null}
     </div>
