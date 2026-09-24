@@ -16,9 +16,37 @@ export interface Teacher {
   lastName: string
   phone: string | null
   qualification: string | null
+  /** The subject they primarily teach — their profile, not a class assignment. */
+  subject: string | null
+  /** Whole years of teaching experience. */
+  experienceYears: number | null
   /** ISO date (`YYYY-MM-DD`). */
   joinedAt: string | null
   status: RecordStatus
+}
+
+/** Read model for the teachers grid — the profile plus its login email and assigned classes. */
+export interface TeacherListItem extends Teacher {
+  email: string
+  classIds: string[]
+  classLabels: string[]
+}
+
+/** What the teacher form sends. Employee number and credentials are the server's job. */
+export interface TeacherInput {
+  fullName: string
+  subject: string
+  email: string
+  phone: string | null
+  qualification: string | null
+  experienceYears: number | null
+  classIds: string[]
+}
+
+/** One class a teacher is assigned to — the `teacher_classes` join. */
+export interface TeacherClass {
+  teacherId: string
+  classId: string
 }
 
 export interface Student {
@@ -93,8 +121,8 @@ export interface StudentInput {
   guardian: Guardian | null
 }
 
-/** The invite that goes out with a new enrolment: a login plus a verification link. */
-export interface StudentInvite {
+/** The invite that goes out with a new account: a login plus a verification link. */
+export interface AccountInvite {
   email: string
   verificationRequired: boolean
   /** Mock only — a real API emails the password and never returns it. */
@@ -102,7 +130,10 @@ export interface StudentInvite {
 }
 
 /** The create response: the new roster row, plus the invite that was sent to the student. */
-export type StudentCreated = StudentListItem & { invite?: StudentInvite }
+export type StudentCreated = StudentListItem & { invite?: AccountInvite }
+
+/** The create response for a teacher: the grid row plus the invite that went out. */
+export type TeacherCreated = TeacherListItem & { invite?: AccountInvite }
 
 /** Everything the profile header and Overview tab read, in one payload. */
 export interface StudentProfile extends StudentListItem {

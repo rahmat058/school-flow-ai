@@ -105,3 +105,6 @@ export function schoolEmail(index: number, domain: string): string {
 }
 
 export const SCHOOL_DOMAIN = 'brightfuture.edu'
+
+/** The one password every demo account uses, and the one invited accounts are emailed in mock mode. */
+export const DEMO_PASSWORD = 'demo1234'

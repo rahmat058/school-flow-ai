@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { env } from '@/lib/env'
+import { emailRules } from '@/lib/validation'
 import { ApiError } from '@/services/apiClient'
 import { useForgotPassword } from '@/features/auth/api'
 import { paths } from '@/routes/paths'
@@ -15,8 +16,6 @@ import { paths } from '@/routes/paths'
 interface ForgotPasswordFormValues {
   email: string
 }
-
-const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
 export function ForgotPasswordForm() {
   const forgotPassword = useForgotPassword()
@@ -81,10 +80,7 @@ export function ForgotPasswordForm() {
         placeholder="you@school.edu"
         hint="We will email a link to choose a new password."
         error={errors.email?.message}
-        {...register('email', {
-          required: 'Email is required',
-          pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
-        })}
+        {...register('email', emailRules)}
       />
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>

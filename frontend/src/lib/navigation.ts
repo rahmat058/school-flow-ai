@@ -24,6 +24,7 @@ const EVERYONE: Role[] = ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT']
 export const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, roles: EVERYONE },
   { label: 'Students', href: '/students', icon: Users, roles: ['ADMIN', 'TEACHER'] },
+  { label: 'Teachers', href: '/teachers', icon: GraduationCap, roles: ['ADMIN'] },
   { label: 'Attendance', href: '/attendance', icon: CalendarCheck, roles: ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] },
   { label: 'Fees', href: '/fees', icon: Wallet, roles: ['ADMIN', 'PARENT'] },
   { label: 'Homework', href: '/homework', icon: ClipboardList, roles: EVERYONE },

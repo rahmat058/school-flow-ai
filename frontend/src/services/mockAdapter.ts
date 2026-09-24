@@ -17,14 +17,15 @@ import type {
   StudentResults,
   Student,
   Teacher,
+  TeacherListItem,
   Gender,
 } from '@/types/people'
-import { SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
+import { DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes } from '@/data/classes'
-import { findTeacher, teachers } from '@/data/teachers'
+import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, gradeForPercentage, maxMarks } from '@/data/exams'
-import { findSubject } from '@/data/subjects'
+import { findSubject, subjects } from '@/data/subjects'
 import { feeInvoices, feePayments, feeStructures } from '@/data/fees'
 import { formatDate } from '@/lib/format'
 import { students } from '@/data/students'
@@ -224,6 +225,35 @@ function studentListItems(): StudentListItem[] {
       feeStanding: isOverdue ? 'OVERDUE' : duePaise > 0 ? 'UNPAID' : 'PAID',
     }
   })
+}
+
+/**
+ * Teacher grid read model: the profile plus its login email and the classes they are assigned to,
+ * derived from the join rather than duplicated on the profile.
+ */
+function teacherListItems(): TeacherListItem[] {
+  return teachers.map((teacher) => {
+    const user = users.find((item) => item.id === teacher.userId)
+    const classIds = [
+      ...new Set(teacherClasses.filter((link) => link.teacherId === teacher.id).map((link) => link.classId)),
+    ]
+
+    return {
+      ...teacher,
+      email: user?.email ?? '',
+      classIds,
+      classLabels: classIds.flatMap((classId) => {
+        const classRoom = classes.find((item) => item.id === classId)
+        return classRoom ? [classLabel(classRoom)] : []
+      }),
+    }
+  })
+}
+
+function fullNameParts(fullName: string): { firstName: string; lastName: string } {
+  const [firstName, ...rest] = fullName.trim().split(' ')
+
+  return { firstName, lastName: rest.join(' ') }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -500,11 +530,15 @@ function syntheticAdmin(registration: PendingRegistration): AuthUser {
   }
 }
 
-/** Passwords minted for invited logins, so a newly enrolled student can actually sign in. */
+/** Passwords minted for invited logins, so a newly enrolled student or teacher can actually sign in. */
 const invitedPasswords = new Map<string, string>()
 
-function temporaryPassword(): string {
-  return `sf-${Math.random().toString(36).slice(2, 8)}`
+/**
+ * A real API generates a random password per invite. The mock hands out the shared demo password
+ * instead, so an invited account is usable as soon as its verification lands.
+ */
+function invitePassword(): string {
+  return DEMO_PASSWORD
 }
 
 function resolveLogin(email: string, password: string): AuthUser | null {
@@ -649,7 +683,41 @@ const routes: Route[] = [
     path: '/schools/resend-otp',
     handler: () => ok({ sent: true, expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() }),
   },
+  {
+    method: 'POST',
+    path: '/auth/verify-invite',
+    handler: ({ body }) => {
+      const email = String(body.email ?? '')
+        .trim()
+        .toLowerCase()
+      const code = String(body.code ?? '')
+      const user = users.find((item) => item.email.toLowerCase() === email)
+
+      if (!user) return fail(404, 'INVITE_NOT_FOUND', 'No invite for that address', ['email'])
+      // Confirming twice is a success, not an error — an emailed link can be opened twice.
+      if (user.isVerified) return ok({ verified: true })
+      // The invite token is a one-time OTP of purpose `INVITE` (`otps`, Database.md §3).
+      if (code !== OTP_CODE) {
+        return fail(400, 'INVITE_INVALID', `That code is not correct. Use ${OTP_CODE} in the demo.`)
+      }
+
+      user.isVerified = true
+      return ok({ verified: true })
+    },
+  },
   { method: 'GET', path: '/schools/current', handler: () => ok(activeSchool) },
+  {
+    method: 'GET',
+    path: '/subjects',
+    handler: ({ params }) =>
+      ok(
+        subjects.filter(
+          (subject) =>
+            (!params.classId || subject.classId === params.classId) &&
+            (!params.teacherId || subject.teacherId === params.teacherId),
+        ),
+      ),
+  },
   { method: 'GET', path: '/dashboard/admin', handler: () => ok(dashboardSummary) },
   {
     method: 'GET',
@@ -667,7 +735,148 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/teachers',
-    handler: () => ok<Teacher[]>(teachers),
+    handler: ({ params }) => {
+      const term = searchTerm(params)
+
+      return ok<TeacherListItem[]>(
+        teacherListItems()
+          // A soft-deleted teacher keeps their row but leaves the grid.
+          .filter((teacher) => teacher.status === 'ACTIVE')
+          .filter((teacher) =>
+            matches(term, [teacher.firstName, teacher.lastName, teacher.subject, teacher.email, teacher.employeeNo]),
+          )
+          .sort((left, right) => left.employeeNo.localeCompare(right.employeeNo)),
+      )
+    },
+  },
+  {
+    method: 'POST',
+    path: '/teachers',
+    handler: ({ body }) => {
+      const fullName = String(body.fullName ?? '').trim()
+      const subject = String(body.subject ?? '').trim()
+      const email = String(body.email ?? '')
+        .trim()
+        .toLowerCase()
+
+      if (!fullName) return fail(400, 'TEACHER_INVALID', 'Full name is required', ['fullName'])
+      if (!subject) return fail(400, 'TEACHER_INVALID', 'Subject is required', ['subject'])
+      if (!email.includes('@')) return fail(400, 'TEACHER_INVALID', 'A valid email is required', ['email'])
+      if (users.some((user) => user.email.toLowerCase() === email)) {
+        return fail(409, 'TEACHER_EMAIL_TAKEN', 'That email already has an account', ['email'])
+      }
+
+      const { firstName, lastName } = fullNameParts(fullName)
+      const index = teachers.length + 1
+      const password = invitePassword()
+
+      const teacher: Teacher = {
+        id: `tch_${index}`,
+        schoolId: SCHOOL_ID,
+        userId: `usr_tch_${index}`,
+        employeeNo: `EMP-${index.toString().padStart(4, '0')}`,
+        firstName,
+        lastName,
+        phone: body.phone ? String(body.phone) : null,
+        qualification: body.qualification ? String(body.qualification) : null,
+        subject,
+        experienceYears: body.experienceYears ? Number(body.experienceYears) : null,
+        joinedAt: dateOffset(0),
+        status: 'ACTIVE',
+      }
+
+      teachers.push(teacher)
+      users.push({
+        id: teacher.userId,
+        email,
+        role: 'TEACHER',
+        schoolId: SCHOOL_ID,
+        // Same invite rule as an enrolment: the login waits for the emailed link.
+        isVerified: false,
+        profileId: teacher.id,
+        firstName,
+        lastName,
+        classId: null,
+      })
+      invitedPasswords.set(teacher.userId, password)
+
+      const classIds = Array.isArray(body.classIds) ? (body.classIds as string[]) : []
+      for (const classId of classIds) {
+        if (classes.some((classRoom) => classRoom.id === classId)) {
+          teacherClasses.push({ teacherId: teacher.id, classId })
+        }
+      }
+
+      const row = teacherListItems().find((item) => item.id === teacher.id)
+      if (!row) return fail(404, 'TEACHER_NOT_FOUND', 'Teacher not found')
+
+      return created({ ...row, invite: { email, verificationRequired: true, mockOnlyPassword: password } })
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/teachers/:id',
+    handler: ({ params, body }) => {
+      const teacher = teachers.find((item) => item.id === params.id)
+      if (!teacher) return fail(404, 'TEACHER_NOT_FOUND', 'Teacher not found')
+
+      if (body.fullName !== undefined) {
+        const { firstName, lastName } = fullNameParts(String(body.fullName))
+        teacher.firstName = firstName
+        teacher.lastName = lastName
+      }
+      if (body.subject !== undefined) teacher.subject = String(body.subject)
+      if (body.phone !== undefined) teacher.phone = body.phone ? String(body.phone) : null
+      if (body.qualification !== undefined) {
+        teacher.qualification = body.qualification ? String(body.qualification) : null
+      }
+      if (body.experienceYears !== undefined) {
+        teacher.experienceYears = body.experienceYears ? Number(body.experienceYears) : null
+      }
+
+      const user = users.find((item) => item.id === teacher.userId)
+      if (user) {
+        user.firstName = teacher.firstName
+        user.lastName = teacher.lastName
+
+        if (body.email !== undefined) {
+          const email = String(body.email).trim().toLowerCase()
+
+          if (!email.includes('@')) return fail(400, 'TEACHER_INVALID', 'A valid email is required', ['email'])
+          if (users.some((item) => item.id !== user.id && item.email.toLowerCase() === email)) {
+            return fail(409, 'TEACHER_EMAIL_TAKEN', 'That email already has an account', ['email'])
+          }
+
+          user.email = email
+        }
+      }
+
+      if (Array.isArray(body.classIds)) {
+        const next = (body.classIds as string[]).filter((classId) =>
+          classes.some((classRoom) => classRoom.id === classId),
+        )
+
+        // The form sends the set the user ended with, so replace rather than merge.
+        for (let index = teacherClasses.length - 1; index >= 0; index -= 1) {
+          if (teacherClasses[index].teacherId === teacher.id) teacherClasses.splice(index, 1)
+        }
+        for (const classId of next) teacherClasses.push({ teacherId: teacher.id, classId })
+      }
+
+      return ok(teacherListItems().find((row) => row.id === teacher.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/teachers/:id',
+    handler: ({ params }) => {
+      const teacher = teachers.find((item) => item.id === params.id)
+      if (!teacher) return fail(404, 'TEACHER_NOT_FOUND', 'Teacher not found')
+
+      // Soft delete: the row survives for history, the grid stops listing it.
+      teacher.status = 'INACTIVE'
+      return ok({ deleted: true })
+    },
   },
   {
     method: 'GET',
@@ -762,7 +971,7 @@ const routes: Route[] = [
       }
 
       const email = schoolEmail(index, `student.${SCHOOL_DOMAIN}`)
-      const password = temporaryPassword()
+      const password = invitePassword()
 
       students.push(student)
       users.push({

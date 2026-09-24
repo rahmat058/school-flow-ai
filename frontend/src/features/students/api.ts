@@ -1,7 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, patch, post, remove } from '@/services/apiClient'
 import type { Paginated } from '@/types/api'
-import type { ClassOption } from '@/types/academic'
 import type {
   FeeStanding,
   StudentAttendance,
@@ -14,6 +13,8 @@ import type {
   StudentResults,
 } from '@/types/people'
 
+export { useClassOptions } from '@/features/classes/api'
+
 export interface StudentListQuery {
   page: number
   limit: number
@@ -25,7 +26,6 @@ export interface StudentListQuery {
 export const studentKeys = {
   all: ['students'] as const,
   list: (query: StudentListQuery) => [...studentKeys.all, 'list', query] as const,
-  classes: () => [...studentKeys.all, 'classes'] as const,
   profile: (id: string) => [...studentKeys.all, 'profile', id] as const,
   attendance: (id: string) => [...studentKeys.all, 'attendance', id] as const,
   results: (id: string) => [...studentKeys.all, 'results', id] as const,
@@ -49,14 +49,6 @@ export function useStudents(query: StudentListQuery) {
     },
     // Keeps the current page on screen while the next one loads, instead of flashing a skeleton.
     placeholderData: keepPreviousData,
-  })
-}
-
-export function useClassOptions() {
-  return useQuery({
-    queryKey: studentKeys.classes(),
-    queryFn: async () => (await get<ClassOption[]>('/classes')).data,
-    staleTime: 5 * 60_000,
   })
 }
 

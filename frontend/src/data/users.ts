@@ -1,5 +1,5 @@
 import type { AuthUser, Role } from '@/types/auth'
-import { SCHOOL_DOMAIN, SCHOOL_ID, personName, schoolEmail } from '@/data/seed'
+import { DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, personName, schoolEmail } from '@/data/seed'
 
 /** Teacher profile indexes (`tch_1`…`tch_8`) — kept in sync with `data/teachers.ts`. */
 const TEACHER_INDEXES = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -85,26 +85,26 @@ export interface DemoAccount {
 
 /** Surfaced in the login screen so the demo can be explored without a backend. */
 export const demoAccounts: DemoAccount[] = [
-  { role: 'ADMIN', label: 'School admin', email: adminUser.email, password: 'demo1234', userId: adminUser.id },
+  { role: 'ADMIN', label: 'School admin', email: adminUser.email, password: DEMO_PASSWORD, userId: adminUser.id },
   {
     role: 'TEACHER',
     label: 'Class teacher',
     email: 'ayesha.khan1@brightfuture.edu',
-    password: 'demo1234',
+    password: DEMO_PASSWORD,
     userId: 'usr_tch_1',
   },
   {
     role: 'STUDENT',
     label: 'Class 5A student',
     email: 'ayesha.khan1@student.brightfuture.edu',
-    password: 'demo1234',
+    password: DEMO_PASSWORD,
     userId: 'usr_std_1',
   },
   {
     role: 'PARENT',
     label: 'Parent of two',
     email: 'ayesha.khan1@parent.brightfuture.edu',
-    password: 'demo1234',
+    password: DEMO_PASSWORD,
     userId: 'usr_par_1',
   },
 ]

@@ -3,6 +3,7 @@ import { BRAND } from '@/lib/brand'
 import { env } from '@/lib/env'
 import { activeSchool } from '@/data/school'
 import { classes } from '@/data/classes'
+import { DEMO_PASSWORD } from '@/data/seed'
 import { users } from '@/data/users'
 
 interface AuthShellProps {
@@ -38,7 +39,8 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
             {env.enableMocks ? (
               <p className="border-line bg-surface text-ink-subtle mt-6 rounded-lg border px-3.5 py-3 text-[11.5px]">
                 <span className="text-ink font-medium">Demo mode</span> — the API is mocked. Sample password{' '}
-                <span className="font-mono">demo1234</span>, signup OTP <span className="font-mono">123456</span>.
+                <span className="font-mono">{DEMO_PASSWORD}</span>, signup OTP <span className="font-mono">123456</span>
+                .
               </p>
             ) : null}
           </div>

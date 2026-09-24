@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
+import { emailRules, passwordHint, passwordRules } from '@/lib/validation'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useRegisterSchool } from '@/features/auth/api'
@@ -22,14 +23,6 @@ interface SignupFormValues {
   email: string
   password: string
 }
-
-const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
-const MIN_PASSWORD = 8
-
-const EMAIL_RULES = {
-  required: 'Email is required',
-  pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
-} as const
 
 export function SignupForm() {
   const navigate = useNavigate()
@@ -102,7 +95,7 @@ export function SignupForm() {
             type="email"
             icon={Mail}
             error={errors.contactEmail?.message}
-            {...register('contactEmail', EMAIL_RULES)}
+            {...register('contactEmail', emailRules)}
           />
           <Input
             label="Contact number"
@@ -136,17 +129,14 @@ export function SignupForm() {
           icon={Mail}
           hint="Used to sign in and to receive the verification code."
           error={errors.email?.message}
-          {...register('email', EMAIL_RULES)}
+          {...register('email', emailRules)}
         />
         <PasswordInput
           label="Password"
           icon={Lock}
-          hint={`At least ${MIN_PASSWORD} characters.`}
+          hint={passwordHint}
           error={errors.password?.message}
-          {...register('password', {
-            required: 'Password is required',
-            minLength: { value: MIN_PASSWORD, message: `Use at least ${MIN_PASSWORD} characters` },
-          })}
+          {...register('password', passwordRules)}
         />
       </fieldset>
 

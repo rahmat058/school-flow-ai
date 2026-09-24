@@ -10,6 +10,7 @@ import {
   NoticesPage,
   StudentProfilePage,
   StudentsPage,
+  TeachersPage,
 } from '@/routes/lazyPages'
 import { childPath, paths } from '@/routes/paths'
 
@@ -77,6 +78,10 @@ export const privateRoutes: RouteObject[] = [
           {
             element: <RoleGuard allow={['ADMIN', 'TEACHER']} />,
             children: [{ path: childPath(paths.students), element: <StudentsPage /> }],
+          },
+          {
+            element: <RoleGuard allow={['ADMIN']} />,
+            children: [{ path: childPath(paths.teachers), element: <TeachersPage /> }],
           },
           {
             // Guardians may open their own child's profile, so parents are allowed here.

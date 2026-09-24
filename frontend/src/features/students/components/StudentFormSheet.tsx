@@ -10,6 +10,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
 import { env } from '@/lib/env'
+import { bloodGroupOptions, genderOptions } from '@/lib/options'
+import { emailRules } from '@/lib/validation'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useCreateStudent, useUpdateStudent } from '@/features/students/api'
 import type { BloodGroup, Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
@@ -34,23 +36,6 @@ interface FormValues {
   guardianPhone: string
   guardianAddress: string
 }
-
-const GENDER_OPTIONS = [
-  { value: '', label: 'Not specified' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'MALE', label: 'Male' },
-  { value: 'OTHER', label: 'Other' },
-]
-
-const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
-
-const BLOOD_GROUP_OPTIONS = [
-  { value: '', label: 'Choose a group' },
-  ...(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const).map((group) => ({
-    value: group,
-    label: group,
-  })),
-]
 
 /**
  * Create and edit share one form: the sheet is keyed on the target student, so it mounts with that
@@ -125,7 +110,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
           tone: 'success',
           title: `${input.firstName} ${input.lastName} enrolled`,
           description: invite
-            ? `Login details sent to ${invite.email}${demoPassword}`
+            ? `Verification email sent to ${invite.email}${demoPassword} — the login unlocks once it is confirmed.`
             : 'They can sign in once an admin shares their credentials.',
         })
       }
@@ -228,7 +213,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
             render={({ field }) => (
               <Select
                 label="Gender"
-                options={GENDER_OPTIONS}
+                options={genderOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 error={errors.gender?.message}
@@ -243,7 +228,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
             render={({ field }) => (
               <Select
                 label="Blood group"
-                options={BLOOD_GROUP_OPTIONS}
+                options={bloodGroupOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 error={errors.bloodGroup?.message}
@@ -282,10 +267,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
             type="email"
             placeholder="parent@example.com"
             error={errors.guardianEmail?.message}
-            {...register('guardianEmail', {
-              required: 'Email is required',
-              pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
-            })}
+            {...register('guardianEmail', emailRules)}
           />
           <Textarea
             label="Address"

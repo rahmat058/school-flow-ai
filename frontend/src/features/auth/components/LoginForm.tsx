@@ -10,6 +10,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import { env } from '@/lib/env'
+import { emailRules } from '@/lib/validation'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { demoAccounts } from '@/data/users'
@@ -21,8 +22,6 @@ interface LoginFormValues {
   email: string
   password: string
 }
-
-const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
 const ROLE_OPTIONS = [
   { role: 'ADMIN', label: 'Admin', icon: ShieldCheck },
@@ -109,10 +108,7 @@ export function LoginForm() {
         autoComplete="email"
         placeholder="you@school.edu"
         error={errors.email?.message}
-        {...register('email', {
-          required: 'Email is required',
-          pattern: { value: EMAIL_PATTERN, message: 'Enter a valid email address' },
-        })}
+        {...register('email', emailRules)}
       />
 
       <PasswordInput

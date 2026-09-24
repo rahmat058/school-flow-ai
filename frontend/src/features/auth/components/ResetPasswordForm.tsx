@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Spinner } from '@/components/ui/Spinner'
+import { passwordHint, passwordRules } from '@/lib/validation'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useResetPassword } from '@/features/auth/api'
@@ -15,8 +16,6 @@ interface ResetPasswordFormValues {
   password: string
   confirmPassword: string
 }
-
-const MIN_PASSWORD = 8
 
 export function ResetPasswordForm() {
   const navigate = useNavigate()
@@ -72,12 +71,9 @@ export function ResetPasswordForm() {
         label="New password"
         icon={Lock}
         autoComplete="new-password"
-        hint={`At least ${MIN_PASSWORD} characters.`}
+        hint={passwordHint}
         error={errors.password?.message}
-        {...register('password', {
-          required: 'Password is required',
-          minLength: { value: MIN_PASSWORD, message: `Use at least ${MIN_PASSWORD} characters` },
-        })}
+        {...register('password', passwordRules)}
       />
 
       <PasswordInput

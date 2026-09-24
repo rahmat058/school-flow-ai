@@ -137,6 +137,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(authenticated)`
 - [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
 - [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)`
+- [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)`
 - [ ] `GET /api/v1/auth/me` — current user + school + role `(authenticated)`
 
 **Behavior**
@@ -152,10 +153,10 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints** — build `/teachers` end to end first, then repeat the same five routes for `/students` and `/parents`
 
-- [ ] `POST /api/v1/teachers` — create + email credentials `(admin)`
-- [ ] `GET /api/v1/teachers` — paginated, search, filter by subject/status `(admin)`
+- [ ] `POST /api/v1/teachers` — create; takes **full name**, **subject**, **email** and the **assigned classes**, plus optional phone, qualification and years of experience. The login is created **unverified** with a generated password emailed alongside a verification link — the same invite rule as an enrolment — and 409 `TEACHER_EMAIL_TAKEN` guards the login email `(admin)`
+- [ ] `GET /api/v1/teachers` — search by name/subject/email; each row carries the login email and the classes the teacher is assigned to (from `teacher_classes`) `(admin)`
 - [ ] `GET /api/v1/teachers/:id` `(admin)`
-- [ ] `PATCH /api/v1/teachers/:id` `(admin)`
+- [ ] `PATCH /api/v1/teachers/:id` — partial update of the same fields; `classIds` **replaces** the assignment set rather than merging, and an email change is re-checked for uniqueness `(admin)`
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
 - [ ] `POST /api/v1/students` — create + admission number; takes the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. The student's own login is created **unverified** with a generated password, emailed with a verification link; the response carries the invite, never the password itself `(admin)`
 - [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list) `(admin)`
