@@ -211,7 +211,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
           />
         </div>
 
-        <div className='grid gap-4'>
+        <div className="grid gap-4">
           <Input
             label="Date of birth"
             type="date"
@@ -221,8 +221,6 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          
-
           <Controller
             control={control}
             name="gender"
