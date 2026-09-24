@@ -2,6 +2,7 @@ import type { InvoiceStatus } from '@/types/fees'
 
 export type RecordStatus = 'ACTIVE' | 'INACTIVE'
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER'
+export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 export type ParentRelation = 'FATHER' | 'MOTHER' | 'GUARDIAN'
 /** The roster's fee column: overdue wins, then anything still owing, otherwise settled. */
 export type FeeStanding = 'PAID' | 'UNPAID' | 'OVERDUE'
@@ -29,6 +30,7 @@ export interface Student {
   lastName: string
   dateOfBirth: string | null
   gender: Gender | null
+  bloodGroup: BloodGroup | null
   /** Current class — the roster. */
   classId: string | null
   /** Position within the class roster — the school's roll number. */
@@ -87,6 +89,7 @@ export interface StudentInput {
   rollNo: number | null
   dateOfBirth: string | null
   gender: Gender | null
+  bloodGroup: BloodGroup | null
   guardian: Guardian | null
 }
 

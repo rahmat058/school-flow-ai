@@ -76,6 +76,7 @@ phase assigned — see §18.
 | `subscription_status` | `TRIAL`, `ACTIVE`, `SUSPENDED`, `CANCELLED`                                               | `schools.subscription_status`   |
 | `record_status`       | `ACTIVE`, `INACTIVE`                                                                      | `teachers`/`students`/`parents` |
 | `gender`              | `MALE`, `FEMALE`, `OTHER`                                                                 | `students.gender`               |
+| `blood_group`         | `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`                                          | `students.blood_group`          |
 | `parent_relation`     | `FATHER`, `MOTHER`, `GUARDIAN`                                                            | `parent_students.relation`      |
 | `otp_purpose`         | `REGISTER`, `RESET_PASSWORD`, `INVITE`                                                    | `otps.purpose`                  |
 | `attendance_status`   | `PRESENT`, `ABSENT`, `LEAVE`, `LATE`                                                      | `attendance.status`             |
@@ -356,6 +357,7 @@ Student profile, 1:1 with `users`. `class_id` is the student's **current** class
 | `last_name`     | `text`          | no   |     |                               |
 | `date_of_birth` | `date`          | yes  |     |                               |
 | `gender`        | `gender`        | yes  |     |                               |
+| `blood_group`   | `blood_group`   | yes  |     | enum, §2                      |
 | `status`        | `record_status` | no   |     | default `ACTIVE`              |
 | `created_at`    | `timestamptz`   | no   |     |                               |
 | `updated_at`    | `timestamptz`   | no   |     |                               |

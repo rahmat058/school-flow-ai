@@ -6,6 +6,7 @@ import type { ClassOption } from '@/types/academic'
 import type { FeeCollectionSummary, FeeInvoice, FeeInvoiceListItem, InvoiceStatus } from '@/types/fees'
 import type { Notice } from '@/types/communication'
 import type {
+  BloodGroup,
   Guardian,
   StudentAttendance,
   StudentDocument,
@@ -716,6 +717,7 @@ const routes: Route[] = [
       // The enrolment form requires every field, so the API does too.
       if (!body.dateOfBirth) return fail(400, 'STUDENT_INVALID', 'Date of birth is required', ['dateOfBirth'])
       if (!body.gender) return fail(400, 'STUDENT_INVALID', 'Gender is required', ['gender'])
+      if (!body.bloodGroup) return fail(400, 'STUDENT_INVALID', 'Blood group is required', ['bloodGroup'])
       if (!guardian?.name.trim()) {
         return fail(400, 'STUDENT_INVALID', 'Guardian name is required', ['guardian.name'])
       }
@@ -753,6 +755,7 @@ const routes: Route[] = [
         lastName,
         dateOfBirth: body.dateOfBirth ? String(body.dateOfBirth) : null,
         gender: (body.gender as Gender | undefined) ?? null,
+        bloodGroup: (body.bloodGroup as BloodGroup | undefined) ?? null,
         classId,
         rollNo,
         status: 'ACTIVE',
@@ -798,6 +801,7 @@ const routes: Route[] = [
       if (body.classId !== undefined) student.classId = String(body.classId)
       if (body.dateOfBirth !== undefined) student.dateOfBirth = body.dateOfBirth ? String(body.dateOfBirth) : null
       if (body.gender !== undefined) student.gender = (body.gender as Gender | null) ?? null
+      if (body.bloodGroup !== undefined) student.bloodGroup = (body.bloodGroup as BloodGroup | null) ?? null
 
       // Checked against the class the student is in now, which may be the one just set above.
       if (body.rollNo !== undefined) {

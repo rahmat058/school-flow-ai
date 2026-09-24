@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/useToast'
 import { env } from '@/lib/env'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useCreateStudent, useUpdateStudent } from '@/features/students/api'
-import type { Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
+import type { BloodGroup, Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
 
 interface StudentFormSheetProps {
   open: boolean
@@ -28,6 +28,7 @@ interface FormValues {
   rollNo: string
   dateOfBirth: string
   gender: string
+  bloodGroup: string
   guardianName: string
   guardianEmail: string
   guardianPhone: string
@@ -42,6 +43,14 @@ const GENDER_OPTIONS = [
 ]
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
+
+const BLOOD_GROUP_OPTIONS = [
+  { value: '', label: 'Choose a group' },
+  ...(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const).map((group) => ({
+    value: group,
+    label: group,
+  })),
+]
 
 /**
  * Create and edit share one form: the sheet is keyed on the target student, so it mounts with that
@@ -69,6 +78,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
       rollNo: student ? String(student.rollNo) : '',
       dateOfBirth: student?.dateOfBirth ?? '',
       gender: student?.gender ?? '',
+      bloodGroup: student?.bloodGroup ?? '',
       guardianName: student?.guardian?.name ?? '',
       guardianEmail: student?.guardian?.email ?? '',
       guardianPhone: student?.guardian?.phone ?? '',
@@ -95,6 +105,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
       rollNo: values.rollNo.trim() ? Number(values.rollNo) : null,
       dateOfBirth: values.dateOfBirth || null,
       gender: values.gender ? (values.gender as Gender) : null,
+      bloodGroup: values.bloodGroup ? (values.bloodGroup as BloodGroup) : null,
       guardian,
     }
 
@@ -200,13 +211,17 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className='grid gap-4'>
           <Input
             label="Date of birth"
             type="date"
             error={errors.dateOfBirth?.message}
             {...register('dateOfBirth', { required: 'Date of birth is required' })}
           />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          
 
           <Controller
             control={control}
@@ -219,6 +234,21 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
                 value={field.value}
                 onValueChange={field.onChange}
                 error={errors.gender?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="bloodGroup"
+            rules={{ required: 'Choose a blood group' }}
+            render={({ field }) => (
+              <Select
+                label="Blood group"
+                options={BLOOD_GROUP_OPTIONS}
+                value={field.value}
+                onValueChange={field.onChange}
+                error={errors.bloodGroup?.message}
               />
             )}
           />

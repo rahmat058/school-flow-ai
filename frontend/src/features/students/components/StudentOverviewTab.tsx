@@ -27,6 +27,7 @@ export function StudentOverviewTab({ profile }: StudentOverviewTabProps) {
           <StudentDetail label="Class" value={profile.className} />
           <StudentDetail label="Roll number" value={String(profile.rollNo)} />
           <StudentDetail label="Gender" value={profile.gender ? profile.gender.toLowerCase() : '—'} />
+          <StudentDetail label="Blood group" value={profile.bloodGroup ?? '—'} />
           <StudentDetail label="Date of birth" value={profile.dateOfBirth ? formatDate(profile.dateOfBirth) : '—'} />
           <StudentDetail label="Class teacher" value={profile.classTeacherName ?? 'Not assigned'} />
           <StudentDetail label="Home address" value={profile.guardian?.address ?? '—'} />
