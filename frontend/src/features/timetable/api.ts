@@ -5,17 +5,17 @@ import type { ClassTimetable, MyTimetable, TimetablePeriodInput, TimetableSlotIn
 export const timetableKeys = {
   all: ['timetable'] as const,
   classWeek: (classId: string) => [...timetableKeys.all, 'class', classId] as const,
-  mine: () => [...timetableKeys.all, 'me'] as const,
+  mine: (studentId = '') => [...timetableKeys.all, 'me', studentId] as const,
 }
 
 /**
- * The caller's own week, resolved by role on the server: a teacher's lessons, a student's class, a
- * parent's child's class. Only the admin reads a class by id.
+ * The caller's own week, resolved by role on the server: a teacher's lessons, a student's class, or
+ * one of a guardian's children. Only the admin reads a class by id.
  */
-export function useMyTimetable(enabled = true) {
+export function useMyTimetable(enabled = true, studentId = '') {
   return useQuery({
-    queryKey: timetableKeys.mine(),
-    queryFn: async () => (await get<MyTimetable>('/timetables/me')).data,
+    queryKey: timetableKeys.mine(studentId),
+    queryFn: async () => (await get<MyTimetable>('/timetables/me', { studentId: studentId || undefined })).data,
     enabled,
   })
 }

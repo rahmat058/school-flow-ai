@@ -101,6 +101,8 @@ export interface ParentStudentLink {
 /** Read model for the admin students table — the entity plus its joined class, guardian and roll-ups. */
 export interface StudentListItem extends Student {
   className: string
+  /** The student's login address (`users.email`), which the enrolment form collects. */
+  email: string
   /** The primary guardian, with the contact details the enrolment form collects. */
   guardian: Guardian | null
   /** Share of register days the student was present or late, 0–100. */
@@ -113,6 +115,8 @@ export interface StudentListItem extends Student {
 export interface StudentInput {
   firstName: string
   lastName: string
+  /** The student's own login address — one of the two accounts an enrolment creates. */
+  email: string
   classId: string
   rollNo: number | null
   dateOfBirth: string | null

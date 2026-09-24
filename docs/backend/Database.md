@@ -102,6 +102,14 @@ phase assigned — see §18.
 `PRD.md` §4.1 (registration + OTP), §4.2 (auth/RBAC + the permission catalogue), and the §4.3 profile
 tables. Phases 1–2.
 
+**Logins.** Enrolling a student provisions **two** `users` rows, not one: the student's own email and the
+guardian's email — both of which the enrolment form collects. The email **is** the login (an address is never
+generated for it), so the credentials that reach an inbox are the ones the account expects. Each is created
+**unverified** (`is_verified = false`) with its password emailed alongside the invite, and sign-in is refused
+until the emailed code confirms it. No profile table carries an email column of its own: `students`,
+`teachers` and `parents` all read it from `users`. A real API mints one password per invite; the demo emails
+the shared demo password so the flow can actually be exercised.
+
 ```mermaid
 erDiagram
   schools ||--o{ users : "employs"

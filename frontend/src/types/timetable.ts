@@ -111,13 +111,20 @@ export interface TeacherTimetableStats {
   subjects: number
 }
 
+/** A child a guardian can switch between — the same class view, for another of their students. */
+export interface TimetableChild {
+  studentId: string
+  name: string
+  className: string
+}
+
 /**
  * `GET /timetables/me` — the caller's own week. A teacher's is their lessons laid out on the same
- * grid, each cell naming the class they are in; a student's (or a parent's child's) is that class's
- * grid. Admins use the class routes, which are what the class picker drives.
+ * grid, each cell naming the class they are in; a student's is their class's grid, and a guardian
+ * reads the same grid for whichever of their children they pick.
  */
 export type MyTimetable =
-  | { scope: 'CLASS'; label: string; note: string; timetable: ClassTimetable }
+  | { scope: 'CLASS'; label: string; note: string; timetable: ClassTimetable; children: TimetableChild[] }
   | {
       scope: 'TEACHER'
       label: string

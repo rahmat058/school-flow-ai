@@ -170,11 +170,11 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `GET /api/v1/teachers/:id` `(admin)`
 - [ ] `PATCH /api/v1/teachers/:id` — partial update of the same fields; `classIds` **replaces** the assignment set rather than merging, and an email change is re-checked for uniqueness `(admin)`
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
-- [ ] `POST /api/v1/students` — create + admission number; takes the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. The student's own login is created **unverified** with a generated password, emailed with a verification link; the response carries the invite, never the password itself `(admin)`
+- [ ] `POST /api/v1/students` — create + admission number; takes the **student's own email** (which becomes their login — the address the form collects, never a generated one; 409 `STUDENT_EMAIL_TAKEN` guards it), the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. **Two logins are provisioned, both unverified**: the student's own email and the guardian's email, each emailed its invite with a verification link; the response carries the student's invite, never a password itself `(admin)`
 - [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list) `(admin)`
 - [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak `(admin, parent of child)`
 - [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist `(admin, teacher, parent of child)`
-- [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in `(admin)`
+- [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in, and an **email change is re-checked for uniqueness** (it moves that account's login) `(admin)`
 - [ ] `DELETE /api/v1/students/:id` — soft delete `(admin)`
 - [ ] `POST /api/v1/parents` — create + email credentials `(admin)`
 - [ ] `GET /api/v1/parents` — paginated, search `(admin)`
@@ -189,7 +189,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 **Behavior**
 
 - Auto-generated admission/employee numbers (per-school sequence)
-- Enrolment invites: creating a student (or a teacher/parent) provisions the login immediately but leaves it **unverified**, with a generated password and a verification link (`otp_purpose = INVITE`) sent by email. Sign-in is refused with 403 `AUTH_NOT_VERIFIED` until that link is confirmed, so a mistyped address can never become a live account.
+- Enrolment invites: creating a student provisions **two** logins — the student's own email and the guardian's — each created immediately but left **unverified**, with a password and a verification link (`otp_purpose = INVITE`) sent to that address. The email the form collects **is** the login, so the password that arrives is the one the account holds; sign-in is refused with 403 `AUTH_NOT_VERIFIED` until the link is confirmed, so a mistyped address can never become a live account. A teacher or a parent created on its own follows the same rule.
 - Credentials emailed on account creation
 - Parent ↔ student linking via `ParentStudent` join table
 
@@ -327,7 +327,7 @@ Concessions
 - [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
 - [ ] `GET /api/v1/timetables/class/:classId` — the class's week in one payload: `periods` (the rows), `days` (each carrying one slot per row) and the `stats` roll-ups `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
-- [ ] `GET /api/v1/timetables/me` — the caller's **own** week, resolved by role, in the same grid shape as a class week: a teacher's own lessons (each cell naming the class they are in, blank where they are free), a student's class, or a parent's child's class `(authenticated)`
+- [ ] `GET /api/v1/timetables/me` — the caller's **own** week, resolved by role, in the same grid shape as a class week: a teacher's own lessons (each cell naming the class they are in, blank where they are free), a student's class, or a guardian's child's class — a guardian may pass `?studentId=` for any of **their own** children, and the payload lists them so the view can switch `(authenticated)`
 - [ ] `PATCH /api/v1/timetables/class/:classId/slots` — set one cell's `subjectId`/`teacherId`, or clear it by sending both null `(admin)`
 - [ ] `POST /api/v1/timetables/class/:classId/periods` — append a period row to the class's week, written to every day in one transaction `(admin)`
 - [ ] `DELETE /api/v1/timetables/class/:classId/periods/:orderIndex` — remove that row from every day and close the positions up `(admin)`
@@ -339,8 +339,9 @@ Concessions
 - Conflict detection: teacher double-booking validation before save
 - **Non-admins never pick a class**: `GET /timetables/me` resolves the caller's week server-side, so a teacher
   reads their own lessons on the same days × periods grid — the period rows are shared by every class, and each
-  cell names the class they are in (blank where they are free) — while a student or a parent reads one class's
-  week read-only. The class routes stay the admin's, and are what the class picker and the editor drive
+  cell names the class they are in (blank where they are free) — while a student reads their own class's week
+  read-only, and a guardian reads one of **their own** children's (any other `studentId` is refused with a 403).
+  The class routes stay the admin's, and are what the class picker and the editor drive
 - Break periods flagged via `isBreak` on Period
 - The week's period rows are stored per day but **managed class-wide**: adding or removing one applies to every day of the class and is addressed by `orderIndex`, so the days cannot drift apart
 - A row's label is the stored `label`, else `Period n` counted over teaching rows only — so the period after a break keeps its number

@@ -26,6 +26,7 @@ interface StudentFormSheetProps {
 interface FormValues {
   firstName: string
   lastName: string
+  email: string
   classId: string
   rollNo: string
   dateOfBirth: string
@@ -59,6 +60,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
     defaultValues: {
       firstName: student?.firstName ?? '',
       lastName: student?.lastName ?? '',
+      email: student?.email ?? '',
       classId: student?.classId ?? '',
       rollNo: student ? String(student.rollNo) : '',
       dateOfBirth: student?.dateOfBirth ?? '',
@@ -86,6 +88,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
     const input: StudentInput = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      email: values.email.trim(),
       classId: values.classId,
       rollNo: values.rollNo.trim() ? Number(values.rollNo) : null,
       dateOfBirth: values.dateOfBirth || null,
@@ -205,6 +208,15 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
           />
         </div>
 
+        <Input
+          label="Student email"
+          type="email"
+          placeholder="ayesha.khan@example.com"
+          hint="Their sign-in address — the invite and its password go here."
+          error={errors.email?.message}
+          {...register('email', emailRules)}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Controller
             control={control}
@@ -266,6 +278,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
             label="Email"
             type="email"
             placeholder="parent@example.com"
+            hint="The guardian's sign-in address — the invite and its password go here."
             error={errors.guardianEmail?.message}
             {...register('guardianEmail', emailRules)}
           />

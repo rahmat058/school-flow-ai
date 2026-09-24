@@ -262,6 +262,7 @@ function matches(needle: string, values: Array<string | null | undefined>): bool
 function studentListItems(): StudentListItem[] {
   return students.map((student) => {
     const classRoom = classes.find((item) => item.id === student.classId)
+    const user = users.find((item) => item.id === student.userId)
     const primaryLink = parentStudents.find((link) => link.studentId === student.id && link.isPrimary)
     const guardian = primaryLink ? parents.find((parent) => parent.id === primaryLink.parentId) : undefined
 
@@ -287,6 +288,7 @@ function studentListItems(): StudentListItem[] {
             address: guardian.address,
           }
         : null,
+      email: user?.email ?? '',
       attendancePercentage: register.length === 0 ? 0 : Math.round((present / register.length) * 100),
       feeStanding: isOverdue ? 'OVERDUE' : duePaise > 0 ? 'UNPAID' : 'PAID',
     }
@@ -677,12 +679,14 @@ function upsertGuardian(student: Student, guardian: Guardian | null | undefined)
       email: details.email ?? schoolEmail(index, `parent.${SCHOOL_DOMAIN}`),
       role: 'PARENT',
       schoolId: SCHOOL_ID,
-      isVerified: true,
+      // The guardian's login goes out under the same invite rule as the student's.
+      isVerified: false,
       profileId: parent.id,
       firstName,
       lastName,
       classId: null,
     })
+    invitedPasswords.set(parent.userId, invitePassword())
   } else {
     parent.firstName = firstName
     parent.lastName = lastName
@@ -1487,9 +1491,9 @@ function rebuildReportCards(examId: string): void {
 
 /**
  * The caller's own week, resolved by role — a teacher's lessons across the classes they teach, or
- * the class of a student (or of a parent's child). Admins read a class by id instead.
+ * the class of a student. A guardian passes one of their own children, or gets the first of them.
  */
-function myTimetableOf(userId: string | null): MyTimetable | undefined {
+function myTimetableOf(userId: string | null, requestedStudentId = ''): MyTimetable | undefined {
   const user = users.find((item) => item.id === userId)
   if (!user) return undefined
 
@@ -1548,12 +1552,24 @@ function myTimetableOf(userId: string | null): MyTimetable | undefined {
     }
   }
 
-  // A student's own class, or the class of a parent's child.
-  const studentId =
-    user.role === 'STUDENT'
-      ? user.profileId
-      : (parentStudents.find((link) => link.parentId === user.profileId)?.studentId ?? null)
-  const student = studentId ? findStudent(studentId) : undefined
+  // A student's own class, or whichever of a guardian's children they picked.
+  const children = (user.role === 'PARENT' ? parentStudents.filter((link) => link.parentId === user.profileId) : [])
+    .flatMap((link) => {
+      const child = findStudent(link.studentId)
+      const childClass = classes.find((room) => room.id === child?.classId)
+      if (!child || !childClass) return []
+
+      return [{ studentId: child.id, name: `${child.firstName} ${child.lastName}`, className: classLabel(childClass) }]
+    })
+    .sort((left, right) => left.className.localeCompare(right.className) || left.name.localeCompare(right.name))
+
+  const ownStudentId = user.role === 'STUDENT' ? (user.profileId ?? '') : ''
+  // A guardian may read only their own children; a student only their own record.
+  const allowed = ownStudentId ? [ownStudentId] : children.map((child) => child.studentId)
+  if (requestedStudentId && !allowed.includes(requestedStudentId)) return undefined
+
+  const chosenId = requestedStudentId || allowed[0] || ''
+  const student = chosenId ? findStudent(chosenId) : undefined
   const classRoom = classes.find((room) => room.id === student?.classId)
   const week = classRoom ? classTimetable(classRoom.id) : undefined
   if (!classRoom || !week) return undefined
@@ -1563,6 +1579,7 @@ function myTimetableOf(userId: string | null): MyTimetable | undefined {
     label: classLabel(classRoom),
     note: user.role === 'PARENT' ? "Your child's weekly timetable." : 'Your class timetable.',
     timetable: week,
+    children,
   }
 }
 
@@ -1929,6 +1946,13 @@ const routes: Route[] = [
       if (!firstName || !lastName) {
         return fail(400, 'STUDENT_INVALID', 'First and last name are required', ['firstName', 'lastName'])
       }
+      // The student's own address is the login this enrolment provisions.
+      if (!String(body.email ?? '').includes('@')) {
+        return fail(400, 'STUDENT_INVALID', 'A valid student email is required', ['email'])
+      }
+      if (users.some((item) => item.email.toLowerCase() === String(body.email).trim().toLowerCase())) {
+        return fail(409, 'STUDENT_EMAIL_TAKEN', 'That email already has an account', ['email'])
+      }
       if (!classes.some((classRoom) => classRoom.id === classId)) {
         return fail(400, 'STUDENT_INVALID', 'Choose a class for the student', ['classId'])
       }
@@ -1980,7 +2004,7 @@ const routes: Route[] = [
         status: 'ACTIVE',
       }
 
-      const email = schoolEmail(index, `student.${SCHOOL_DOMAIN}`)
+      const email = String(body.email).trim().toLowerCase()
       const password = invitePassword()
 
       students.push(student)
@@ -2044,6 +2068,19 @@ const routes: Route[] = [
         user.firstName = student.firstName
         user.lastName = student.lastName
         user.classId = student.classId
+
+        if (body.email !== undefined) {
+          const email = String(body.email).trim().toLowerCase()
+
+          if (!email.includes('@')) {
+            return fail(400, 'STUDENT_INVALID', 'A valid student email is required', ['email'])
+          }
+          if (users.some((item) => item.id !== user.id && item.email.toLowerCase() === email)) {
+            return fail(409, 'STUDENT_EMAIL_TAKEN', 'That email already has an account', ['email'])
+          }
+
+          user.email = email
+        }
       }
 
       return ok(studentListItems().find((row) => row.id === student.id))
@@ -3244,9 +3281,14 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/timetables/me',
-    handler: ({ userId }) => {
-      const mine = myTimetableOf(userId)
-      return mine ? ok<MyTimetable>(mine) : fail(404, 'TIMETABLE_NOT_FOUND', 'No timetable for this account')
+    handler: ({ params, userId }) => {
+      const requested = params.studentId ? String(params.studentId) : ''
+      const mine = myTimetableOf(userId, requested)
+
+      if (mine) return ok<MyTimetable>(mine)
+      return requested
+        ? fail(403, 'TIMETABLE_FORBIDDEN', 'That student is not on your account')
+        : fail(404, 'TIMETABLE_NOT_FOUND', 'No timetable for this account')
     },
   },
 ]
@@ -3258,6 +3300,8 @@ const PUBLIC_PATHS = new Set([
   '/auth/logout',
   '/auth/forgot-password',
   '/auth/reset-password',
+  // An invite is confirmed before the account can sign in, so this one needs no token (`PRD.md` §4.2).
+  '/auth/verify-invite',
   '/schools/register',
   '/schools/verify-otp',
   '/schools/resend-otp',

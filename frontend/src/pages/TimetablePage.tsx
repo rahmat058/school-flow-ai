@@ -172,20 +172,37 @@ function AdminTimetable() {
   )
 }
 
-/** Everyone else: the caller's own week, read-only. */
+/** Everyone else: the caller's own week, read-only — and a guardian's children, one at a time. */
 function MyWeek() {
-  const view = useMyTimetable()
+  const [childId, setChildId] = useState('')
+  const view = useMyTimetable(true, childId)
   const data = view.data
+  const children = data?.scope === 'CLASS' ? data.children : []
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">
-          {data?.scope === 'TEACHER' ? 'My schedule' : 'Class timetable'}
-        </h1>
-        <p className="text-ink-muted text-[14px]">
-          {data ? `${data.label} · ${data.note}` : 'Loading your timetable…'}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">
+            {data?.scope === 'TEACHER' ? 'My schedule' : 'Class timetable'}
+          </h1>
+          <p className="text-ink-muted text-[14px]">
+            {data ? `${data.label} · ${data.note}` : 'Loading your timetable…'}
+          </p>
+        </div>
+
+        {children.length > 1 ? (
+          <Select
+            className="w-60 shrink-0"
+            aria-label="Choose a child"
+            options={children.map((child) => ({
+              value: child.studentId,
+              label: `${child.name} · ${child.className}`,
+            }))}
+            value={childId || children[0].studentId}
+            onValueChange={setChildId}
+          />
+        ) : null}
       </header>
 
       {view.isError ? (

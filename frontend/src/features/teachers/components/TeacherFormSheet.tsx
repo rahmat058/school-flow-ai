@@ -153,19 +153,17 @@ export function TeacherFormSheet({ open, onClose, teacher }: TeacherFormSheetPro
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Email"
-            type="email"
-            placeholder="Email"
-            error={errors.email?.message}
-            {...register('email', emailRules)}
-          />
-          <Input label="Phone" type="tel" placeholder="Phone" {...register('phone')} />
-        </div>
+        <Input
+          label="Sign-in email"
+          type="email"
+          placeholder="teacher@example.com"
+          hint="Their login — the invite and its password go here."
+          error={errors.email?.message}
+          {...register('email', emailRules)}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Qualification" placeholder="e.g. BSc, MSc" {...register('qualification')} />
+          <Input label="Phone" type="tel" placeholder="Phone" {...register('phone')} />
           <Input
             label="Experience"
             type="number"
@@ -175,6 +173,8 @@ export function TeacherFormSheet({ open, onClose, teacher }: TeacherFormSheetPro
             {...register('experienceYears')}
           />
         </div>
+
+        <Input label="Qualification" placeholder="e.g. BSc, MSc" {...register('qualification')} />
 
         <div className="border-line space-y-3 border-t pt-5">
           <Controller
