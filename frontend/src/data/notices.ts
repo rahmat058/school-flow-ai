@@ -1,5 +1,6 @@
 import type { Notice, SchoolEvent } from '@/types/communication'
 import { SCHOOL_ID, dateOffset, dateTimeOffset } from '@/data/seed'
+import { classIdFor } from '@/data/classes'
 
 export const notices: Notice[] = [
   {
@@ -11,7 +12,7 @@ export const notices: Notice[] = [
     audience: ['ALL'],
     publishedAt: dateTimeOffset(-9, 10, 0),
     expiresAt: null,
-    classIds: ['cls_1', 'cls_2', 'cls_3'],
+    classIds: [classIdFor(5, 'A'), classIdFor(5, 'B'), classIdFor(6, 'A')],
     authorName: 'Nadia Rahman',
   },
   {
@@ -47,7 +48,7 @@ export const notices: Notice[] = [
     audience: ['STUDENTS'],
     publishedAt: dateTimeOffset(-2, 8, 45),
     expiresAt: dateOffset(5),
-    classIds: ['cls_3'],
+    classIds: [classIdFor(6, 'A')],
     authorName: 'Fatima Chowdhury',
   },
   {

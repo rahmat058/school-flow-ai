@@ -1,6 +1,7 @@
 import type { Teacher, TeacherClass } from '@/types/people'
 import { SCHOOL_ID, dateOffset, personName } from '@/data/seed'
 import { subjectTemplates } from '@/data/subjects'
+import { classIds } from '@/data/classes'
 
 const QUALIFICATIONS = [
   'M.Ed, University of Dhaka',
@@ -45,8 +46,8 @@ export const teacherClasses: TeacherClass[] = teachers.flatMap((teacher, offset)
   const index = offset + 1
 
   return [
-    { teacherId: teacher.id, classId: `cls_${((index - 1) % 6) + 1}` },
-    { teacherId: teacher.id, classId: `cls_${((index + 2) % 6) + 1}` },
+    { teacherId: teacher.id, classId: classIds[(index - 1) % classIds.length] },
+    { teacherId: teacher.id, classId: classIds[(index + 4) % classIds.length] },
   ]
 })
 

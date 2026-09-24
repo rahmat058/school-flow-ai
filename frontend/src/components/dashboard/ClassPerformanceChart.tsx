@@ -23,40 +23,44 @@ export function ClassPerformanceChart({ performance }: ClassPerformanceChartProp
         <p className="text-ink-muted mt-1 text-[13px]">Average marks per class, across recorded results</p>
       </div>
 
-      <div className="h-[280px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={performance} barCategoryGap="30%">
-            <CartesianGrid vertical={false} stroke="#E8E8EC" strokeDasharray="4 4" />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: '#9C9C9C', fontSize: 11, fontFamily: 'DM Sans' }}
-              dy={8}
-            />
-            <YAxis
-              domain={[0, 100]}
-              axisLine={false}
-              tickLine={false}
-              width={32}
-              tick={{ fill: '#9C9C9C', fontSize: 11, fontFamily: 'DM Sans' }}
-            />
-            <Tooltip
-              cursor={{ fill: 'rgba(99, 102, 241, 0.04)' }}
-              content={({ active, payload }) => {
-                if (!active || !payload?.[0]) return null
+      {/* One bar per class, so with twenty classes the chart scrolls inside its own card rather
+          than squeezing the labels into an unreadable row. */}
+      <div className="h-[280px] w-full overflow-x-auto">
+        <div className="h-full" style={{ minWidth: `${Math.max(performance.length * 44, 320)}px` }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={performance} barCategoryGap="30%">
+              <CartesianGrid vertical={false} stroke="#E8E8EC" strokeDasharray="4 4" />
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#9C9C9C', fontSize: 11, fontFamily: 'DM Sans' }}
+                dy={8}
+              />
+              <YAxis
+                domain={[0, 100]}
+                axisLine={false}
+                tickLine={false}
+                width={32}
+                tick={{ fill: '#9C9C9C', fontSize: 11, fontFamily: 'DM Sans' }}
+              />
+              <Tooltip
+                cursor={{ fill: 'rgba(99, 102, 241, 0.04)' }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.[0]) return null
 
-                return (
-                  <div className="border-line bg-surface rounded-lg border px-3 py-2 text-[13px] shadow-lg">
-                    <p className="text-ink-muted">Class {payload[0].payload.label}</p>
-                    <p className="text-ink font-medium">{Number(payload[0].value)}% average</p>
-                  </div>
-                )
-              }}
-            />
-            <Bar dataKey="value" maxBarSize={36} radius={[6, 6, 0, 0]} fill="#6366F1" isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
+                  return (
+                    <div className="border-line bg-surface rounded-lg border px-3 py-2 text-[13px] shadow-lg">
+                      <p className="text-ink-muted">Class {payload[0].payload.label}</p>
+                      <p className="text-ink font-medium">{Number(payload[0].value)}% average</p>
+                    </div>
+                  )
+                }}
+              />
+              <Bar dataKey="value" maxBarSize={36} radius={[6, 6, 0, 0]} fill="#6366F1" isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <p className="text-ink-subtle mt-4 text-[12px]">

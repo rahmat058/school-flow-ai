@@ -7,6 +7,15 @@ export interface FieldOption {
 }
 
 /**
+ * The school's class shape, shared by the seed and the UI: grades 1–10, each with an A and a B
+ * section. `data/classes.ts` builds its rows from these, so the catalogue and the class list can
+ * never disagree.
+ */
+export const CLASS_GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
+
+export const CLASS_SECTIONS = ['A', 'B'] as const
+
+/**
  * Option lists derived from the domain types rather than retyped in each form: the `satisfies`
  * check means adding a member to a union without offering it here is a compile error, not a
  * select that quietly omits a value.

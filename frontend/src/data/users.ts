@@ -1,5 +1,6 @@
 import type { AuthUser, Role } from '@/types/auth'
 import { DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, personName, schoolEmail } from '@/data/seed'
+import { classIds } from '@/data/classes'
 
 /** Teacher profile indexes (`tch_1`…`tch_8`) — kept in sync with `data/teachers.ts`. */
 const TEACHER_INDEXES = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -49,8 +50,8 @@ function studentUser(index: number): AuthUser {
     profileId: `std_${index}`,
     firstName,
     lastName,
-    // Four students per class, classes are graded 5A, 5B, 6A, 6B, 7A, 7B in `data/classes.ts`.
-    classId: `cls_${Math.floor((index - 1) / 4) + 1}`,
+    // The same distribution `data/students.ts` uses, read from the one list in `data/classes.ts`.
+    classId: classIds[(index - 1) % classIds.length],
   }
 }
 
@@ -95,7 +96,7 @@ export const demoAccounts: DemoAccount[] = [
   },
   {
     role: 'STUDENT',
-    label: 'Class 5A student',
+    label: 'Class 1A student',
     email: 'ayesha.khan1@student.brightfuture.edu',
     password: DEMO_PASSWORD,
     userId: 'usr_std_1',
