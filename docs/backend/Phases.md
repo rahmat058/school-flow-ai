@@ -10,7 +10,7 @@
 - [ ] Supabase client module (`database/`) + base schema migration (`supabase/migrations`: `schools`, `users`, `teachers`/`students`/`parents`, `otps`)
 - [ ] OTP-integrated school registration — `POST /schools/register`, `POST /schools/verify-otp`, `POST /schools/resend-otp` (transactional create; bcrypt-hashed code, 10-minute expiry, 5 attempts, 60s resend cooldown)
 - [ ] School settings — `GET /schools/current`, `GET`/`PATCH /schools/:id/settings`
-- [ ] MailModule (Resend) with the OTP + credentials templates
+- [ ] MailModule (Resend) with React Email templates (`src/mail/templates/`) for the OTP + credentials messages
 - [ ] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
 - [ ] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard

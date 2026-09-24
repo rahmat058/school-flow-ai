@@ -19,7 +19,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | Real-Time    | Socket.io (NestJS WebSocket Gateways)                                   |
 | Auth         | JWT (Passport.js) + bcrypt                                              |
 | File Storage | Cloudinary (or Supabase Storage)                                        |
-| Email        | Resend (transactional email API)                                        |
+| Email        | Resend (transactional email API) + React Email templates                |
 | Payments     | Stripe (international) + SSLCommerz (Bangladesh)                        |
 | AI           | LLM API (e.g., OpenAI/Gemini)                                           |
 | Validation   | class-validator + class-transformer (DTOs)                              |
@@ -426,7 +426,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 **Behavior**
 
 - Email queue with retry (BullMQ + Redis)
-- Handlebars HTML templates in `src/mail/templates/`
+- React Email (`.tsx`) templates in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend
 
 ### 4.16 Platform endpoints (no feature module)
 

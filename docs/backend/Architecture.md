@@ -2,7 +2,7 @@
 
 ## App flow
 
-React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis.
+React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis. Email jobs render a React Email template to HTML and deliver it through Resend.
 
 Layers: **Controller → Service → Supabase client → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
@@ -35,7 +35,7 @@ backend/
 │   ├── ai/                   # 7 AI assistant features (ai_feature enum)
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
-│   └── mail/                 # mailer + handlebars templates
+│   └── mail/                 # Resend mailer + react-email .tsx templates
 ├── package.json
 └── .env
 ```
@@ -51,5 +51,6 @@ backend/
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe
 - **BullMQ + Redis** — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
 - **Stripe** (international) + **SSLCommerz** (Bangladesh) — payments; **Resend** — transactional email; **Cloudinary** — file storage
+- **React Email** (`react-email`) — email templates written as `.tsx` components in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend; live preview with the `email dev` CLI
 - **@nestjs/throttler** — rate limiting; **helmet** — headers
 - Deployed on **Render**

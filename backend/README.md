@@ -58,7 +58,7 @@ backend/
 │   ├── ai/                   # AI assistant features
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
-│   └── mail/                 # mailer + handlebars templates
+│   └── mail/                 # Resend mailer + react-email .tsx templates
 ├── package.json
 └── .env                      # not committed
 ```
@@ -85,7 +85,7 @@ same internal layout:
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
 - [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
-- [Stripe](https://stripe.com/) (international) + [SSLCommerz](https://sslcommerz.com/) (Bangladesh) — payments; [Resend](https://resend.com/) — transactional email; [Cloudinary](https://cloudinary.com/) — file storage
+- [Stripe](https://stripe.com/) (international) + [SSLCommerz](https://sslcommerz.com/) (Bangladesh) — payments; [Resend](https://resend.com/) — transactional email ([React Email](https://react.email/) templates in `src/mail/templates/`); [Cloudinary](https://cloudinary.com/) — file storage
 - `@nestjs/throttler` — rate limiting; `helmet` — security headers
 
 ---
@@ -119,6 +119,8 @@ same internal layout:
   services throw `HttpException` subclasses and never build HTTP responses.
 - **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.
 - **Money:** store as integer paise, never floats.
+- **Emails:** templates are React Email (`.tsx`) components in `src/mail/templates/`,
+  rendered to HTML with `render()` and sent through Resend — no hand-written HTML.
 - Run lint + build before finishing.
 
 ---
