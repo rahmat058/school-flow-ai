@@ -91,7 +91,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **ReportCard** — examId, studentId, totalMarks, percentage, grade, rank, aiComment
 - **Timetable** — classId, day (`MON`–`SUN`), periods → **Period** child table (startTime, endTime, subjectId, teacherId, isBreak)
 - **StudyMaterial** — classId, subjectId, title, type (`PDF | NOTES | WORKSHEET | PAPER`), fileUrl
-- **Notice** — title, body, audience (enum[] or JSONB), publishedById, publishedAt
+- **Notice** — title, body, priority (`HIGH | MEDIUM | LOW`), audience (enum[] or JSONB), authorName, publishedById, publishedAt
 - **Event** — title, date, description, audience
 - **Conversation** — participants → **ConversationParticipant** join table; lastMessageAt
 - **Message** — conversationId, senderId, body, readAt
@@ -384,17 +384,28 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/notices` — audience targeting (all/teachers/class through `notice_classes`) `(admin)`
+- [ ] `POST /api/v1/notices` — publish a notice (title, body, `priority`, optional `authorName`) + audience targeting (all/teachers/class through `notice_classes`) `(admin)`
 - [ ] `GET /api/v1/notices` — role-filtered feed `(all roles)`
 - [ ] `GET /api/v1/notices/:id` `(all roles)`
-- [ ] `PATCH /api/v1/notices/:id` `(admin)`
-- [ ] `DELETE /api/v1/notices/:id` `(admin)`
+- [ ] `PATCH /api/v1/notices/:id` — edit; a draft is published by the edit `(admin)`
+- [ ] `DELETE /api/v1/notices/:id` — soft delete (`deletedAt`) `(admin)`
 - [ ] `POST /api/v1/events` — calendar entry `(admin)`
 - [ ] `GET /api/v1/events` — filter by date range/audience `(all roles)`
 - [ ] `GET /api/v1/events/:id` `(all roles)`
 - [ ] `PATCH /api/v1/events/:id` `(admin)`
 - [ ] `DELETE /api/v1/events/:id` `(admin)`
 - [ ] Publish side effects — Socket broadcast + email notification on notice publish
+
+**Behavior**
+
+- A notice is created **published** (`publishedAt` = now) with `audience` defaulting to `ALL` — the board has no
+  draft state, and editing a draft publishes it
+- `priority` (`HIGH`/`MEDIUM`/`LOW`) sets the board card's tint; it does **not** reorder the feed, which stays
+  newest-first (`publishedAt` desc)
+- The board form collects title, body, `priority` and an optional `authorName` — a blank byline falls back to the
+  publisher's display name from `published_by_id`
+- `DELETE` is a soft delete (`deletedAt`): `GET /api/v1/notices` excludes deleted rows, so the notice leaves the
+  feed while the record survives
 
 ### 4.12 AI Assistant (`AiModule`)
 

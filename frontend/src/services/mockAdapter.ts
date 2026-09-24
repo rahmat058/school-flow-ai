@@ -34,7 +34,7 @@ import type {
   StudentLedger,
   StudentLedgerRow,
 } from '@/types/fees'
-import type { Notice } from '@/types/communication'
+import type { Notice, NoticePriority } from '@/types/communication'
 import type { Homework, HomeworkListItem } from '@/types/homework'
 import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
 import type {
@@ -70,6 +70,7 @@ import {
   structureForClass,
 } from '@/data/fees'
 import { formatPaise } from '@/lib/format'
+import { NOTICE_PRIORITY_VALUES } from '@/lib/options'
 import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
@@ -1726,12 +1727,101 @@ const routes: Route[] = [
     handler: ({ params }) => {
       const term = searchTerm(params)
 
-      const filtered = [...notices]
+      const filtered = notices
+        .filter((notice) => notice.deletedAt === null)
         .filter((notice) => matches(term, [notice.title, notice.body]))
         .sort((left, right) => (right.publishedAt ?? '').localeCompare(left.publishedAt ?? ''))
 
       const { items, meta } = paginate(filtered, params)
       return ok<Notice[]>(items, meta)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/notices',
+    handler: ({ body, userId }) => {
+      const title = String(body.title ?? '').trim()
+      const text = String(body.body ?? '').trim()
+      const priority = String(body.priority ?? 'MEDIUM')
+
+      if (!title) return fail(400, 'NOTICE_INVALID', 'A title is required', ['title'])
+      if (!text) return fail(400, 'NOTICE_INVALID', 'A description is required', ['body'])
+      if (!NOTICE_PRIORITY_VALUES.includes(priority as NoticePriority)) {
+        return fail(400, 'NOTICE_INVALID', 'Choose a priority', ['priority'])
+      }
+
+      const user = users.find((item) => item.id === userId)
+      const byline = user ? `${user.firstName} ${user.lastName}`.trim() : 'School office'
+      const requestedByline = String(body.authorName ?? '').trim()
+
+      const notice: Notice = {
+        id: `not_${notices.length + 1}`,
+        schoolId: SCHOOL_ID,
+        publishedById: userId ?? 'usr_admin_1',
+        title,
+        body: text,
+        priority: priority as NoticePriority,
+        // The board form targets every role; class narrowing stays a server-side concern.
+        audience: ['ALL'],
+        publishedAt: new Date().toISOString(),
+        expiresAt: null,
+        classIds: [],
+        authorName: requestedByline || byline,
+        deletedAt: null,
+      }
+
+      notices.push(notice)
+      return created(notice)
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/notices/:id',
+    handler: ({ params, body }) => {
+      const notice = notices.find((item) => item.id === params.id && item.deletedAt === null)
+      if (!notice) return fail(404, 'NOTICE_NOT_FOUND', 'Notice not found')
+
+      if (body.title !== undefined) {
+        const title = String(body.title).trim()
+        if (!title) return fail(400, 'NOTICE_INVALID', 'A title is required', ['title'])
+        notice.title = title
+      }
+
+      if (body.body !== undefined) {
+        const text = String(body.body).trim()
+        if (!text) return fail(400, 'NOTICE_INVALID', 'A description is required', ['body'])
+        notice.body = text
+      }
+
+      if (body.priority !== undefined) {
+        const priority = String(body.priority)
+        if (!NOTICE_PRIORITY_VALUES.includes(priority as NoticePriority)) {
+          return fail(400, 'NOTICE_INVALID', 'Choose a priority', ['priority'])
+        }
+        notice.priority = priority as NoticePriority
+      }
+
+      if (body.authorName !== undefined) {
+        const byline = String(body.authorName).trim()
+        if (byline) notice.authorName = byline
+      }
+
+      // The board has no "save as draft": editing a draft publishes it.
+      if (notice.publishedAt === null) notice.publishedAt = new Date().toISOString()
+
+      return ok(notice)
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/notices/:id',
+    handler: ({ params }) => {
+      const notice = notices.find((item) => item.id === params.id && item.deletedAt === null)
+      if (!notice) return fail(404, 'NOTICE_NOT_FOUND', 'Notice not found')
+
+      // Soft delete (Database.md §11): the row survives, the board stops listing it.
+      notice.deletedAt = new Date().toISOString()
+      return ok({ deleted: true })
     },
   },
   {

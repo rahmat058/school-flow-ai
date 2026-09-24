@@ -1,4 +1,5 @@
 import type { SubjectName } from '@/types/academic'
+import type { NoticePriority } from '@/types/communication'
 import type { HomeworkStatus } from '@/types/homework'
 import type { BloodGroup, FeeStanding, Gender } from '@/types/people'
 import type { ConcessionCategory, ConcessionType, FeeFrequency, InvoiceStatus, PaymentMethod } from '@/types/fees'
@@ -72,6 +73,8 @@ export const MANUAL_PAYMENT_METHODS = [
 
 export const HOMEWORK_STATUS_VALUES = ['ACTIVE', 'OVERDUE'] as const satisfies readonly HomeworkStatus[]
 
+export const NOTICE_PRIORITY_VALUES = ['HIGH', 'MEDIUM', 'LOW'] as const satisfies readonly NoticePriority[]
+
 export const CONCESSION_CATEGORY_VALUES = [
   'SIBLING',
   'MERIT',
@@ -123,6 +126,12 @@ const HOMEWORK_STATUS_LABELS: Record<HomeworkStatus, string> = {
   OVERDUE: 'Overdue',
 }
 
+const NOTICE_PRIORITY_LABELS: Record<NoticePriority, string> = {
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low',
+}
+
 export const CONCESSION_CATEGORY_LABELS: Record<ConcessionCategory, string> = {
   SIBLING: 'Sibling',
   MERIT: 'Merit',
@@ -165,6 +174,11 @@ export const concessionCategoryOptions: FieldOption[] = CONCESSION_CATEGORY_VALU
 export const concessionTypeOptions: FieldOption[] = CONCESSION_TYPE_VALUES.map((value) => ({
   value,
   label: CONCESSION_TYPE_LABELS[value],
+}))
+
+export const noticePriorityOptions: FieldOption[] = NOTICE_PRIORITY_VALUES.map((value) => ({
+  value,
+  label: NOTICE_PRIORITY_LABELS[value],
 }))
 
 export const invoiceStatusOptions: FieldOption[] = [

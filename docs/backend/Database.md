@@ -92,6 +92,7 @@ phase assigned — see §18.
 | `exam_type`           | `UNIT`, `MID`, `FINAL`                                                                    | `exams.type`                    |
 | `weekday`             | `MON`, `TUE`, `WED`, `THU`, `FRI`, `SAT`, `SUN`                                           | `timetables.day`                |
 | `notice_audience`     | `ALL`, `TEACHERS`, `STUDENTS`, `PARENTS`                                                  | `notices`/`events.audience`     |
+| `notice_priority`     | `HIGH`, `MEDIUM`, `LOW`                                                                   | `notices.priority`              |
 | `ai_feature`          | `CHAT`, `REPORT_COMMENT`, `FEE_REMINDER`, `NOTICE`, `EVENT_PLAN`, `HOMEWORK_HELP`, `QUIZ` | `ai_conversations.feature`      |
 
 ## 3. Feature ERD — Foundation & Auth
@@ -1551,8 +1552,10 @@ broadcasts over Socket.io and queues email via BullMQ.
 | `id`              | `uuid`              | no   | PK  |                   |
 | `school_id`       | `uuid`              | no   | FK  | → `schools.id`    |
 | `published_by_id` | `uuid`              | no   | FK  | → `users.id`      |
+| `author_name`     | `text`              | no   |     | byline            |
 | `title`           | `text`              | no   |     |                   |
 | `body`            | `text`              | no   |     |                   |
+| `priority`        | `notice_priority`   | no   |     | default `MEDIUM`  |
 | `audience`        | `notice_audience[]` | no   |     | default `'{ALL}'` |
 | `published_at`    | `timestamptz`       | yes  |     | null = draft      |
 | `expires_at`      | `timestamptz`       | yes  |     | auto-hide         |
@@ -1576,6 +1579,7 @@ erDiagram
     uuid id PK
     uuid school_id FK
     uuid published_by_id FK
+    notice_priority priority
     notice_audience audience
     timestamptz published_at
   }
@@ -2296,6 +2300,7 @@ erDiagram
     uuid id PK
     uuid school_id FK
     uuid published_by_id FK
+    notice_priority priority
     notice_audience audience
     timestamptz published_at
   }
