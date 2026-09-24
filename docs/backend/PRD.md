@@ -95,7 +95,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **Event** — title, date, description, audience
 - **Conversation** — participants → **ConversationParticipant** join table; lastMessageAt
 - **Message** — conversationId, senderId, body, readAt
-- **Otp** — email, codeHash, expiresAt, attempts, purpose (`REGISTER | RESET_PASSWORD`)
+- **Otp** — email, codeHash, expiresAt, attempts, purpose (`REGISTER | RESET_PASSWORD | INVITE`)
 - **AiConversation** — userId, feature, messages (JSONB)
 
 **Indexes**: `(schoolId)` on all tables; composite indexes on Attendance(classId, date), FeeInvoice(studentId, status), Message(conversationId, createdAt).
@@ -157,7 +157,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `GET /api/v1/teachers/:id` `(admin)`
 - [ ] `PATCH /api/v1/teachers/:id` `(admin)`
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
-- [ ] `POST /api/v1/students` — create + admission number + email credentials; takes the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating `(admin)`
+- [ ] `POST /api/v1/students` — create + admission number; takes the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. The student's own login is created **unverified** with a generated password, emailed with a verification link; the response carries the invite, never the password itself `(admin)`
 - [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list) `(admin)`
 - [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak `(admin, parent of child)`
 - [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist `(admin, teacher, parent of child)`
@@ -176,6 +176,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 **Behavior**
 
 - Auto-generated admission/employee numbers (per-school sequence)
+- Enrolment invites: creating a student (or a teacher/parent) provisions the login immediately but leaves it **unverified**, with a generated password and a verification link (`otp_purpose = INVITE`) sent by email. Sign-in is refused with 403 `AUTH_NOT_VERIFIED` until that link is confirmed, so a mistyped address can never become a live account.
 - Credentials emailed on account creation
 - Parent ↔ student linking via `ParentStudent` join table
 
@@ -415,6 +416,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 **Templates & triggers**
 
 - [ ] OTP verification (registration, password reset)
+- [ ] Student invite — the verification link plus the generated login password
 - [ ] Teacher/student/parent login credentials on creation
 - [ ] Fee reminders (manual trigger + `@nestjs/schedule` cron)
 - [ ] Result publication alerts

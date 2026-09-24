@@ -5,6 +5,7 @@ import type { ClassOption } from '@/types/academic'
 import type {
   FeeStanding,
   StudentAttendance,
+  StudentCreated,
   StudentDocument,
   StudentFees,
   StudentInput,
@@ -70,7 +71,7 @@ function useRosterMutation<TInput, TResult>(mutationFn: (input: TInput) => Promi
 }
 
 export function useCreateStudent() {
-  return useRosterMutation(async (input: StudentInput) => (await post<StudentListItem>('/students', input)).data)
+  return useRosterMutation(async (input: StudentInput) => (await post<StudentCreated>('/students', input)).data)
 }
 
 export function useUpdateStudent() {

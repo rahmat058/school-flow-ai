@@ -77,7 +77,7 @@ phase assigned — see §18.
 | `record_status`       | `ACTIVE`, `INACTIVE`                                                                      | `teachers`/`students`/`parents` |
 | `gender`              | `MALE`, `FEMALE`, `OTHER`                                                                 | `students.gender`               |
 | `parent_relation`     | `FATHER`, `MOTHER`, `GUARDIAN`                                                            | `parent_students.relation`      |
-| `otp_purpose`         | `REGISTER`, `RESET_PASSWORD`                                                              | `otps.purpose`                  |
+| `otp_purpose`         | `REGISTER`, `RESET_PASSWORD`, `INVITE`                                                    | `otps.purpose`                  |
 | `attendance_status`   | `PRESENT`, `ABSENT`, `LEAVE`, `LATE`                                                      | `attendance.status`             |
 | `fee_frequency`       | `MONTHLY`, `QUARTERLY`, `ANNUAL`, `ONE_TIME`                                              | `fee_heads.frequency`           |
 | `invoice_status`      | `PENDING`, `PARTIAL`, `PAID`, `OVERDUE`                                                   | `fee_invoices.status`           |
@@ -220,17 +220,17 @@ erDiagram
 One-time codes for registration and password reset, stored bcrypt-hashed. Ephemeral: 10-minute expiry,
 max 5 attempts, 60-second resend cooldown, and rows are purged once expired.
 
-| Column        | Type          | Null | Key | Notes                       |
-| ------------- | ------------- | ---- | --- | --------------------------- |
-| `id`          | `uuid`        | no   | PK  |                             |
-| `school_id`   | `uuid`        | yes  | FK  | → `schools.id`              |
-| `email`       | `text`        | no   |     | matched, not FK'd           |
-| `code_hash`   | `text`        | no   |     | bcrypt                      |
-| `purpose`     | `otp_purpose` | no   |     | `REGISTER`/`RESET_PASSWORD` |
-| `attempts`    | `integer`     | no   |     | default `0`, max 5          |
-| `expires_at`  | `timestamptz` | no   |     | created + 10 min            |
-| `consumed_at` | `timestamptz` | yes  |     | set on success              |
-| `created_at`  | `timestamptz` | no   |     |                             |
+| Column        | Type          | Null | Key | Notes                                |
+| ------------- | ------------- | ---- | --- | ------------------------------------ |
+| `id`          | `uuid`        | no   | PK  |                                      |
+| `school_id`   | `uuid`        | yes  | FK  | → `schools.id`                       |
+| `email`       | `text`        | no   |     | matched, not FK'd                    |
+| `code_hash`   | `text`        | no   |     | bcrypt                               |
+| `purpose`     | `otp_purpose` | no   |     | `REGISTER`/`RESET_PASSWORD`/`INVITE` |
+| `attempts`    | `integer`     | no   |     | default `0`, max 5                   |
+| `expires_at`  | `timestamptz` | no   |     | created + 10 min                     |
+| `consumed_at` | `timestamptz` | yes  |     | set on success                       |
+| `created_at`  | `timestamptz` | no   |     |                                      |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (cascade) · **no FK to `users`** — codes are matched
 by `email`, because a registration OTP precedes the admin's first login.

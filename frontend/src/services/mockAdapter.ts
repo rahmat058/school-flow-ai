@@ -499,6 +499,13 @@ function syntheticAdmin(registration: PendingRegistration): AuthUser {
   }
 }
 
+/** Passwords minted for invited logins, so a newly enrolled student can actually sign in. */
+const invitedPasswords = new Map<string, string>()
+
+function temporaryPassword(): string {
+  return `sf-${Math.random().toString(36).slice(2, 8)}`
+}
+
 function resolveLogin(email: string, password: string): AuthUser | null {
   const account = demoAccounts.find((item) => item.email.toLowerCase() === email.toLowerCase())
   if (account && account.password === password) {
@@ -507,6 +514,9 @@ function resolveLogin(email: string, password: string): AuthUser | null {
 
   const registration = pendingRegistrations.get(email.toLowerCase())
   if (registration && registration.password === password) return syntheticAdmin(registration)
+
+  const invited = users.find((user) => user.email.toLowerCase() === email.toLowerCase())
+  if (invited && invitedPasswords.get(invited.id) === password) return invited
 
   return null
 }
@@ -525,6 +535,9 @@ const routes: Route[] = [
 
       if (!user) {
         return fail(401, 'AUTH_INVALID_CREDENTIALS', 'Email or password is incorrect')
+      }
+      if (!user.isVerified) {
+        return fail(403, 'AUTH_NOT_VERIFIED', 'Confirm the link in your invite email before signing in')
       }
 
       sessionShim.set(REFRESH_KEY, user.id)
@@ -745,21 +758,32 @@ const routes: Route[] = [
         status: 'ACTIVE',
       }
 
+      const email = schoolEmail(index, `student.${SCHOOL_DOMAIN}`)
+      const password = temporaryPassword()
+
       students.push(student)
       users.push({
         id: student.userId,
-        email: schoolEmail(index, `student.${SCHOOL_DOMAIN}`),
+        email,
         role: 'STUDENT',
         schoolId: SCHOOL_ID,
-        isVerified: true,
+        // The invite flow: the login exists from the start, but only the emailed link verifies it.
+        isVerified: false,
         profileId: student.id,
         firstName,
         lastName,
         classId,
       })
+      invitedPasswords.set(student.userId, password)
       upsertGuardian(student, guardian)
 
-      return created(studentListItems().find((row) => row.id === student.id))
+      const row = studentListItems().find((item) => item.id === student.id)
+      if (!row) return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+
+      return created({
+        ...row,
+        invite: { email, verificationRequired: true, mockOnlyPassword: password },
+      })
     },
   },
   {

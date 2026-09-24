@@ -1,4 +1,8 @@
-import { FileText } from 'lucide-react'
+import { useRef } from 'react'
+import type { ChangeEvent } from 'react'
+import { FileText, Upload } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { useToast } from '@/hooks/useToast'
 import { useCurrentSchool } from '@/features/school/api'
 import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
 import type { StudentDocument, StudentProfile } from '@/types/people'
@@ -9,11 +13,26 @@ interface StudentDocumentsTabProps {
 }
 
 /**
- * Documents. Nothing is stored against a student yet and there is no upload flow, so this is the
- * honest empty state — the download button stays disabled, and uploads are not offered at all.
+ * Documents. The upload control is wired to a real file picker but nothing is stored yet — it says
+ * so plainly rather than pretending. Once the documents endpoint lands, only `handlePicked` changes.
  */
 export function StudentDocumentsTab({ profile, documents }: StudentDocumentsTabProps) {
   const school = useCurrentSchool()
+  const { toast } = useToast()
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  function handlePicked(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Reset first, so choosing the same file twice still fires a change event.
+    event.target.value = ''
+    if (!file) return
+
+    toast({
+      tone: 'info',
+      title: 'Uploads are not connected yet',
+      description: `${file.name} was not stored — this lands with the documents endpoint.`,
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -21,16 +40,31 @@ export function StudentDocumentsTab({ profile, documents }: StudentDocumentsTabP
         title="Documents"
         description="Certificates, transfer papers and report cards held for this student."
         action={
-          <DownloadSheetButton
-            label="Download document index PDF"
-            disabled={documents.length === 0}
-            disabledReason="No documents to export yet"
-            run={async () => {
-              const { downloadDocumentsPdf } = await import('@/features/students/lib/studentPdf')
-              await downloadDocumentsPdf({ schoolName: school.data?.name ?? 'School', profile, documents })
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => fileInput.current?.click()}>
+              <Upload className="size-4" strokeWidth={1.75} />
+              Upload document
+            </Button>
+
+            <DownloadSheetButton
+              label="Download document index PDF"
+              disabled={documents.length === 0}
+              disabledReason="No documents to export yet"
+              run={async () => {
+                const { downloadDocumentsPdf } = await import('@/features/students/lib/studentPdf')
+                await downloadDocumentsPdf({ schoolName: school.data?.name ?? 'School', profile, documents })
+              }}
+            />
+          </div>
         }
+      />
+
+      <input
+        ref={fileInput}
+        type="file"
+        className="hidden"
+        aria-label="Choose a document to upload"
+        onChange={handlePicked}
       />
 
       {documents.length === 0 ? (

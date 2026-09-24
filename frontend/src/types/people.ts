@@ -90,6 +90,17 @@ export interface StudentInput {
   guardian: Guardian | null
 }
 
+/** The invite that goes out with a new enrolment: a login plus a verification link. */
+export interface StudentInvite {
+  email: string
+  verificationRequired: boolean
+  /** Mock only — a real API emails the password and never returns it. */
+  mockOnlyPassword?: string
+}
+
+/** The create response: the new roster row, plus the invite that was sent to the student. */
+export type StudentCreated = StudentListItem & { invite?: StudentInvite }
+
 /** Everything the profile header and Overview tab read, in one payload. */
 export interface StudentProfile extends StudentListItem {
   /** Homeroom teacher of the current class. */

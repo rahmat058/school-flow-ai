@@ -9,6 +9,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
+import { env } from '@/lib/env'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useCreateStudent, useUpdateStudent } from '@/features/students/api'
 import type { Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
@@ -102,8 +103,20 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
         await updateStudent.mutateAsync({ id: student.id, input })
         toast({ tone: 'success', title: `${input.firstName} ${input.lastName} updated` })
       } else {
-        await createStudent.mutateAsync(input)
-        toast({ tone: 'success', title: `${input.firstName} ${input.lastName} enrolled` })
+        const created = await createStudent.mutateAsync(input)
+        const invite = created.invite
+        // The login is created with the enrolment; the password goes out by email, so in mock mode
+        // (where there is no inbox) it is shown here instead.
+        const demoPassword =
+          env.enableMocks && invite?.mockOnlyPassword ? ` · demo password ${invite.mockOnlyPassword}` : ''
+
+        toast({
+          tone: 'success',
+          title: `${input.firstName} ${input.lastName} enrolled`,
+          description: invite
+            ? `Login details sent to ${invite.email}${demoPassword}`
+            : 'They can sign in once an admin shares their credentials.',
+        })
       }
 
       onClose()
