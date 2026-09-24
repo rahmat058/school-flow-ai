@@ -34,7 +34,7 @@ import type {
   StudentLedger,
   StudentLedgerRow,
 } from '@/types/fees'
-import type { Notice, NoticePriority } from '@/types/communication'
+import type { ChatMessageListItem, ConversationListItem, Notice, NoticePriority } from '@/types/communication'
 import type { Homework, HomeworkListItem } from '@/types/homework'
 import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
 import type {
@@ -69,12 +69,13 @@ import {
   headsForStructure,
   structureForClass,
 } from '@/data/fees'
-import { formatPaise } from '@/lib/format'
+import { formatPaise, humanizeEnum } from '@/lib/format'
 import { NOTICE_PRIORITY_VALUES } from '@/lib/options'
 import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
+import { conversations, messages } from '@/data/chat'
 import { homework, homeworkSubmissions } from '@/data/homework'
 import { periods, timetables, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
@@ -1175,6 +1176,64 @@ function resolveLogin(email: string, password: string): AuthUser | null {
   if (invited && invitedPasswords.get(invited.id) === password) return invited
 
   return null
+}
+
+/** The line under a participant's name: their class, their subject, or else their role. */
+function participantLabel(user: AuthUser): string {
+  if (user.role === 'STUDENT') {
+    const classRoom = classes.find((item) => item.id === user.classId)
+    return classRoom ? `Class ${classLabel(classRoom)}` : 'Student'
+  }
+
+  if (user.role === 'TEACHER') return findTeacher(user.profileId)?.subject ?? 'Teacher'
+
+  return humanizeEnum(user.role)
+}
+
+/**
+ * Conversation list read model: the caller's threads with the other participant resolved and the
+ * newest message previewed, newest activity first — the way the backend's list query reads.
+ */
+function conversationListItems(userId: string | null): ConversationListItem[] {
+  const me = users.find((item) => item.id === userId)
+  if (!me) return []
+
+  return conversations
+    .filter((conversation) => conversation.participantIds.includes(me.id))
+    .flatMap((conversation) => {
+      const other = users.find((item) => item.id !== me.id && conversation.participantIds.includes(item.id))
+      if (!other) return []
+
+      const thread = [...messages]
+        .filter((message) => message.conversationId === conversation.id)
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+
+      return [
+        {
+          id: conversation.id,
+          name: `${other.firstName} ${other.lastName}`,
+          participantLabel: participantLabel(other),
+          lastMessage: thread[thread.length - 1]?.body ?? '',
+          lastMessageAt: conversation.lastMessageAt,
+          unreadCount: thread.filter((message) => message.senderId !== me.id && message.readAt === null).length,
+        },
+      ]
+    })
+    .sort((left, right) => (right.lastMessageAt ?? '').localeCompare(left.lastMessageAt ?? ''))
+}
+
+/** One thread's history, oldest message first, with each side resolved against the caller. */
+function conversationMessages(conversationId: string, userId: string): ChatMessageListItem[] {
+  return messages
+    .filter((message) => message.conversationId === conversationId)
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    .map((message) => ({
+      id: message.id,
+      body: message.body,
+      mine: message.senderId === userId,
+      sentAt: message.createdAt,
+      read: message.readAt !== null,
+    }))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2431,6 +2490,24 @@ const routes: Route[] = [
       }
 
       return ok(classTimetable(classRoom.id))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/chat/conversations',
+    handler: ({ userId }) => ok<ConversationListItem[]>(conversationListItems(userId)),
+  },
+  {
+    method: 'GET',
+    path: '/chat/:conversationId/messages',
+    handler: ({ params, userId }) => {
+      const conversation = conversations.find((item) => item.id === params.conversationId)
+      if (!conversation) return fail(404, 'CHAT_CONVERSATION_NOT_FOUND', 'Conversation not found')
+      if (!conversation.participantIds.includes(String(userId))) {
+        return fail(403, 'CHAT_NOT_A_PARTICIPANT', 'You are not part of this conversation')
+      }
+
+      return ok<ChatMessageListItem[]>(conversationMessages(String(params.conversationId), String(userId)))
     },
   },
 ]

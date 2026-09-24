@@ -31,6 +31,7 @@ export const FeeCollectPage = lazy(async () => ({
   default: (await import('@/pages/admin/FeeCollectPage')).FeeCollectPage,
 }))
 export const NoticesPage = lazy(async () => ({ default: (await import('@/pages/NoticesPage')).NoticesPage }))
+export const ChatPage = lazy(async () => ({ default: (await import('@/pages/ChatPage')).ChatPage }))
 export const HomeworkPage = lazy(async () => ({ default: (await import('@/pages/HomeworkPage')).HomeworkPage }))
 export const TimetablePage = lazy(async () => ({ default: (await import('@/pages/TimetablePage')).TimetablePage }))
 export const NotFoundPage = lazy(async () => ({ default: (await import('@/pages/NotFoundPage')).NotFoundPage }))

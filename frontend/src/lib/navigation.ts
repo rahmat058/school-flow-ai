@@ -32,7 +32,7 @@ export const navItems: NavItem[] = [
   { label: 'Timetable', href: '/timetable', icon: CalendarDays, roles: EVERYONE },
   { label: 'Materials', href: '/materials', icon: BookOpen, roles: EVERYONE },
   { label: 'Notices', href: '/notices', icon: Megaphone, roles: EVERYONE },
-  { label: 'Chat', href: '/chat', icon: MessagesSquare, roles: EVERYONE },
+  { label: 'Communication', href: '/chat', icon: MessagesSquare, roles: EVERYONE },
   { label: 'Reports', href: '/reports', icon: FileSpreadsheet, roles: ['ADMIN', 'TEACHER'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['ADMIN'] },
 ]

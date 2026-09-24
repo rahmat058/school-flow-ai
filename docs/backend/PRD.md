@@ -93,7 +93,7 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **StudyMaterial** — classId, subjectId, title, type (`PDF | NOTES | WORKSHEET | PAPER`), fileUrl
 - **Notice** — title, body, priority (`HIGH | MEDIUM | LOW`), audience (enum[] or JSONB), authorName, publishedById, publishedAt
 - **Event** — title, date, description, audience
-- **Conversation** — participants → **ConversationParticipant** join table; lastMessageAt
+- **Conversation** — participants → **ConversationParticipant** join table (per-caller read state in `lastReadAt`); lastMessageAt
 - **Message** — conversationId, senderId, body, readAt
 - **Otp** — email, codeHash, expiresAt, attempts, purpose (`REGISTER | RESET_PASSWORD | INVITE`)
 - **AiConversation** — userId, feature, messages (JSONB)
@@ -369,14 +369,26 @@ Concessions
 **Endpoints (history/persistence)** — the gateway carries live traffic; these hydrate the client and keep history
 
 - [ ] `POST /api/v1/chat/conversations` — allowed pairs enforced (admin↔teacher, teacher↔student, teacher↔parent) `(authenticated)`
-- [ ] `GET /api/v1/chat/conversations` — the caller's conversations, newest `lastMessageAt` first `(authenticated)`
-- [ ] `GET /api/v1/chat/:conversationId/messages` — paginated history `(participant)`
-- [ ] `POST /api/v1/chat/:conversationId/read` — mark read up to a message `(participant)`
+- [ ] `GET /api/v1/chat/conversations` — the caller's conversations, newest `lastMessageAt` first; each row is the **inbox row** below `(authenticated)`
+- [ ] `GET /api/v1/chat/:conversationId/messages` — paginated history, oldest first within a page; each row is the **history row** below, and a non-participant is refused (403) `(participant)`
+- [ ] `POST /api/v1/chat/:conversationId/read` — mark read up to a message; stamps both the message's `readAt` and the caller's `lastReadAt` `(participant)`
+
+**Read models** — the two reads above are shaped here, not in the client
+
+- **Inbox row** — `id`, and for the other participant a `name` plus a `participantLabel` (a student's class, a
+  teacher's subject, else their role), then `lastMessage` (the newest body), `lastMessageAt` and `unreadCount`
+- **History row** — `id`, `body`, `mine` (`senderId` = caller), `sentAt` (`createdAt`), `read` (`readAt` not null)
+- `unreadCount` counts the other side's messages newer than the caller's
+  `conversation_participants.lastReadAt` — per-caller by construction and never a column on `conversations`, so
+  the badge cannot drift between the two participants
 
 **Behavior**
 
 - `@socket-io/redis-adapter` (optional) for horizontal scaling
-- Message persistence in PostgreSQL with read receipts (`readAt`)
+- Message persistence in PostgreSQL with read receipts (`readAt`); a read stamps both `messages.read_at` (the
+  sender's double-check) and `conversation_participants.last_read_at` (the caller's unread marker)
+- Both reads are **scoped to the caller**: the inbox lists only conversations the caller participates in, and a
+  thread request from anyone else is refused (403) rather than returning history
 
 ### 4.11 Notices & Events (`NoticesModule`)
 

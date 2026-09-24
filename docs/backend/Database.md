@@ -1454,8 +1454,9 @@ erDiagram
 
 <!-- table: conversation_participants · module: ChatModule · prd: §4.10 · phase: 5 · tenant: yes · soft-delete: no -->
 
-Membership + read state for a conversation. `last_read_at` drives the unread badge; `chat:read` updates
-it over the gateway.
+Membership + read state for a conversation. `last_read_at` is the authority for the caller's unread badge —
+never computed from `conversations` — and both `chat:read` (gateway) and `POST /chat/:conversationId/read`
+stamp it.
 
 | Column            | Type          | Null | Key | Notes                |
 | ----------------- | ------------- | ---- | --- | -------------------- |
@@ -1489,8 +1490,9 @@ erDiagram
 
 <!-- table: messages · module: ChatModule · prd: §4.10 · phase: 5 · tenant: yes · soft-delete: yes -->
 
-Persisted chat message. `read_at` is the receipt for the single recipient. Ordering is by `created_at`
-within a conversation.
+Persisted chat message. `read_at` is the receipt for the single recipient (it flips the sender's double-check);
+the caller's unread badge comes from `conversation_participants.last_read_at` instead, so the two are not the
+same marker. Ordering is by `created_at` within a conversation.
 
 | Column            | Type          | Null | Key | Notes                |
 | ----------------- | ------------- | ---- | --- | -------------------- |

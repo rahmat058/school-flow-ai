@@ -4,6 +4,7 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { ProtectedRoute } from '@/routes/guards/ProtectedRoute'
 import { RoleGuard } from '@/routes/guards/RoleGuard'
 import {
+  ChatPage,
   DashboardPage,
   FeeCollectPage,
   FeesPage,
@@ -36,11 +37,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.materials,
     title: 'Study material',
     description: 'Uploads and downloads for notes, worksheets and previous-year papers arrive in Phase 3.',
-  },
-  {
-    path: paths.chat,
-    title: 'Messages',
-    description: 'Real-time chat between permitted role pairs arrives in Phase 5.',
   },
   {
     path: paths.reports,
@@ -93,6 +89,7 @@ export const privateRoutes: RouteObject[] = [
           // Readable by every role; the grid's write controls are admin-only, per the API contract.
           { path: childPath(paths.timetable), element: <TimetablePage /> },
           { path: childPath(paths.notices), element: <NoticesPage /> },
+          { path: childPath(paths.chat), element: <ChatPage /> },
           ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },
         ],

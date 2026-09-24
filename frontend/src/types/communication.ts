@@ -28,6 +28,29 @@ export interface NoticeInput {
   authorName: string
 }
 
+/** One row in the conversation list — the thread with the other participant already resolved. */
+export interface ConversationListItem {
+  id: string
+  name: string
+  /** The line under the name: a student's class, a teacher's subject, or else their role. */
+  participantLabel: string
+  /** The newest message's body, for the preview line. */
+  lastMessage: string
+  lastMessageAt: string | null
+  /** Messages from the other participant the caller has not read. */
+  unreadCount: number
+}
+
+/** One message as a thread renders it. */
+export interface ChatMessageListItem {
+  id: string
+  body: string
+  /** True when the caller sent it — this drives the bubble's side and tint. */
+  mine: boolean
+  sentAt: string
+  read: boolean
+}
+
 /** Named `SchoolEvent` to avoid colliding with the DOM `Event`. */
 export interface SchoolEvent {
   id: string

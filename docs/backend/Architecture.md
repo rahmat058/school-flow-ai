@@ -54,3 +54,18 @@ backend/
 - **React Email** (`react-email`) — email templates written as `.tsx` components in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend; live preview with the `email dev` CLI
 - **@nestjs/throttler** — rate limiting; **helmet** — headers
 - Deployed on **Render**
+
+## Real-time chat (`ChatModule`)
+
+The split is deliberate: **Socket.io carries live traffic, REST carries history.**
+
+- The gateway (`*.gateway.ts`) authenticates the JWT on `handleConnection`, then `chat:join` subscribes the socket
+  to one conversation — only once the allowed-pair check (admin↔teacher, teacher↔student, teacher↔parent) passes.
+- `chat:message` **persists first, then fans out**, so a client never sees a message the database has not
+  accepted. `chat:typing` is ephemeral and never persisted.
+- Read state lives on `conversation_participants.last_read_at`: `chat:read` and `POST /chat/:conversationId/read`
+  both stamp it, and the inbox's unread count is derived from it rather than stored on `conversations`.
+- `GET /chat/conversations` and `GET /chat/:conversationId/messages` hydrate the client on load and are scoped to
+  the caller, so a non-participant gets a 403 instead of a thread.
+- Payloads reuse the REST DTO shapes, so one serializer serves both transports.
+- Notifications (`notification:new`) ride the same gateway, which is why it is not chat-specific.
