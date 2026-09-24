@@ -308,13 +308,16 @@ Concessions
 
 **Tables:** `timetables`, `periods` · Database.md §7
 
-> Post-MVP: `Database.md` marks `timetables`/`periods` as `phase: none` and no phase claims them yet — build these after Phase 5.
+> Post-MVP for the **backend**: `Database.md` marks `timetables`/`periods` as `phase: none` and no phase claims them yet — build these after Phase 5. The frontend module ships against the mock API in the meantime.
 
 **Endpoints**
 
 - [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
-- [ ] `GET /api/v1/timetables/class/:classId` `(admin, teacher, student, parent of child)`
+- [ ] `GET /api/v1/timetables/class/:classId` — the class's week in one payload: `periods` (the rows), `days` (each carrying one slot per row) and the `stats` roll-ups `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
+- [ ] `PATCH /api/v1/timetables/class/:classId/slots` — set one cell's `subjectId`/`teacherId`, or clear it by sending both null `(admin)`
+- [ ] `POST /api/v1/timetables/class/:classId/periods` — append a period row to the class's week, written to every day in one transaction `(admin)`
+- [ ] `DELETE /api/v1/timetables/class/:classId/periods/:orderIndex` — remove that row from every day and close the positions up `(admin)`
 - [ ] `PUT /api/v1/timetables/:id` — **full replacement**: the body carries the whole period set, so this is the one route where `PUT` is correct `(admin)`
 - [ ] `DELETE /api/v1/timetables/:id` `(admin)`
 
@@ -322,6 +325,10 @@ Concessions
 
 - Conflict detection: teacher double-booking validation before save
 - Break periods flagged via `isBreak` on Period
+- The week's period rows are stored per day but **managed class-wide**: adding or removing one applies to every day of the class and is addressed by `orderIndex`, so the days cannot drift apart
+- A row's label is the stored `label`, else `Period n` counted over teaching rows only — so the period after a break keeps its number
+- Break rows carry no subject or teacher and are not editable in the grid; an unknown `orderIndex` is a 404 `TIMETABLE_PERIOD_NOT_FOUND`
+- A week keeps at least one period row — removing the last one is refused rather than leaving an empty grid
 
 ### 4.9 Exams, Tests & Report Cards (`ExamsModule`)
 

@@ -57,4 +57,4 @@
 
 **Done when:** app passes lint/typecheck, is responsive, and is deployed.
 
-> Do not start Phase N+1 UI until Phase N is merged. Timetable builder UI is post-MVP.
+> Do not start Phase N+1 UI until Phase N is merged. The **weekly timetable** (class week view, per-cell subject/teacher editing, class-wide period rows) ships against the mock API, out of phase order as the fees and homework modules did; the drag-and-drop timetable **builder** UI stays post-MVP.

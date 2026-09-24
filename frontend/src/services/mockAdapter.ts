@@ -36,6 +36,7 @@ import type {
 } from '@/types/fees'
 import type { Notice } from '@/types/communication'
 import type { Homework, HomeworkListItem } from '@/types/homework'
+import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
 import type {
   BloodGroup,
   Guardian,
@@ -74,6 +75,7 @@ import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
 import { homework, homeworkSubmissions } from '@/data/homework'
+import { periods, timetables, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
 
@@ -342,6 +344,103 @@ function homeworkVisibleTo(assignment: HomeworkListItem, user: AuthUser | undefi
     .filter((classId): classId is string => Boolean(classId))
 
   return childClassIds.includes(assignment.classId)
+}
+
+// ---------------------------------------------------------------------------------------------
+// timetable read model — the class's week: its period rows, each day's slots and the stat roll-ups
+// ---------------------------------------------------------------------------------------------
+
+/** A day that was never built gets its row on demand, so a class can adopt another school day later. */
+function dayTimetableOf(classId: string, day: Weekday): Timetable {
+  const existing = timetables.find((item) => item.classId === classId && item.day === day)
+  if (existing) return existing
+
+  const created: Timetable = {
+    id: `tt_${classId.replace('cls_', '')}_${day}`,
+    schoolId: SCHOOL_ID,
+    classId,
+    academicYear: ACADEMIC_YEAR,
+    day,
+  }
+
+  timetables.push(created)
+  return created
+}
+
+function periodRowsOf(timetable: Timetable): Period[] {
+  return periods
+    .filter((period) => period.timetableId === timetable.id)
+    .sort((left, right) => left.orderIndex - right.orderIndex)
+}
+
+/**
+ * The rows as the grid reads them. A named row keeps its label; a numbered one derives `Period n`
+ * from its place, counting teaching rows only — which is why the period after the short break is
+ * `Period 4` and not `Period 5`.
+ */
+function labelRows(rows: Period[]): TimetablePeriodRow[] {
+  let teaching = 0
+
+  return rows.map((row) => {
+    if (!row.isBreak) teaching += 1
+
+    return {
+      orderIndex: row.orderIndex,
+      label: row.label ?? (row.isBreak ? 'Break' : `Period ${teaching}`),
+      startTime: row.startTime,
+      endTime: row.endTime,
+      isBreak: row.isBreak,
+    }
+  })
+}
+
+function teacherNameOf(teacherId: string | null): string | null {
+  const teacher = findTeacher(teacherId)
+  return teacher ? `${teacher.firstName} ${teacher.lastName}` : null
+}
+
+function classTimetable(classId: string): ClassTimetable | undefined {
+  const classRoom = classes.find((item) => item.id === classId)
+  if (!classRoom) return undefined
+
+  // The rows are the class's, so the first day speaks for all of them.
+  const rows = labelRows(periodRowsOf(dayTimetableOf(classId, 'MON')))
+
+  const days: TimetableDay[] = weekdays.map((day) => {
+    const scheduled = periodRowsOf(dayTimetableOf(classId, day))
+
+    return {
+      day,
+      slots: rows.map((_, index) => {
+        const period = scheduled[index]
+
+        return {
+          subjectId: period?.subjectId ?? null,
+          subjectName: period?.subjectId ? (findSubject(period.subjectId)?.name ?? null) : null,
+          teacherId: period?.teacherId ?? null,
+          teacherName: teacherNameOf(period?.teacherId ?? null),
+          room: period?.room ?? null,
+        }
+      }),
+    }
+  })
+
+  const taught = days.flatMap((day) => day.slots).filter((slot) => slot.subjectName !== null)
+
+  return {
+    classId,
+    className: classLabel(classRoom),
+    academicYear: ACADEMIC_YEAR,
+    periods: rows,
+    days,
+    stats: {
+      periodRows: rows.length,
+      weeklySlots: days.length * rows.filter((row) => !row.isBreak).length,
+      subjects: new Set(taught.map((slot) => slot.subjectName)).size,
+      // A slot can be scheduled without a teacher yet; that is not a teacher to count.
+      teachers: new Set(taught.map((slot) => slot.teacherName).filter((name) => name !== null)).size,
+    },
+  }
 }
 
 function fullNameParts(fullName: string): { firstName: string; lastName: string } {
@@ -2123,6 +2222,125 @@ const routes: Route[] = [
 
       concessions.splice(index, 1)
       return ok({ deleted: true })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/timetables/class/:classId',
+    handler: ({ params }) => {
+      const timetable = classTimetable(String(params.classId))
+      return timetable ? ok(timetable) : fail(404, 'TIMETABLE_NOT_FOUND', 'Class not found')
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/timetables/class/:classId/slots',
+    handler: ({ params, body }) => {
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(404, 'TIMETABLE_NOT_FOUND', 'Class not found')
+
+      const day = String(body.day ?? '') as Weekday
+      if (!weekdays.includes(day)) return fail(400, 'TIMETABLE_INVALID', 'Choose a day of the week', ['day'])
+
+      const orderIndex = Number(body.orderIndex)
+      const row = periodRowsOf(dayTimetableOf(classRoom.id, day)).find((item) => item.orderIndex === orderIndex)
+      if (!row) return fail(404, 'TIMETABLE_PERIOD_NOT_FOUND', 'That period does not exist on this day')
+      if (row.isBreak) return fail(400, 'TIMETABLE_INVALID', 'A break row holds no lesson', ['orderIndex'])
+
+      const subjectId = body.subjectId ? String(body.subjectId) : null
+      const teacherId = body.teacherId ? String(body.teacherId) : null
+
+      if (subjectId) {
+        const subject = findSubject(subjectId)
+        if (!subject) return fail(400, 'TIMETABLE_INVALID', 'That subject does not exist', ['subjectId'])
+        if (subject.classId !== classRoom.id) {
+          return fail(400, 'TIMETABLE_INVALID', 'That subject is not taught in this class', ['subjectId'])
+        }
+      }
+
+      if (teacherId && !teachers.some((teacher) => teacher.id === teacherId && teacher.status === 'ACTIVE')) {
+        return fail(400, 'TIMETABLE_INVALID', 'That teacher is not on the staff list', ['teacherId'])
+      }
+
+      // Both null clears the cell, which is what the editor's Clear does.
+      row.subjectId = subjectId
+      row.teacherId = teacherId
+
+      return ok(classTimetable(classRoom.id))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/timetables/class/:classId/periods',
+    handler: ({ params, body }) => {
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(404, 'TIMETABLE_NOT_FOUND', 'Class not found')
+
+      const label = String(body.label ?? '').trim()
+      const startTime = String(body.startTime ?? '')
+      const endTime = String(body.endTime ?? '')
+      const isBreak = Boolean(body.isBreak)
+
+      if (!label) return fail(400, 'TIMETABLE_INVALID', 'A label is required', ['label'])
+      if (!startTime) return fail(400, 'TIMETABLE_INVALID', 'A start time is required', ['startTime'])
+      if (!endTime) return fail(400, 'TIMETABLE_INVALID', 'An end time is required', ['endTime'])
+      if (endTime <= startTime) {
+        return fail(400, 'TIMETABLE_INVALID', 'The end time must come after the start time', ['endTime'])
+      }
+
+      // The row belongs to the class, so every day gains it in the same pass.
+      for (const day of weekdays) {
+        const timetable = dayTimetableOf(classRoom.id, day)
+        const nextIndex = periodRowsOf(timetable).reduce((max, row) => Math.max(max, row.orderIndex + 1), 0)
+
+        periods.push({
+          id: `per_${timetable.id}_${nextIndex + 1}`,
+          schoolId: SCHOOL_ID,
+          timetableId: timetable.id,
+          subjectId: null,
+          teacherId: null,
+          startTime,
+          endTime,
+          isBreak,
+          orderIndex: nextIndex,
+          room: null,
+          label,
+        })
+      }
+
+      return created(classTimetable(classRoom.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/timetables/class/:classId/periods/:orderIndex',
+    handler: ({ params }) => {
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(404, 'TIMETABLE_NOT_FOUND', 'Class not found')
+
+      const orderIndex = Number(params.orderIndex)
+      const dayRows = weekdays.map((day) => periodRowsOf(dayTimetableOf(classRoom.id, day)))
+
+      if (dayRows.some((rows) => !rows.some((row) => row.orderIndex === orderIndex))) {
+        return fail(404, 'TIMETABLE_PERIOD_NOT_FOUND', 'That period does not exist')
+      }
+      if (dayRows[0].length <= 1) {
+        return fail(400, 'TIMETABLE_INVALID', 'A week needs at least one period row')
+      }
+
+      for (const day of weekdays) {
+        const timetable = dayTimetableOf(classRoom.id, day)
+        const target = periodRowsOf(timetable).find((row) => row.orderIndex === orderIndex)
+        if (!target) continue
+
+        periods.splice(periods.indexOf(target), 1)
+        // Keep positions contiguous — a numbered row reads its number from where it sits.
+        periodRowsOf(timetable).forEach((row, position) => {
+          row.orderIndex = position
+        })
+      }
+
+      return ok(classTimetable(classRoom.id))
     },
   },
 ]

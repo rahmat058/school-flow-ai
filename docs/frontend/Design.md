@@ -47,6 +47,7 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 - **Wide tables:** a table inside a card must fit the card — trim padding and merge paired columns (e.g. `13 / 20`) rather than letting the page scroll sideways; if a table still overflows on a narrow viewport the scrollbar stays inside its own container. Scrollable strips (the profile tab bar) hide their scrollbar entirely and stay swipable.
 - **Record tabs:** each tab opens with a title, a one-line description and its own action on the right — a `Download … PDF` where a sheet makes sense. When there is nothing to export the action disables itself and explains why in its tooltip, rather than disappearing.
 - **Card grids:** a collection of people (teachers) reads as cards, not table rows — avatar, name, identifier, one accent chip for the primary attribute, neutral chips for the rest, then contact lines with icons. A table stays the right shape for records you compare numerically (students, invoices).
+- **Timetable:** a days × periods grid in a card, scrolling inside its own container on narrow viewports. The **TIME column** carries a soft per-row gradient wash (the palette's soft tints, cycling row by row) with the row label over its times — the one place in the app where a gradient is allowed, because it is what makes a row readable across six columns. Day headers mark today in primary. A **legend** of the class's subjects sits above the grid, and each subject's soft tint is reused by its cells; a lesson is a tinted block (subject over teacher) that lifts on hover and opens the entry editor, an empty period is a dashed muted cell, and breaks span the week as a flat strip. Read-only roles get the same grid with no edit affordances and no hover lift.
 - **Nav:** sidebar 240px, collapsing to a 76px icon rail on desktop and sliding in as a drawer on mobile; header 64px (72px on desktop) with backdrop-blur; the sidebar is viewport-pinned, so only the main column scrolls
 - **Currency:** amounts are stored as integer minor units and displayed in **USD** (`$1,500.00`) — see `src/lib/format.ts`
 - **Scrollbars:** thin and neutral (`--color-scrollbar-thumb`, darkening on hover), defined once globally in `src/styles/index.css` — a 4px pill via the WebKit pseudo-elements, `scrollbar-width: thin` for Firefox. Don't set `scrollbar-width`/`scrollbar-color` anywhere else: Chrome ignores `::-webkit-scrollbar` entirely as soon as either is set.
@@ -65,7 +66,7 @@ Visual language for School Flow AI: editorial, quietly confident, high informati
 - Do keep the 4px spacing grid everywhere
 - Do keep cards at 12px and buttons/inputs at 6px radius — don't mix
 - Don't use pure black/white for text — use palette values
-- Don't add gradients or decorative illustrations
+- Don't add gradients or decorative illustrations — the one exception is the timetable's TIME column, where a soft per-row wash is a wayfinding device (see Components)
 - Don't use shadows on static elements — shadows are for hover/focus only
 - Don't invent new hover backgrounds — interactive hover is `bg-primary-soft`, everywhere
 - Don't place more than one primary button per view section

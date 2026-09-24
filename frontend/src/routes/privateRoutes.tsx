@@ -13,6 +13,7 @@ import {
   StudentProfilePage,
   StudentsPage,
   TeachersPage,
+  TimetablePage,
 } from '@/routes/lazyPages'
 import { childPath, paths } from '@/routes/paths'
 
@@ -30,11 +31,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.exams,
     title: 'Exams & results',
     description: 'Exam scheduling, marks entry, publishing and report cards arrive in Phase 4.',
-  },
-  {
-    path: paths.timetable,
-    title: 'Timetable',
-    description: 'The weekly class timetable and teacher view arrive with Phase 2.',
   },
   {
     path: paths.materials,
@@ -94,6 +90,8 @@ export const privateRoutes: RouteObject[] = [
           },
           // Readable by every role; the page itself withholds the write controls from students and parents.
           { path: childPath(paths.homework), element: <HomeworkPage /> },
+          // Readable by every role; the grid's write controls are admin-only, per the API contract.
+          { path: childPath(paths.timetable), element: <TimetablePage /> },
           { path: childPath(paths.notices), element: <NoticesPage /> },
           ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },

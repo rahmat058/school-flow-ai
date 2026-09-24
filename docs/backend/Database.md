@@ -840,7 +840,8 @@ erDiagram
 <!-- table: timetables · module: TimetablesModule · prd: §4.8 · phase: none · tenant: yes · soft-delete: no -->
 
 One weekly timetable per class per academic year. A day's periods are created nested; the parent row is
-the conflict-detection boundary.
+the conflict-detection boundary. The rows themselves are the same across the week's days and are handled
+class-wide — see the `periods` notes below.
 
 | Column          | Type          | Null | Key | Notes          |
 | --------------- | ------------- | ---- | --- | -------------- |
@@ -876,7 +877,9 @@ erDiagram
 
 <!-- table: periods · module: TimetablesModule · prd: §4.8 · phase: none · tenant: yes · soft-delete: no -->
 
-A single slot inside a day. Break rows carry `is_break = true` with no subject or teacher.
+A single slot inside a day. Break rows carry `is_break = true` with no subject or teacher. The rows
+are managed **class-wide**: adding or removing one writes it to every day's timetable in a single
+transaction and it is addressed by its `order_index`, so the week keeps one period structure.
 
 | Column         | Type      | Null | Key | Notes                    |
 | -------------- | --------- | ---- | --- | ------------------------ |
@@ -890,6 +893,7 @@ A single slot inside a day. Break rows carry `is_break = true` with no subject o
 | `is_break`     | `boolean` | no   |     | default `false`          |
 | `order_index`  | `integer` | no   |     | display order within day |
 | `room`         | `text`    | yes  |     |                          |
+| `label`        | `text`    | yes  |     | label; else `Period n`   |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `timetable_id` → `timetables.id`
 (cascade), `subject_id` → `subjects.id` (set null), `teacher_id` → `teachers.id` (set null).
@@ -897,7 +901,9 @@ A single slot inside a day. Break rows carry `is_break = true` with no subject o
 **Indexes** — `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)` (the teacher's weekly view).
 
 **Constraints** — `subject_id` / `teacher_id` are required unless `is_break`; `check (end_time >
-start_time)`.
+start_time)`. A null `label` on a teaching row is exposed as `Period n`, counted over teaching rows
+only — so the first period after a break keeps its number rather than skipping it. Break rows always
+carry a `label` ("Short Break", "Lunch Break"), since there is no number to derive.
 
 ```mermaid
 erDiagram
@@ -910,6 +916,7 @@ erDiagram
     uuid subject_id FK
     uuid teacher_id FK
     time start_time
+    text label
   }
 ```
 
@@ -1940,6 +1947,8 @@ writing migrations:
 4. **Timetable has no phase** — **Resolved 2026-09-23:** timetables are deliberately post-MVP, which is
    what `phase: none` on `timetables`/`periods` already meant. `Phases.md` and `PRD.md` §4.8 now say so
    explicitly rather than leaving the endpoints unscheduled; §4.8 stays defined for when it is picked up.
+   **Updated 2026-09-24:** the frontend now ships the weekly timetable against the mock API, so `phase: none`
+   no longer means nothing exists — it means the _backend_ endpoints are still unscheduled.
 5. **Class roster history** — `students.class_id` (current class only) was chosen over a
    `class_enrollments` join table. If promotion/academic-year history must be reportable, a join table is
    required instead.
@@ -2180,6 +2189,7 @@ erDiagram
     uuid subject_id FK
     uuid teacher_id FK
     time start_time
+    text label
   }
   fee_structures {
     uuid id PK
