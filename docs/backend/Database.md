@@ -1772,24 +1772,28 @@ erDiagram
 <!-- table: ai_conversations · module: AiModule · prd: §4.12 · phase: 5 · tenant: yes · soft-delete: no -->
 
 History per user per AI feature. `messages` is a JSONB array of `{ role, content, createdAt }` turns.
-Prompts are server-side templates, so raw user input is never forwarded to the LLM.
+Prompts are server-side templates, so raw user input is never forwarded to the LLM. For the four tool
+screens (quiz, homework helper, event planner, notice) a row **is** a generation: `prompt_args` keeps the
+form's own fields, and the reply is the text the panel renders.
 
-| Column       | Type          | Null | Key | Notes                 |
-| ------------ | ------------- | ---- | --- | --------------------- |
-| `id`         | `uuid`        | no   | PK  |                       |
-| `school_id`  | `uuid`        | no   | FK  | → `schools.id`        |
-| `user_id`    | `uuid`        | no   | FK  | → `users.id`          |
-| `feature`    | `ai_feature`  | no   |     | one of the 7 features |
-| `title`      | `text`        | yes  |     | derived label         |
-| `messages`   | `jsonb`       | no   |     | default `'[]'`        |
-| `created_at` | `timestamptz` | no   |     |                       |
-| `updated_at` | `timestamptz` | no   |     |                       |
+| Column        | Type          | Null | Key | Notes                 |
+| ------------- | ------------- | ---- | --- | --------------------- |
+| `id`          | `uuid`        | no   | PK  |                       |
+| `school_id`   | `uuid`        | no   | FK  | → `schools.id`        |
+| `user_id`     | `uuid`        | no   | FK  | → `users.id`          |
+| `feature`     | `ai_feature`  | no   |     | one of the 7 features |
+| `title`       | `text`        | yes  |     | derived label         |
+| `prompt_args` | `jsonb`       | no   |     | default `'{}'`        |
+| `messages`    | `jsonb`       | no   |     | default `'[]'`        |
+| `created_at`  | `timestamptz` | no   |     |                       |
+| `updated_at`  | `timestamptz` | no   |     |                       |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade).
 
 **Indexes** — `(user_id, feature, created_at desc)` (per-feature history), `(school_id)`.
 
-**Constraints** — rate limits are per user via `@Throttle`, not a column.
+**Constraints** — rate limits are per user via `@Throttle`, not a column. `prompt_args` is validated against
+the feature's template in the service, since its keys differ per tool.
 
 ```mermaid
 erDiagram
@@ -1798,6 +1802,7 @@ erDiagram
     uuid id PK
     uuid user_id FK
     ai_feature feature
+    jsonb prompt_args
     jsonb messages
   }
 ```
@@ -2439,6 +2444,7 @@ erDiagram
     uuid school_id FK
     uuid user_id FK
     ai_feature feature
+    jsonb prompt_args
     jsonb messages
   }
   permissions {

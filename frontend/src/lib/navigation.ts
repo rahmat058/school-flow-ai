@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Settings,
   ShieldCheck,
+  Sparkles,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ export const navItems: NavItem[] = [
   { label: 'Materials', href: '/materials', icon: BookOpen, roles: EVERYONE },
   { label: 'Notices', href: '/notices', icon: Megaphone, roles: EVERYONE },
   { label: 'Communication', href: '/chat', icon: MessagesSquare, roles: EVERYONE },
+  { label: 'AI Assistant', href: '/ai', icon: Sparkles, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
   { label: 'Reports', href: '/reports', icon: FileSpreadsheet, roles: ['ADMIN', 'TEACHER'] },
   { label: 'Roles & permissions', href: '/permissions', icon: ShieldCheck, roles: ['ADMIN'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['ADMIN'] },

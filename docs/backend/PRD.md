@@ -454,16 +454,21 @@ Concessions
 - [ ] `POST /api/v1/ai/chat` — school insights (admin): DB aggregates via Supabase RPC, answered by the LLM `(admin)`
 - [ ] `POST /api/v1/ai/report-comment` — report card comment generator `(admin, teacher)`
 - [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator `(admin)`
-- [ ] `POST /api/v1/ai/notice` — notice drafting `(admin)`
-- [ ] `POST /api/v1/ai/event-plan` — event planner `(admin)`
-- [ ] `POST /api/v1/ai/homework-help` — student homework helper `(student)`
-- [ ] `POST /api/v1/ai/quiz` — quiz generator (topic, class level, count → JSON questions) `(student, teacher)`
-- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by feature `(authenticated)`
+- [ ] `POST /api/v1/ai/notice` — notice drafting: takes the notice **type** and the **details**, returns the announcement text `(admin)`
+- [ ] `POST /api/v1/ai/event-plan` — event planner: takes the event **name**, **type**, **date**, expected **participants** and **budget**, returns a full plan (objectives, hour-by-hour timeline, budget split, checklist) `(admin)`
+- [ ] `POST /api/v1/ai/homework-help` — student homework helper: takes an optional **subject** and the **question**, returns a step-by-step explanation `(student)`
+- [ ] `POST /api/v1/ai/quiz` — quiz generator: takes **subject**, **topic** and the **question count**, returns the questions with their options `(student, teacher)`
+- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by `feature`, newest first. Each row is the **generation read model**: `id`, `feature`, `title`, `promptArgs` (the tool form's fields, so a past run can be reopened with its inputs), `output` (the last reply) and `createdAt` `(authenticated)`
 
 **Behavior**
 
 - Server-side prompt templates per feature; no raw user prompts to LLM
 - Rate-limited per user (`@Throttle`); conversation history stored in `AiConversation` (JSONB messages)
+- Four of the seven features own a screen (quiz, homework helper, event planner, notice) and each is offered
+  only to the roles `§2` allows — a teacher sees the quiz, a student the quiz and the homework helper, and a
+  guardian none of them
+- A generation is two turns — the template-filled prompt, then the reply — and `prompt_args` keeps the form's
+  own fields alongside them, so the tool can be re-run with the same inputs
 - School insights grounded in real DB aggregations (attendance %, fee collection, performance)
 
 ### 4.13 Study Material Module (`MaterialsModule`)

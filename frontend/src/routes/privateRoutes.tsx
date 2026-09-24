@@ -4,6 +4,7 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { ProtectedRoute } from '@/routes/guards/ProtectedRoute'
 import { RoleGuard } from '@/routes/guards/RoleGuard'
 import {
+  AiAssistantPage,
   ChatPage,
   DashboardPage,
   ExamsPage,
@@ -91,6 +92,7 @@ export const privateRoutes: RouteObject[] = [
           { path: childPath(paths.notices), element: <NoticesPage /> },
           { path: childPath(paths.chat), element: <ChatPage /> },
           { path: childPath(paths.exams), element: <ExamsPage /> },
+          { path: childPath(paths.ai), element: <AiAssistantPage /> },
           ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },
         ],

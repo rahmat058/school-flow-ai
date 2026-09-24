@@ -36,6 +36,7 @@ import type {
 } from '@/types/fees'
 import type { ChatMessageListItem, ConversationListItem, Notice, NoticePriority } from '@/types/communication'
 import type { PermissionGroupRow, StaffPermissionRow, UserPermissions } from '@/types/permission'
+import type { AiConversation, AiGeneration } from '@/types/ai'
 import type {
   Exam,
   ExamKind,
@@ -102,6 +103,7 @@ import { homework, homeworkSubmissions } from '@/data/homework'
 import { periods, timetables, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
+import { aiConversations } from '@/data/ai'
 
 /**
  * Demo API. Answers requests from `src/data/*` with the real response envelope and realistic
@@ -1580,6 +1582,21 @@ function myTimetableOf(userId: string | null, requestedStudentId = ''): MyTimeta
     note: user.role === 'PARENT' ? "Your child's weekly timetable." : 'Your class timetable.',
     timetable: week,
     children,
+  }
+}
+
+/** The assistant's read model: the stored turn pair, with its last reply as the result. */
+function generationOf(conversation: AiConversation): AiGeneration | undefined {
+  const reply = [...conversation.messages].reverse().find((turn) => turn.role === 'assistant')
+  if (!reply) return undefined
+
+  return {
+    id: conversation.id,
+    feature: conversation.feature,
+    title: conversation.title ?? 'Untitled generation',
+    promptArgs: conversation.promptArgs,
+    output: reply.content,
+    createdAt: conversation.createdAt,
   }
 }
 
@@ -3289,6 +3306,26 @@ const routes: Route[] = [
       return requested
         ? fail(403, 'TIMETABLE_FORBIDDEN', 'That student is not on your account')
         : fail(404, 'TIMETABLE_NOT_FOUND', 'No timetable for this account')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/ai/conversations',
+    handler: ({ params, userId }) => {
+      const feature = params.feature ? String(params.feature) : ''
+
+      // The caller's own history, newest first (`PRD.md` §4.12).
+      const mine = aiConversations
+        .filter((row) => row.userId === userId)
+        .filter((row) => (feature ? row.feature === feature : true))
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+
+      return ok<AiGeneration[]>(
+        mine.flatMap((row) => {
+          const generation = generationOf(row)
+          return generation ? [generation] : []
+        }),
+      )
     },
   },
 ]
