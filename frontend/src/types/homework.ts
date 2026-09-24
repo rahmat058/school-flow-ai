@@ -1,5 +1,3 @@
-export type MaterialType = 'PDF' | 'NOTES' | 'WORKSHEET' | 'PAPER'
-
 /** Derived from `dueDate` against today — the schema has no status column. Overdue wins. */
 export type HomeworkStatus = 'ACTIVE' | 'OVERDUE'
 
@@ -67,18 +65,4 @@ export interface HomeworkSubmission {
   remarks: string | null
   gradedById: string | null
   gradedAt: string | null
-}
-
-export interface StudyMaterial {
-  id: string
-  schoolId: string
-  classId: string
-  subjectId: string
-  uploadedById: string
-  title: string
-  description: string | null
-  type: MaterialType
-  fileUrl: string
-  fileSizeBytes: number | null
-  createdAt: string
 }

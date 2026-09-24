@@ -897,7 +897,7 @@ PDF/JPG/PNG/DOCX ≤ 10MB and stored in Cloudinary; this table keeps the `file_u
 
 **Indexes** — `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`.
 
-**Constraints** — `DELETE /materials/:id` removes the stored asset as well as the row.
+**Constraints** — `DELETE /materials/:id` soft-deletes the row (`deleted_at`) and removes the stored asset alongside it.
 
 ```mermaid
 erDiagram

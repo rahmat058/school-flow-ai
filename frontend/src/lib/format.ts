@@ -23,6 +23,17 @@ export function formatPaiseCompact(paise: number): string {
   return `$${value.toFixed(0)}`
 }
 
+/** A stored file size in bytes, at a readable magnitude — `null` renders as an em dash. */
+export function formatBytes(bytes: number | null): string {
+  if (bytes === null || bytes <= 0) return '—'
+
+  const units = ['B', 'KB', 'MB', 'GB']
+  const exponent = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+  const value = bytes / 1024 ** exponent
+
+  return `${value.toFixed(exponent === 0 || value >= 10 ? 0 : 1)} ${units[exponent]}`
+}
+
 export function formatDate(value: string | null, pattern = 'dd MMM yyyy'): string {
   if (!value) return '—'
   return format(parseISO(value), pattern)

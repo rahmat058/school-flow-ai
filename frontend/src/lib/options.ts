@@ -2,6 +2,7 @@ import type { SubjectName } from '@/types/academic'
 import type { NoticePriority } from '@/types/communication'
 import type { ExamKind, ExamType } from '@/types/exams'
 import type { HomeworkStatus } from '@/types/homework'
+import type { MaterialType } from '@/types/materials'
 import type { BloodGroup, FeeStanding, Gender } from '@/types/people'
 import type { ConcessionCategory, ConcessionType, FeeFrequency, InvoiceStatus, PaymentMethod } from '@/types/fees'
 
@@ -74,6 +75,8 @@ export const MANUAL_PAYMENT_METHODS = [
 
 export const HOMEWORK_STATUS_VALUES = ['ACTIVE', 'OVERDUE'] as const satisfies readonly HomeworkStatus[]
 
+export const MATERIAL_TYPE_VALUES = ['PDF', 'NOTES', 'WORKSHEET', 'PAPER'] as const satisfies readonly MaterialType[]
+
 export const NOTICE_PRIORITY_VALUES = ['HIGH', 'MEDIUM', 'LOW'] as const satisfies readonly NoticePriority[]
 
 export const EXAM_TYPE_VALUES = ['UNIT', 'MID', 'FINAL', 'ANNUAL'] as const satisfies readonly ExamType[]
@@ -129,6 +132,13 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 const HOMEWORK_STATUS_LABELS: Record<HomeworkStatus, string> = {
   ACTIVE: 'Active',
   OVERDUE: 'Overdue',
+}
+
+export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
+  PDF: 'PDF',
+  NOTES: 'Notes',
+  WORKSHEET: 'Worksheet',
+  PAPER: 'Previous-year paper',
 }
 
 const NOTICE_PRIORITY_LABELS: Record<NoticePriority, string> = {
@@ -222,3 +232,10 @@ export const homeworkStatusOptions: FieldOption[] = [
   { value: '', label: 'All status' },
   ...HOMEWORK_STATUS_VALUES.map((value) => ({ value, label: HOMEWORK_STATUS_LABELS[value] })),
 ]
+
+export const materialTypeOptions: FieldOption[] = MATERIAL_TYPE_VALUES.map((value) => ({
+  value,
+  label: MATERIAL_TYPE_LABELS[value],
+}))
+
+export const materialTypeFilterOptions: FieldOption[] = [{ value: '', label: 'All types' }, ...materialTypeOptions]

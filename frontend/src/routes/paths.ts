@@ -23,7 +23,7 @@ export const paths = {
   homework: '/homework',
   exams: '/exams',
   timetable: '/timetable',
-  materials: '/materials',
+  materials: '/study-materials',
   notices: '/notices',
   chat: '/chat',
   ai: '/ai',

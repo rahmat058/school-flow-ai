@@ -27,7 +27,7 @@
 - [ ] Teacher daily/bulk attendance register
 - [ ] Student/parent attendance views + monthly charts
 - [ ] Homework create/submit/track/grade flows
-- [ ] Study material listing & upload UI
+- [x] Study material listing & upload UI
 
 **Done when:** a teacher marks attendance and assigns homework; student submits; parent sees both.
 

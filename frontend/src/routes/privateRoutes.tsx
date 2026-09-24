@@ -11,6 +11,7 @@ import {
   FeeCollectPage,
   FeesPage,
   HomeworkPage,
+  MaterialsPage,
   NotFoundPage,
   NoticesPage,
   PermissionsPage,
@@ -30,11 +31,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.attendance,
     title: 'Attendance',
     description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-  {
-    path: paths.materials,
-    title: 'Study material',
-    description: 'Uploads and downloads for notes, worksheets and previous-year papers arrive in Phase 3.',
   },
   {
     path: paths.reports,
@@ -87,6 +83,8 @@ export const privateRoutes: RouteObject[] = [
           },
           // Readable by every role; the page itself withholds the write controls from students and parents.
           { path: childPath(paths.homework), element: <HomeworkPage /> },
+          // Readable by every role; the page withholds the upload controls from students and parents.
+          { path: childPath(paths.materials), element: <MaterialsPage /> },
           // Readable by every role; the grid's write controls are admin-only, per the API contract.
           { path: childPath(paths.timetable), element: <TimetablePage /> },
           { path: childPath(paths.notices), element: <NoticesPage /> },

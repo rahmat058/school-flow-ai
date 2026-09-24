@@ -29,7 +29,7 @@ frontend/
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   ├── dashboard/        # StatGrid, StatCard, CollectionChart, RecentPaymentsTable, AiInsightsCard, OverviewHeader
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
-│   ├── features/             # auth/, dashboard/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, timetable/, school/
+│   ├── features/             # auth/, dashboard/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, timetable/, school/
 │   │                         # each: components/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
 │   ├── services/             # apiClient.ts (axios + interceptors), mockAdapter.ts (demo API)
 │   ├── store/                # Zustand stores — auth session

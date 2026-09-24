@@ -95,6 +95,17 @@ export async function post<T>(url: string, body?: unknown): Promise<ApiResult<T>
   return unwrap(response.data)
 }
 
+/**
+ * Multipart upload. The instance defaults to `application/json`, which would make axios serialise the
+ * `FormData` into JSON — the explicit content type keeps it a real file upload.
+ */
+export async function postForm<T>(url: string, form: FormData): Promise<ApiResult<T>> {
+  const response = await http.post<ApiEnvelope<T>>(url, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return unwrap(response.data)
+}
+
 export async function put<T>(url: string, body?: unknown): Promise<ApiResult<T>> {
   const response = await http.put<ApiEnvelope<T>>(url, body)
   return unwrap(response.data)

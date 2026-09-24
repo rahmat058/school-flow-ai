@@ -1,4 +1,4 @@
-import type { StudyMaterial } from '@/types/homework'
+import type { MaterialType, StudyMaterial } from '@/types/materials'
 import { SCHOOL_ID, dateTimeOffset } from '@/data/seed'
 
 interface MaterialSpec {
@@ -6,7 +6,7 @@ interface MaterialSpec {
   subjectIndex: number
   title: string
   description: string
-  type: StudyMaterial['type']
+  type: MaterialType
 }
 
 const SPECS: MaterialSpec[] = [
@@ -68,16 +68,22 @@ const SPECS: MaterialSpec[] = [
   },
 ]
 
-export const studyMaterials: StudyMaterial[] = SPECS.map((spec, index) => ({
-  id: `mat_${index + 1}`,
-  schoolId: SCHOOL_ID,
-  classId: `cls_${spec.classIndex}`,
-  subjectId: `sub_${spec.classIndex}_${spec.subjectIndex}`,
-  uploadedById: index % 3 === 0 ? 'usr_admin_1' : `usr_tch_${(index % 8) + 1}`,
-  title: spec.title,
-  description: spec.description,
-  type: spec.type,
-  fileUrl: `https://res.cloudinary.com/school-flow/materials/${spec.type.toLowerCase()}-${index + 1}.pdf`,
-  fileSizeBytes: 180_000 + index * 42_500,
-  createdAt: dateTimeOffset(-(2 + index * 3), 10, 30),
-}))
+export const studyMaterials: StudyMaterial[] = SPECS.map((spec, index) => {
+  const createdAt = dateTimeOffset(-(2 + index * 3), 10, 30)
+
+  return {
+    id: `mat_${index + 1}`,
+    schoolId: SCHOOL_ID,
+    classId: `cls_${spec.classIndex}`,
+    subjectId: `sub_${spec.classIndex}_${spec.subjectIndex}`,
+    uploadedById: index % 3 === 0 ? 'usr_admin_1' : `usr_tch_${(index % 8) + 1}`,
+    title: spec.title,
+    description: spec.description,
+    type: spec.type,
+    fileUrl: `https://res.cloudinary.com/school-flow/materials/${spec.type.toLowerCase()}-${index + 1}.pdf`,
+    fileSizeBytes: 180_000 + index * 42_500,
+    createdAt,
+    updatedAt: createdAt,
+    deletedAt: null,
+  }
+})

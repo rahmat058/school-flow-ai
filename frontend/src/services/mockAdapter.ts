@@ -48,6 +48,7 @@ import type {
   TestListItem,
 } from '@/types/exams'
 import type { Homework, HomeworkListItem } from '@/types/homework'
+import type { MaterialDetail, MaterialListItem, MaterialType, StudyMaterial } from '@/types/materials'
 import type {
   ClassTimetable,
   MyTimetable,
@@ -75,7 +76,7 @@ import type {
 } from '@/types/people'
 import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
-import { classLabel, classes } from '@/data/classes'
+import { classLabel, classes, findClass } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, maxMarks, reportCards } from '@/data/exams'
 import { gradeForPercentage } from '@/lib/grades'
@@ -92,7 +93,8 @@ import {
   structureForClass,
 } from '@/data/fees'
 import { formatPaise, humanizeEnum } from '@/lib/format'
-import { NOTICE_PRIORITY_VALUES } from '@/lib/options'
+import { MATERIAL_TYPE_VALUES, NOTICE_PRIORITY_VALUES } from '@/lib/options'
+import { materialFileError } from '@/lib/validation'
 import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
@@ -100,6 +102,7 @@ import { notices } from '@/data/notices'
 import { conversations, messages } from '@/data/chat'
 import { permissions, userPermissions } from '@/data/permissions'
 import { homework, homeworkSubmissions } from '@/data/homework'
+import { studyMaterials } from '@/data/materials'
 import { periods, timetables, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
@@ -197,6 +200,14 @@ function normalizePath(config: InternalAxiosRequestConfig): string {
 function parseBody(config: InternalAxiosRequestConfig): Record<string, unknown> {
   const { data } = config
   if (!data) return {}
+  // A multipart upload arrives as `FormData`; flatten it so a field reads like any other body value.
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    const fields: Record<string, unknown> = {}
+    data.forEach((value, key) => {
+      fields[key] = value
+    })
+    return fields
+  }
   if (typeof data === 'string') {
     try {
       return JSON.parse(data) as Record<string, unknown>
@@ -372,6 +383,60 @@ function homeworkVisibleTo(assignment: HomeworkListItem, user: AuthUser | undefi
     .filter((classId): classId is string => Boolean(classId))
 
   return childClassIds.includes(assignment.classId)
+}
+
+/**
+ * Materials library read model: the upload plus its joined class, subject and author — computed here,
+ * the way the backend's list query would, so the card renders what it is handed.
+ */
+function materialListItems(): MaterialListItem[] {
+  return (
+    studyMaterials
+      // A soft-deleted upload keeps its row but leaves the library.
+      .filter((material) => material.deletedAt === null)
+      .map((material) => {
+        const classRoom = findClass(material.classId)
+        const subject = findSubject(material.subjectId)
+        const uploader = users.find((item) => item.id === material.uploadedById)
+
+        return {
+          id: material.id,
+          classId: material.classId,
+          className: classRoom ? classLabel(classRoom) : 'Unassigned',
+          subjectId: material.subjectId,
+          subjectName: subject?.name ?? '—',
+          uploadedById: material.uploadedById,
+          uploadedByName: uploader ? `${uploader.firstName} ${uploader.lastName}`.trim() : 'School office',
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSizeBytes: material.fileSizeBytes,
+          createdAt: material.createdAt,
+        }
+      })
+  )
+}
+
+/** `GET /materials` is role-scoped: staff see the school, a student their class, a parent their children's. */
+function materialVisibleTo(material: MaterialListItem, user: AuthUser | undefined): boolean {
+  if (!user || user.role === 'ADMIN' || user.role === 'TEACHER') return true
+  if (user.role === 'STUDENT') return material.classId === user.classId
+
+  const childClassIds = parentStudents
+    .filter((link) => link.parentId === user.profileId)
+    .map((link) => findStudent(link.studentId)?.classId)
+    .filter((classId): classId is string => Boolean(classId))
+
+  return childClassIds.includes(material.classId)
+}
+
+/** The received file part, narrowed to what the shared rule needs (a Node probe sends a File-like). */
+function receivedFilePart(value: unknown): { name: string; size: number } | null {
+  const candidate = value as { name?: unknown; size?: unknown } | null | undefined
+  if (!candidate || typeof candidate.name !== 'string' || typeof candidate.size !== 'number') return null
+
+  return { name: candidate.name, size: candidate.size }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2408,6 +2473,108 @@ const routes: Route[] = [
 
       // Soft delete (Database.md §6): the row survives so submissions keep their parent.
       assignment.deletedAt = new Date().toISOString()
+      return ok({ deleted: true })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/materials',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      const term = searchTerm(params)
+      const classId = params.classId ? String(params.classId) : ''
+      const subjectId = params.subjectId ? String(params.subjectId) : ''
+      const type = params.type ? String(params.type) : ''
+
+      const filtered = materialListItems()
+        .filter((material) => materialVisibleTo(material, user))
+        .filter((material) => (classId ? material.classId === classId : true))
+        .filter((material) => (subjectId ? material.subjectId === subjectId : true))
+        .filter((material) => (type ? material.type === type : true))
+        .filter((material) =>
+          matches(term, [
+            material.title,
+            material.subjectName,
+            material.className,
+            material.uploadedByName,
+            material.description,
+          ]),
+        )
+        // Newest first, so the library opens on the most recent upload.
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.title.localeCompare(right.title))
+
+      return ok<MaterialListItem[]>(filtered)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/materials',
+    handler: ({ body, userId }) => {
+      const classId = String(body.classId ?? '')
+      const subjectId = String(body.subjectId ?? '')
+      const type = String(body.type ?? '')
+      const title = String(body.title ?? '').trim()
+
+      if (!classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'MATERIAL_INVALID', 'Choose a class for this material', ['classId'])
+      }
+
+      const subject = findSubject(subjectId)
+      if (!subject) return fail(400, 'MATERIAL_INVALID', 'Choose a subject for this material', ['subjectId'])
+      if (subject.classId !== classId) {
+        return fail(400, 'MATERIAL_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
+      }
+      if (!title) return fail(400, 'MATERIAL_INVALID', 'A title is required', ['title'])
+      if (!MATERIAL_TYPE_VALUES.includes(type as MaterialType)) {
+        return fail(400, 'MATERIAL_INVALID', 'Choose a material type', ['type'])
+      }
+
+      const file = receivedFilePart(body.file)
+      const fileError = materialFileError(file)
+      if (fileError || !file) return fail(400, 'MATERIAL_INVALID', fileError ?? 'Choose a file to upload', ['file'])
+
+      const now = new Date().toISOString()
+      const material: StudyMaterial = {
+        id: `mat_${studyMaterials.length + 1}`,
+        schoolId: SCHOOL_ID,
+        classId,
+        subjectId,
+        uploadedById: userId ?? 'usr_admin_1',
+        title,
+        description: body.description ? String(body.description).trim() || null : null,
+        type: type as MaterialType,
+        // The demo stands in for the storage provider's URL.
+        fileUrl: `https://res.cloudinary.com/school-flow/materials/${file.name.replace(/\s+/g, '-').toLowerCase()}`,
+        fileSizeBytes: file.size,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }
+
+      studyMaterials.push(material)
+      return created(materialListItems().find((row) => row.id === material.id))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/materials/:id',
+    handler: ({ params }) => {
+      const material = materialListItems().find((row) => row.id === params.id)
+      if (!material) return fail(404, 'MATERIAL_NOT_FOUND', 'Study material not found')
+
+      // A real backend signs a short-lived URL for the stored asset; the demo hands back its own.
+      return ok<MaterialDetail>({ ...material, signedUrl: material.fileUrl })
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/materials/:id',
+    handler: ({ params }) => {
+      const material = studyMaterials.find((item) => item.id === params.id && item.deletedAt === null)
+      if (!material) return fail(404, 'MATERIAL_NOT_FOUND', 'Study material not found')
+
+      // Soft delete (Database.md §6); the stored asset goes with it in a real backend.
+      material.deletedAt = new Date().toISOString()
       return ok({ deleted: true })
     },
   },
