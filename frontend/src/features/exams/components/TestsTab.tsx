@@ -153,9 +153,9 @@ export function TestsTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           <Select
-            className="max-w-45"
+            className="w-45 shrink-0"
             options={classSelectOptions}
             value={classId}
             onValueChange={(value) => {
@@ -165,7 +165,7 @@ export function TestsTab({ canManage }: { canManage: boolean }) {
             aria-label="Filter by class"
           />
           <Select
-            className="max-w-45"
+            className="w-45 shrink-0"
             options={subjectSelectOptions}
             value={subjectId}
             onValueChange={setSubjectId}

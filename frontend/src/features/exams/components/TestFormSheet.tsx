@@ -169,13 +169,14 @@ export function TestFormSheet({ open, onClose, test }: TestFormSheetProps) {
           {...register('name', { required: 'A title is required' })}
         />
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Input
-            label="Date"
-            type="date"
-            error={errors.examDate?.message}
-            {...register('examDate', { required: 'A date is required' })}
-          />
+        <Input
+          label="Date"
+          type="date"
+          error={errors.examDate?.message}
+          {...register('examDate', { required: 'A date is required' })}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Total marks"
             type="number"

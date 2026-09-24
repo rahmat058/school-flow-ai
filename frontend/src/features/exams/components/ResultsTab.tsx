@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Spinner } from '@/components/ui/Spinner'
-import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
 import { gradeForPercentage, isPass, percentageOf } from '@/lib/grades'
 import { EXAM_TYPE_LABELS, examKindOptions } from '@/lib/options'
@@ -218,126 +218,132 @@ function MarksGrid({ examId }: { examId: string | null }) {
         </div>
       </header>
 
-      <Tabs value={activeSubjectId} onValueChange={setPickedSubjectId} className="px-5 pt-4">
-        <TabList>
+      <div className="border-line border-b px-5 py-4">
+        <div className="flex flex-wrap gap-2">
           {data.subjects.map((subject) => (
-            <Tab key={subject.subjectId} value={subject.subjectId}>
-              <span className="flex items-center gap-2">
-                <span>{subject.subjectName}</span>
-                <span className="text-ink-subtle text-[11.5px] font-normal">
-                  ({formatDate(subject.examDate, 'd MMM yyyy')} · {subject.maxMarks}M)
-                </span>
-                <span className="bg-canvas text-ink-muted rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums">
-                  {subject.enteredCount}/{data.students.length}
-                </span>
+            <button
+              key={subject.subjectId}
+              type="button"
+              onClick={() => setPickedSubjectId(subject.subjectId)}
+              aria-pressed={subject.subjectId === activeSubjectId}
+              className={cn(
+                'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[13px] transition-colors',
+                subject.subjectId === activeSubjectId
+                  ? 'border-primary bg-primary-soft text-primary'
+                  : 'border-line text-ink-muted hover:border-primary hover:text-primary',
+              )}>
+              <span className="font-medium">{subject.subjectName}</span>
+              <span className="text-ink-subtle text-[11.5px]">
+                ({formatDate(subject.examDate, 'd MMM yyyy')} · {subject.maxMarks}M)
               </span>
-            </Tab>
+              <span className="bg-canvas text-ink-muted rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums">
+                {subject.enteredCount}/{data.students.length}
+              </span>
+            </button>
           ))}
-        </TabList>
+        </div>
+      </div>
 
-        <TabPanel value={activeSubjectId}>
-          <div className="pb-5">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>#</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Roll no.</TableHead>
-                  <TableHead>Marks / {activeSubject.maxMarks}</TableHead>
-                  <TableHead>Remarks</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>Published</TableHead>
+      <div className="p-5">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>#</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Roll no.</TableHead>
+              <TableHead>Marks / {activeSubject.maxMarks}</TableHead>
+              <TableHead>Remarks</TableHead>
+              <TableHead>Grade</TableHead>
+              <TableHead>Result</TableHead>
+              <TableHead>Published</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {data.students.map((student, index) => {
+              const key = cellKey(student.studentId, activeSubject.subjectId)
+              const stored = serverEntry(student.studentId, activeSubject.subjectId)
+              const marksText = draft[key]?.marks ?? (stored?.marks != null ? String(stored.marks) : '')
+              const remarksText = draft[key]?.remarks ?? stored?.remarks ?? ''
+              const parsed = marksText.trim() === '' ? null : Number(marksText)
+              const percentage =
+                parsed === null || Number.isNaN(parsed) ? null : percentageOf(parsed, activeSubject.maxMarks)
+              const dirty = draft[key] !== undefined
+
+              return (
+                <TableRow key={student.studentId}>
+                  <TableCell className="text-ink-muted tabular-nums">{index + 1}</TableCell>
+                  <TableCell>
+                    <span className="flex flex-col">
+                      <span className="text-ink font-medium">{student.studentName}</span>
+                      <span className="text-ink-subtle font-mono text-[11.5px]">{student.admissionNo}</span>
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-ink-muted tabular-nums">{student.rollNo}</TableCell>
+
+                  <TableCell className="w-32">
+                    {stored?.isAbsent && !dirty ? (
+                      <span className="text-ink-subtle text-[13px]">Absent</span>
+                    ) : (
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-9 rounded-md"
+                        placeholder={`0–${activeSubject.maxMarks}`}
+                        aria-label={`${student.studentName} marks`}
+                        value={marksText}
+                        onChange={(event) =>
+                          setCell(student.studentId, activeSubject.subjectId, { marks: event.target.value })
+                        }
+                      />
+                    )}
+                  </TableCell>
+
+                  <TableCell className="w-48">
+                    <Input
+                      className="h-9 rounded-md"
+                      placeholder="Optional"
+                      aria-label={`${student.studentName} remarks`}
+                      value={remarksText}
+                      onChange={(event) =>
+                        setCell(student.studentId, activeSubject.subjectId, { remarks: event.target.value })
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell>
+                    {percentage === null ? (
+                      <span className="text-ink-subtle">—</span>
+                    ) : (
+                      <span className="bg-primary-soft text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-medium tabular-nums">
+                        {gradeForPercentage(percentage)} ({percentage}%)
+                      </span>
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {percentage === null ? (
+                      <span className="text-ink-subtle">—</span>
+                    ) : (
+                      <StatusBadge status={isPass(percentage) ? 'PASS' : 'FAIL'} />
+                    )}
+                  </TableCell>
+
+                  <TableCell>
+                    {dirty ? (
+                      <span className="text-warning text-[12px] font-medium">Unsaved</span>
+                    ) : stored?.marks == null ? (
+                      <span className="text-ink-subtle">—</span>
+                    ) : (
+                      <StatusBadge status={data.isPublished ? 'PUBLISHED' : 'DRAFT'} />
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {data.students.map((student, index) => {
-                  const key = cellKey(student.studentId, activeSubject.subjectId)
-                  const stored = serverEntry(student.studentId, activeSubject.subjectId)
-                  const marksText = draft[key]?.marks ?? (stored?.marks != null ? String(stored.marks) : '')
-                  const remarksText = draft[key]?.remarks ?? stored?.remarks ?? ''
-                  const parsed = marksText.trim() === '' ? null : Number(marksText)
-                  const percentage =
-                    parsed === null || Number.isNaN(parsed) ? null : percentageOf(parsed, activeSubject.maxMarks)
-                  const dirty = draft[key] !== undefined
-
-                  return (
-                    <TableRow key={student.studentId}>
-                      <TableCell className="text-ink-muted tabular-nums">{index + 1}</TableCell>
-                      <TableCell>
-                        <span className="flex flex-col">
-                          <span className="text-ink font-medium">{student.studentName}</span>
-                          <span className="text-ink-subtle font-mono text-[11.5px]">{student.admissionNo}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-ink-muted tabular-nums">{student.rollNo}</TableCell>
-
-                      <TableCell className="w-32">
-                        {stored?.isAbsent && !dirty ? (
-                          <span className="text-ink-subtle text-[13px]">Absent</span>
-                        ) : (
-                          <Input
-                            type="number"
-                            min={0}
-                            className="h-9 rounded-md"
-                            placeholder={`0–${activeSubject.maxMarks}`}
-                            aria-label={`${student.studentName} marks`}
-                            value={marksText}
-                            onChange={(event) =>
-                              setCell(student.studentId, activeSubject.subjectId, { marks: event.target.value })
-                            }
-                          />
-                        )}
-                      </TableCell>
-
-                      <TableCell className="w-48">
-                        <Input
-                          className="h-9 rounded-md"
-                          placeholder="Optional"
-                          aria-label={`${student.studentName} remarks`}
-                          value={remarksText}
-                          onChange={(event) =>
-                            setCell(student.studentId, activeSubject.subjectId, { remarks: event.target.value })
-                          }
-                        />
-                      </TableCell>
-
-                      <TableCell>
-                        {percentage === null ? (
-                          <span className="text-ink-subtle">—</span>
-                        ) : (
-                          <span className="bg-primary-soft text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-medium tabular-nums">
-                            {gradeForPercentage(percentage)} ({percentage}%)
-                          </span>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        {percentage === null ? (
-                          <span className="text-ink-subtle">—</span>
-                        ) : (
-                          <StatusBadge status={isPass(percentage) ? 'PASS' : 'FAIL'} />
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        {dirty ? (
-                          <span className="text-warning text-[12px] font-medium">Unsaved</span>
-                        ) : stored?.marks == null ? (
-                          <span className="text-ink-subtle">—</span>
-                        ) : (
-                          <StatusBadge status={data.isPublished ? 'PUBLISHED' : 'DRAFT'} />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </TabPanel>
-      </Tabs>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   )
 }
