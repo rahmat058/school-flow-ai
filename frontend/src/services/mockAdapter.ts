@@ -3,7 +3,37 @@ import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
 import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
 import type { ClassOption } from '@/types/academic'
-import type { FeeCollectionSummary, FeeInvoice, FeeInvoiceListItem, InvoiceStatus } from '@/types/fees'
+import type {
+  ClassFeeStatusRow,
+  ClassReportRow,
+  Concession,
+  ConcessionCategory,
+  ConcessionRow,
+  ConcessionType,
+  DayBook,
+  DayBookRow,
+  DefaulterRow,
+  FeeChartPoint,
+  FeeCollectSummary,
+  FeeCollectionSummary,
+  FeeDashboard,
+  FeeHead,
+  FeeHeadRow,
+  FeeInvoice,
+  FeeInvoiceListItem,
+  FeePayment,
+  FeeStructureDetail,
+  FeeTrendPoint,
+  InvoiceCandidateRow,
+  InvoiceStatus,
+  PaymentHistoryRow,
+  PaymentMethod,
+  Receipt,
+  StudentCollectSummary,
+  StudentDueRow,
+  StudentLedger,
+  StudentLedgerRow,
+} from '@/types/fees'
 import type { Notice } from '@/types/communication'
 import type {
   BloodGroup,
@@ -20,15 +50,25 @@ import type {
   TeacherListItem,
   Gender,
 } from '@/types/people'
-import { DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
+import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, gradeForPercentage, maxMarks } from '@/data/exams'
 import { findSubject, subjects } from '@/data/subjects'
-import { feeInvoices, feePayments, feeStructures } from '@/data/fees'
-import { formatDate } from '@/lib/format'
-import { students } from '@/data/students'
+import {
+  concessions,
+  feeHeads,
+  feeInvoices,
+  feePayments,
+  feeStructures,
+  findFeeHead,
+  findFeeInvoice,
+  headsForStructure,
+  structureForClass,
+} from '@/data/fees'
+import { formatPaise } from '@/lib/format'
+import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
@@ -200,8 +240,6 @@ function studentListItems(): StudentListItem[] {
     const register = attendance.filter((record) => record.studentId === student.id)
     const present = register.filter((record) => record.status === 'PRESENT' || record.status === 'LATE').length
     const invoices = feeInvoices.filter((invoice) => invoice.studentId === student.id)
-    const outstanding = (invoice: FeeInvoice) =>
-      Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0)
     const duePaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
     const today = dateOffset(0)
     // A balance past its due date is overdue even when the stored status has not caught up.
@@ -389,12 +427,10 @@ function studentFees(id: string): StudentFees {
     .filter((invoice) => invoice.studentId === id)
     .map((invoice) => {
       const payment = feePayments.find((item) => item.invoiceId === invoice.id)
-      const structure = feeStructures.find((item) => item.id === invoice.feeStructureId)
 
       return {
         id: invoice.id,
-        // Invoices carry no title or period of their own yet — see the note in PRD §4.6.
-        title: structure ? `${structure.name} · due ${formatDate(invoice.dueDate, 'dd MMM yyyy')}` : 'Fee invoice',
+        title: findFeeHead(invoice.feeHeadId)?.name ?? 'Fee invoice',
         amountPaise: invoice.amountPaise,
         paidPaise: invoice.paidPaise,
         paidAt: payment?.paidAt ?? null,
@@ -490,6 +526,32 @@ function upsertGuardian(student: Student, guardian: Guardian | null | undefined)
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// fees — read models. Every roll-up, join and aggregate is computed here, not in the view.
+// ---------------------------------------------------------------------------------------------
+
+/** Continues the demo's receipt run for payments recorded through the collect form. */
+let manualReceiptSeq = 90000
+
+function outstanding(invoice: FeeInvoice): number {
+  return Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0)
+}
+
+function studentNameOf(studentId: string): string {
+  const student = students.find((item) => item.id === studentId)
+  return student ? `${student.firstName} ${student.lastName}` : 'Unknown student'
+}
+
+function classNameOf(studentId: string): string {
+  const student = students.find((item) => item.id === studentId)
+  const classRoom = classes.find((item) => item.id === student?.classId)
+  return classRoom ? classLabel(classRoom) : 'Unassigned'
+}
+
+function titleForInvoice(invoice: FeeInvoice): string {
+  return findFeeHead(invoice.feeHeadId)?.name ?? 'Fee invoice'
+}
+
 function invoiceListItems(): FeeInvoiceListItem[] {
   return feeInvoices.map((invoice) => {
     const student = students.find((item) => item.id === invoice.studentId)
@@ -500,6 +562,409 @@ function invoiceListItems(): FeeInvoiceListItem[] {
       studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown student',
       admissionNo: student?.admissionNo ?? '—',
       className: classRoom ? classLabel(classRoom) : 'Unassigned',
+      title: titleForInvoice(invoice),
+    }
+  })
+}
+
+/** Students with nothing left to pay count as collected; the rest are the defaulter line. */
+function feeCollectionSummary(): FeeCollectionSummary {
+  const invoices = invoiceListItems()
+  const monthPrefix = dateOffset(0).slice(0, 7)
+  const paidAtByInvoice = new Map(feePayments.map((payment) => [payment.invoiceId, payment.paidAt ?? '']))
+  const balanceByStudent = new Map<string, number>()
+
+  let collectedPaise = 0
+  let thisMonthPaise = 0
+  let pendingPaise = 0
+  let concessionPaise = 0
+  let overdueCount = 0
+
+  for (const invoice of invoices) {
+    collectedPaise += invoice.paidPaise
+    concessionPaise += invoice.discountPaise
+    pendingPaise += outstanding(invoice)
+    if ((paidAtByInvoice.get(invoice.id) ?? '').slice(0, 7) === monthPrefix) thisMonthPaise += invoice.paidPaise
+    if (invoice.status === 'OVERDUE') overdueCount += 1
+    balanceByStudent.set(invoice.studentId, (balanceByStudent.get(invoice.studentId) ?? 0) + outstanding(invoice))
+  }
+
+  const active = students.filter((student) => student.status === 'ACTIVE')
+  const pendingStudents = active.filter((student) => (balanceByStudent.get(student.id) ?? 0) > 0).length
+
+  return {
+    collectedPaise,
+    thisMonthPaise,
+    pendingPaise,
+    concessionPaise,
+    overdueCount,
+    totalStudents: active.length,
+    paidStudents: active.length - pendingStudents,
+    pendingStudents,
+  }
+}
+
+function pendingInvoiceRows(): Array<{
+  invoiceId: string
+  studentId: string
+  studentName: string
+  className: string
+  title: string
+  dueDate: string
+  amountPaise: number
+  balancePaise: number
+  status: InvoiceStatus
+}> {
+  const open: InvoiceStatus[] = ['PENDING', 'PARTIAL', 'OVERDUE']
+
+  return invoiceListItems()
+    .filter((invoice) => open.includes(invoice.status))
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => ({
+      invoiceId: invoice.id,
+      studentId: invoice.studentId,
+      studentName: invoice.studentName,
+      className: invoice.className,
+      title: invoice.title,
+      dueDate: invoice.dueDate,
+      amountPaise: invoice.amountPaise,
+      balancePaise: outstanding(invoice),
+      status: invoice.status,
+    }))
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * The fees dashboard's charts. The trend is the real register — a month with no collection shows a
+ * zero rather than an invented bar — and coverage runs the last twelve months.
+ */
+function feeDashboard(): FeeDashboard {
+  const invoices = invoiceListItems()
+  const paidAtByInvoice = new Map(feePayments.map((payment) => [payment.invoiceId, payment.paidAt ?? '']))
+  const now = new Date()
+
+  const collectionTrend: FeeTrendPoint[] = Array.from({ length: 12 }, (_, offset) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - 11 + offset, 1)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+    let collectedPaise = 0
+    let pendingPaise = 0
+    for (const invoice of invoices) {
+      if ((paidAtByInvoice.get(invoice.id) ?? '').slice(0, 7) === key) collectedPaise += invoice.paidPaise
+      if (invoice.dueDate.slice(0, 7) === key) pendingPaise += outstanding(invoice)
+    }
+
+    return { label: MONTH_LABELS[date.getMonth()], collectedPaise, pendingPaise }
+  })
+
+  const classCollection: FeeChartPoint[] = classes.map((classRoom) => {
+    const studentIds = new Set(students.filter((student) => student.classId === classRoom.id).map((item) => item.id))
+    const value = invoices
+      .filter((invoice) => studentIds.has(invoice.studentId))
+      .reduce((total, invoice) => total + invoice.paidPaise, 0)
+
+    return { label: classLabel(classRoom), value }
+  })
+
+  return { collectionTrend, classCollection, pending: pendingInvoiceRows() }
+}
+
+function feeStructureDetails(classId: string): FeeStructureDetail[] {
+  const selected = classId ? feeStructures.filter((structure) => structure.classId === classId) : feeStructures
+
+  return selected.map((structure) => {
+    const classRoom = classes.find((item) => item.id === structure.classId)
+    const heads = headsForStructure(structure.id).map<FeeHeadRow>((head) => ({
+      ...head,
+      className: classRoom ? classLabel(classRoom) : 'Unassigned',
+      structureName: structure.name,
+      academicYear: structure.academicYear,
+    }))
+
+    return {
+      ...structure,
+      className: classRoom ? classLabel(classRoom) : 'Unassigned',
+      heads,
+      totalHeads: heads.length,
+      totalAmountPaise: heads.reduce((total, head) => total + head.amountPaise, 0),
+    }
+  })
+}
+
+/** One row per student: what was billed, what came in, what is left. */
+function classFeeStatusRows(classId = '', status = ''): ClassFeeStatusRow[] {
+  return students
+    .filter((student) => student.status === 'ACTIVE')
+    .filter((student) => (classId ? student.classId === classId : true))
+    .map((student) => {
+      const invoices = invoiceListItems().filter((invoice) => invoice.studentId === student.id)
+      const totalDuePaise = invoices.reduce((total, invoice) => total + invoice.amountPaise - invoice.discountPaise, 0)
+      const paidPaise = invoices.reduce((total, invoice) => total + invoice.paidPaise, 0)
+      const pendingPaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
+      const resolved: InvoiceStatus =
+        pendingPaise === 0
+          ? 'PAID'
+          : invoices.some((invoice) => invoice.status === 'OVERDUE')
+            ? 'OVERDUE'
+            : invoices.some((invoice) => invoice.status === 'PARTIAL')
+              ? 'PARTIAL'
+              : 'PENDING'
+
+      return {
+        studentId: student.id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        className: classNameOf(student.id),
+        admissionNo: student.admissionNo,
+        totalDuePaise,
+        paidPaise,
+        pendingPaise,
+        status: resolved,
+      }
+    })
+    .filter((row) => (status ? row.status === status : true))
+    .sort(
+      (left, right) =>
+        left.className.localeCompare(right.className) || left.studentName.localeCompare(right.studentName),
+    )
+}
+
+function feeCollectSummary(classId: string, status: string): FeeCollectSummary {
+  const rows = classFeeStatusRows(classId, status)
+
+  return {
+    totalStudents: rows.length,
+    paidStudents: rows.filter((row) => row.pendingPaise === 0).length,
+    pendingStudents: rows.filter((row) => row.pendingPaise > 0).length,
+    totalCollectedPaise: rows.reduce((total, row) => total + row.paidPaise, 0),
+    totalPendingPaise: rows.reduce((total, row) => total + row.pendingPaise, 0),
+  }
+}
+
+function concessionAmountFor(studentId: string, head: FeeHead): number {
+  const concession = concessions.find(
+    (item) => item.studentId === studentId && item.feeHeadId === head.id && item.status === 'APPROVED',
+  )
+  if (!concession) return 0
+
+  if (concession.type === 'PERCENTAGE') {
+    return Math.round((head.amountPaise * (concession.percentage ?? 0)) / 100)
+  }
+
+  return Math.min(head.amountPaise, concession.amountPaise ?? 0)
+}
+
+function studentCollectSummary(studentId: string): StudentCollectSummary | undefined {
+  const student = students.find((item) => item.id === studentId)
+  if (!student) return undefined
+
+  const structure = structureForClass(student.classId)
+  const invoices = invoiceListItems().filter((invoice) => invoice.studentId === studentId)
+  const invoicedHeads = new Set(invoices.map((invoice) => invoice.feeHeadId))
+
+  const dues: StudentDueRow[] = invoices
+    .filter((invoice) => outstanding(invoice) > 0)
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => ({
+      invoiceId: invoice.id,
+      title: invoice.title,
+      totalPaise: invoice.amountPaise,
+      paidPaise: invoice.paidPaise,
+      balancePaise: outstanding(invoice),
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }))
+
+  const invoiceCandidates: InvoiceCandidateRow[] = headsForStructure(structure.id).map((head) => {
+    const concessionPaise = concessionAmountFor(studentId, head)
+
+    return {
+      feeHeadId: head.id,
+      title: head.name,
+      grossPaise: head.amountPaise,
+      concessionPaise,
+      netPaise: head.amountPaise - concessionPaise,
+      frequency: head.frequency,
+      hasInvoice: invoicedHeads.has(head.id),
+    }
+  })
+
+  const payments: PaymentHistoryRow[] = invoices
+    .filter((invoice) => invoice.receiptNo !== null)
+    .map((invoice) => {
+      const payment = feePayments.find((item) => item.invoiceId === invoice.id)
+
+      return {
+        id: payment?.id ?? invoice.id,
+        receiptNo: invoice.receiptNo ?? '—',
+        title: invoice.title,
+        amountPaise: invoice.paidPaise,
+        method: payment?.method ?? 'CASH',
+        paidAt: payment?.paidAt ?? invoice.dueDate,
+      }
+    })
+    .sort((left, right) => right.paidAt.localeCompare(left.paidAt))
+
+  return {
+    studentId,
+    studentName: `${student.firstName} ${student.lastName}`,
+    className: classNameOf(studentId),
+    admissionNo: student.admissionNo,
+    rollNo: student.rollNo,
+    totalPaidPaise: invoices.reduce((total, invoice) => total + invoice.paidPaise, 0),
+    balancePaise: invoices.reduce((total, invoice) => total + outstanding(invoice), 0),
+    dues,
+    invoiceCandidates,
+    payments,
+  }
+}
+
+function receiptFor(paymentId: string): Receipt | undefined {
+  const payment = feePayments.find((item) => item.id === paymentId)
+  if (!payment) return undefined
+
+  const invoice = findFeeInvoice(payment.invoiceId)
+  if (!invoice) return undefined
+
+  const student = students.find((item) => item.id === payment.studentId)
+  const head = findFeeHead(invoice.feeHeadId)
+
+  return {
+    receiptNo: invoice.receiptNo ?? `RCP-${invoice.id}`,
+    studentName: studentNameOf(payment.studentId),
+    className: classNameOf(payment.studentId),
+    admissionNo: student?.admissionNo ?? '—',
+    rollNo: student?.rollNo ?? 0,
+    paidAt: payment.paidAt ?? new Date().toISOString(),
+    items: [{ title: head?.name ?? 'Fee payment', amountPaise: payment.amountPaise }],
+    amountPaidPaise: payment.amountPaise,
+    method: payment.method,
+    reference: payment.remarks,
+  }
+}
+
+function latestPaymentDate(): string {
+  const dates = feePayments.map((payment) => (payment.paidAt ?? '').slice(0, 10)).filter(Boolean)
+  return dates.sort()[dates.length - 1] ?? dateOffset(0)
+}
+
+function dayBookReport(date: string): DayBook {
+  const day = date || latestPaymentDate()
+  const rows: DayBookRow[] = feePayments
+    .filter((payment) => (payment.paidAt ?? '').slice(0, 10) === day)
+    .map((payment) => {
+      const invoice = findFeeInvoice(payment.invoiceId)
+
+      return {
+        id: payment.id,
+        receiptNo: invoice?.receiptNo ?? '—',
+        studentName: studentNameOf(payment.studentId),
+        className: classNameOf(payment.studentId),
+        title: invoice ? titleForInvoice(invoice) : 'Fee payment',
+        amountPaise: payment.amountPaise,
+        method: payment.method,
+        status: payment.status,
+      }
+    })
+
+  return { rows, count: rows.length, totalPaise: rows.reduce((total, row) => total + row.amountPaise, 0) }
+}
+
+function classReportRows(classId: string): ClassReportRow[] {
+  return students
+    .filter((student) => student.status === 'ACTIVE' && student.classId === classId)
+    .map((student) => {
+      const invoices = invoiceListItems().filter((invoice) => invoice.studentId === student.id)
+      const totalInvoicedPaise = invoices.reduce(
+        (total, invoice) => total + invoice.amountPaise - invoice.discountPaise,
+        0,
+      )
+      const totalPaidPaise = invoices.reduce((total, invoice) => total + invoice.paidPaise, 0)
+      const balancePaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
+
+      return {
+        studentId: student.id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        rollNo: student.rollNo,
+        totalInvoicedPaise,
+        totalPaidPaise,
+        balancePaise,
+        status:
+          balancePaise === 0
+            ? ('CLEAR' as const)
+            : invoices.some((invoice) => invoice.status === 'OVERDUE')
+              ? ('OVERDUE' as const)
+              : ('PENDING' as const),
+      }
+    })
+    .sort((left, right) => left.rollNo - right.rollNo)
+}
+
+function defaulterRows(classId: string): DefaulterRow[] {
+  return invoiceListItems()
+    .filter((invoice) => outstanding(invoice) > 0)
+    .filter((invoice) => (classId ? findStudent(invoice.studentId)?.classId === classId : true))
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => ({
+      studentId: invoice.studentId,
+      studentName: invoice.studentName,
+      className: invoice.className,
+      rollNo: findStudent(invoice.studentId)?.rollNo ?? 0,
+      title: invoice.title,
+      duePaise: outstanding(invoice),
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }))
+}
+
+function studentLedger(studentId: string): StudentLedger {
+  const invoices = invoiceListItems()
+    .filter((invoice) => invoice.studentId === studentId)
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+
+  const rows: StudentLedgerRow[] = invoices.map((invoice) => {
+    const payment = feePayments.find((item) => item.invoiceId === invoice.id)
+
+    return {
+      id: invoice.id,
+      receiptNo: invoice.receiptNo,
+      title: invoice.title,
+      amountPaise: invoice.amountPaise,
+      paidPaise: invoice.paidPaise,
+      method: payment?.method ?? null,
+      dueDate: invoice.dueDate,
+      paidAt: payment?.paidAt ?? null,
+      status: invoice.status,
+    }
+  })
+
+  return {
+    rows,
+    totalInvoicedPaise: rows.reduce((total, row) => total + row.amountPaise, 0),
+    totalPaidPaise: rows.reduce((total, row) => total + row.paidPaise, 0),
+    balancePaise: invoices.reduce((total, invoice) => total + outstanding(invoice), 0),
+  }
+}
+
+function concessionRows(): ConcessionRow[] {
+  return concessions.map((concession) => {
+    const student = students.find((item) => item.id === concession.studentId)
+    const structure = structureForClass(student?.classId ?? null)
+    const head = findFeeHead(concession.feeHeadId) ?? headsForStructure(structure.id)[1]
+    const grossPaise = head?.amountPaise ?? 0
+    const discountPaise =
+      concession.type === 'PERCENTAGE'
+        ? Math.round((grossPaise * (concession.percentage ?? 0)) / 100)
+        : Math.min(grossPaise, concession.amountPaise ?? 0)
+
+    return {
+      ...concession,
+      studentName: studentNameOf(concession.studentId),
+      className: classNameOf(concession.studentId),
+      feeHeadTitle: findFeeHead(concession.feeHeadId)?.name ?? null,
+      discountLabel:
+        concession.type === 'PERCENTAGE' ? `${concession.percentage ?? 0}%` : formatPaise(concession.amountPaise ?? 0),
+      effectivePaise: Math.max(grossPaise - discountPaise, 0),
     }
   })
 }
@@ -1120,11 +1585,19 @@ const routes: Route[] = [
     handler: ({ params }) => {
       const term = searchTerm(params)
       const status = params.status ? String(params.status) : ''
+      const classId = params.classId ? String(params.classId) : ''
 
       const filtered = invoiceListItems()
         .filter((invoice) => (status ? invoice.status === status : true))
+        .filter((invoice) => (classId ? findStudent(invoice.studentId)?.classId === classId : true))
         .filter((invoice) =>
-          matches(term, [invoice.studentName, invoice.admissionNo, invoice.receiptNo, invoice.className]),
+          matches(term, [
+            invoice.studentName,
+            invoice.admissionNo,
+            invoice.receiptNo,
+            invoice.className,
+            invoice.title,
+          ]),
         )
         .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
 
@@ -1136,31 +1609,320 @@ const routes: Route[] = [
     method: 'GET',
     path: '/fees/pending',
     handler: ({ params }) => {
-      const open: InvoiceStatus[] = ['PENDING', 'PARTIAL', 'OVERDUE']
-      const filtered = invoiceListItems()
-        .filter((invoice) => open.includes(invoice.status))
-        .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+      const classId = params.classId ? String(params.classId) : ''
+      const filtered = pendingInvoiceRows().filter((row) =>
+        classId ? findStudent(row.studentId)?.classId === classId : true,
+      )
 
       const { items, meta } = paginate(filtered, params)
       return ok(items, meta)
     },
   },
+  { method: 'GET', path: '/fees/summary', handler: () => ok<FeeCollectionSummary>(feeCollectionSummary()) },
+  { method: 'GET', path: '/fees/dashboard', handler: () => ok<FeeDashboard>(feeDashboard()) },
   {
     method: 'GET',
-    path: '/fees/summary',
-    handler: () => {
-      const invoices = invoiceListItems()
-      const summary: FeeCollectionSummary = {
-        collectedPaise: invoices.reduce((total, invoice) => total + invoice.paidPaise, 0),
-        pendingPaise: invoices.reduce(
-          (total, invoice) => total + Math.max(invoice.amountPaise - invoice.discountPaise - invoice.paidPaise, 0),
-          0,
-        ),
-        overdueCount: invoices.filter((invoice) => invoice.status === 'OVERDUE').length,
-        concessionPaise: invoices.reduce((total, invoice) => total + invoice.discountPaise, 0),
+    path: '/fees/structures',
+    handler: ({ params }) =>
+      ok<FeeStructureDetail[]>(feeStructureDetails(params.classId ? String(params.classId) : '')),
+  },
+  {
+    method: 'POST',
+    path: '/fees/heads',
+    handler: ({ body }) => {
+      const classId = String(body.classId ?? '')
+      const title = String(body.title ?? '').trim()
+      const amountPaise = Number(body.amountPaise ?? 0)
+      const dueDate = String(body.dueDate ?? '')
+
+      if (!classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'FEE_VALIDATION', 'Choose a class for the fee head', ['classId'])
+      }
+      if (!title) return fail(400, 'FEE_VALIDATION', 'A title is required', ['title'])
+      if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+        return fail(400, 'FEE_VALIDATION', 'Amount must be greater than zero', ['amountPaise'])
+      }
+      if (!dueDate) return fail(400, 'FEE_VALIDATION', 'A due date is required', ['dueDate'])
+
+      const structure = structureForClass(classId)
+      const duplicate = feeHeads.some(
+        (head) => head.feeStructureId === structure.id && head.name.toLowerCase() === title.toLowerCase(),
+      )
+      if (duplicate) return fail(409, 'FEE_HEAD_EXISTS', 'That head already exists for this class', ['title'])
+
+      const head: FeeHead = {
+        id: `fhd_${structure.id}_${feeHeads.length + 1}`,
+        schoolId: SCHOOL_ID,
+        feeStructureId: structure.id,
+        name: title,
+        amountPaise,
+        frequency: (body.frequency ? String(body.frequency) : 'ONE_TIME') as FeeHead['frequency'],
+        dueDate,
+        description: body.description ? String(body.description) : null,
       }
 
-      return ok(summary)
+      feeHeads.push(head)
+      return created(feeStructureDetails(classId)[0])
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/fees/heads/:id',
+    handler: ({ params, body }) => {
+      const head = findFeeHead(String(params.id))
+      if (!head) return fail(404, 'FEE_HEAD_NOT_FOUND', 'Fee head not found')
+
+      if (body.title !== undefined) head.name = String(body.title).trim()
+      if (body.amountPaise !== undefined) head.amountPaise = Number(body.amountPaise)
+      if (body.frequency !== undefined) head.frequency = String(body.frequency) as FeeHead['frequency']
+      if (body.dueDate !== undefined) head.dueDate = String(body.dueDate)
+      if (body.description !== undefined) head.description = body.description ? String(body.description) : null
+
+      return ok(head)
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/fees/heads/:id',
+    handler: ({ params }) => {
+      const index = feeHeads.findIndex((head) => head.id === params.id)
+      if (index < 0) return fail(404, 'FEE_HEAD_NOT_FOUND', 'Fee head not found')
+
+      feeHeads.splice(index, 1)
+      return ok({ deleted: true })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/collect/summary',
+    handler: ({ params }) =>
+      ok<FeeCollectSummary>(
+        feeCollectSummary(params.classId ? String(params.classId) : '', params.status ? String(params.status) : ''),
+      ),
+  },
+  {
+    method: 'GET',
+    path: '/fees/collect/students',
+    handler: ({ params }) => {
+      const rows = classFeeStatusRows(
+        params.classId ? String(params.classId) : '',
+        params.status ? String(params.status) : '',
+      )
+      const { items, meta } = paginate(rows, params)
+      return ok(items, meta)
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/collect/student/:studentId',
+    handler: ({ params }) => {
+      const summary = studentCollectSummary(String(params.studentId))
+      return summary ? ok(summary) : fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    method: 'POST',
+    path: '/fees/invoices',
+    handler: ({ body }) => {
+      const studentId = String(body.studentId ?? '')
+      const feeHeadId = String(body.feeHeadId ?? '')
+      const student = findStudent(studentId)
+      if (!student) return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+
+      const head = findFeeHead(feeHeadId)
+      if (!head) return fail(404, 'FEE_HEAD_NOT_FOUND', 'Fee head not found')
+
+      const structure = structureForClass(student.classId)
+      if (head.feeStructureId !== structure.id) {
+        return fail(400, 'FEE_VALIDATION', "That head does not belong to the student's class", ['feeHeadId'])
+      }
+      if (feeInvoices.some((invoice) => invoice.studentId === studentId && invoice.feeHeadId === feeHeadId)) {
+        return fail(409, 'FEE_INVOICE_EXISTS', 'An invoice for that head already exists', ['feeHeadId'])
+      }
+
+      const invoice: FeeInvoice = {
+        id: `inv_${studentId}_${feeHeadId}`,
+        schoolId: SCHOOL_ID,
+        studentId,
+        feeStructureId: structure.id,
+        feeHeadId,
+        amountPaise: head.amountPaise,
+        discountPaise: concessionAmountFor(studentId, head),
+        paidPaise: 0,
+        dueDate: body.dueDate ? String(body.dueDate) : head.dueDate,
+        status: 'PENDING',
+        receiptNo: null,
+        issuedAt: new Date().toISOString(),
+        notes: body.notes ? String(body.notes) : null,
+      }
+
+      feeInvoices.push(invoice)
+      return created(studentCollectSummary(studentId))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/fees/payments/manual',
+    handler: ({ body, userId }) => {
+      const invoice = findFeeInvoice(String(body.invoiceId ?? ''))
+      if (!invoice) return fail(404, 'FEE_INVOICE_NOT_FOUND', 'Invoice not found')
+
+      const amountPaise = Number(body.amountPaise ?? 0)
+      const balance = outstanding(invoice)
+
+      if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+        return fail(400, 'FEE_VALIDATION', 'Enter an amount greater than zero', ['amountPaise'])
+      }
+      if (amountPaise > balance) {
+        return fail(400, 'FEE_VALIDATION', 'The amount is more than the balance on this invoice', ['amountPaise'])
+      }
+
+      const student = findStudent(invoice.studentId)
+      const classSeq = classes.findIndex((classRoom) => classRoom.id === student?.classId) + 1
+
+      if (invoice.receiptNo === null) {
+        manualReceiptSeq += 1
+        invoice.receiptNo = `RCP-SCH-${ACADEMIC_YEAR}-${String(classSeq).padStart(4, '0')}-${String(manualReceiptSeq).padStart(5, '0')}`
+      }
+
+      const payment: FeePayment = {
+        id: `pay_${invoice.id}_${feePayments.length + 1}`,
+        schoolId: SCHOOL_ID,
+        invoiceId: invoice.id,
+        studentId: invoice.studentId,
+        recordedById: userId,
+        amountPaise,
+        provider: 'MANUAL',
+        method: (body.method ? String(body.method) : 'CASH') as PaymentMethod,
+        providerOrderId: null,
+        providerTxnId: null,
+        status: 'PAID',
+        paidAt: new Date().toISOString(),
+        remarks: body.remarks ? String(body.remarks) : null,
+      }
+
+      feePayments.push(payment)
+      invoice.paidPaise += amountPaise
+      invoice.status = outstanding(invoice) === 0 ? 'PAID' : 'PARTIAL'
+
+      return created(receiptFor(payment.id))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/payments/:id/receipt',
+    handler: ({ params }) => {
+      const receipt = receiptFor(String(params.id))
+      return receipt ? ok(receipt) : fail(404, 'FEE_PAYMENT_NOT_FOUND', 'Payment not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/reports/day-book',
+    handler: ({ params }) => ok<DayBook>(dayBookReport(params.date ? String(params.date) : '')),
+  },
+  {
+    method: 'GET',
+    path: '/fees/reports/class',
+    handler: ({ params }) => ok<ClassReportRow[]>(classReportRows(params.classId ? String(params.classId) : '')),
+  },
+  {
+    method: 'GET',
+    path: '/fees/reports/defaulters',
+    handler: ({ params }) => ok<DefaulterRow[]>(defaulterRows(params.classId ? String(params.classId) : '')),
+  },
+  {
+    method: 'GET',
+    path: '/fees/reports/student-ledger',
+    handler: ({ params }) => ok<StudentLedger>(studentLedger(String(params.studentId ?? ''))),
+  },
+  {
+    method: 'GET',
+    path: '/fees/concessions',
+    handler: ({ params }) => {
+      const term = searchTerm(params)
+      const status = params.status ? String(params.status) : ''
+
+      const filtered = concessionRows()
+        .filter((row) => (status ? row.status === status : true))
+        .filter((row) => matches(term, [row.studentName, row.className, row.feeHeadTitle, row.reason]))
+
+      return ok(filtered)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/fees/concessions',
+    handler: ({ body, userId }) => {
+      const studentId = String(body.studentId ?? '')
+      if (!findStudent(studentId)) return fail(400, 'FEE_VALIDATION', 'Choose a student', ['studentId'])
+
+      const type = (body.type ? String(body.type) : 'PERCENTAGE') as ConcessionType
+      const percentage = body.percentage === null || body.percentage === undefined ? null : Number(body.percentage)
+      const amountPaise = body.amountPaise === null || body.amountPaise === undefined ? null : Number(body.amountPaise)
+
+      if (type === 'PERCENTAGE' && (percentage === null || percentage <= 0 || percentage > 100)) {
+        return fail(400, 'FEE_VALIDATION', 'Enter a percentage between 1 and 100', ['percentage'])
+      }
+      if (type === 'FIXED' && (amountPaise === null || amountPaise <= 0)) {
+        return fail(400, 'FEE_VALIDATION', 'Enter an amount greater than zero', ['amountPaise'])
+      }
+
+      const feeHeadId = body.feeHeadId ? String(body.feeHeadId) : null
+      if (feeHeadId && !findFeeHead(feeHeadId)) {
+        return fail(400, 'FEE_VALIDATION', 'That fee head does not exist', ['feeHeadId'])
+      }
+
+      const concession: Concession = {
+        id: `con_${concessions.length + 1}`,
+        schoolId: SCHOOL_ID,
+        studentId,
+        feeHeadId,
+        category: (body.category ? String(body.category) : 'CUSTOM') as ConcessionCategory,
+        type,
+        percentage: type === 'PERCENTAGE' ? percentage : null,
+        amountPaise: type === 'FIXED' ? amountPaise : null,
+        reason: body.reason ? String(body.reason) : null,
+        status: 'APPROVED',
+        approvedById: userId,
+        approvedAt: new Date().toISOString(),
+      }
+
+      concessions.push(concession)
+      return created(concessionRows().find((row) => row.id === concession.id))
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/fees/concessions/:id',
+    handler: ({ params, body }) => {
+      const concession = concessions.find((item) => item.id === params.id)
+      if (!concession) return fail(404, 'FEE_CONCESSION_NOT_FOUND', 'Concession not found')
+
+      if (body.studentId !== undefined) concession.studentId = String(body.studentId)
+      if (body.feeHeadId !== undefined) concession.feeHeadId = body.feeHeadId ? String(body.feeHeadId) : null
+      if (body.category !== undefined) concession.category = String(body.category) as ConcessionCategory
+      if (body.type !== undefined) concession.type = String(body.type) as ConcessionType
+      if (body.percentage !== undefined) {
+        concession.percentage = body.percentage === null ? null : Number(body.percentage)
+      }
+      if (body.amountPaise !== undefined) {
+        concession.amountPaise = body.amountPaise === null ? null : Number(body.amountPaise)
+      }
+      if (body.reason !== undefined) concession.reason = body.reason ? String(body.reason) : null
+
+      return ok(concessionRows().find((row) => row.id === concession.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/fees/concessions/:id',
+    handler: ({ params }) => {
+      const index = concessions.findIndex((item) => item.id === params.id)
+      if (index < 0) return fail(404, 'FEE_CONCESSION_NOT_FOUND', 'Concession not found')
+
+      concessions.splice(index, 1)
+      return ok({ deleted: true })
     },
   },
 ]

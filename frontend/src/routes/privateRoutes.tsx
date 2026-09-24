@@ -5,7 +5,8 @@ import { ProtectedRoute } from '@/routes/guards/ProtectedRoute'
 import { RoleGuard } from '@/routes/guards/RoleGuard'
 import {
   DashboardPage,
-  InvoicesPage,
+  FeeCollectPage,
+  FeesPage,
   NotFoundPage,
   NoticesPage,
   StudentProfilePage,
@@ -90,7 +91,10 @@ export const privateRoutes: RouteObject[] = [
           },
           {
             element: <RoleGuard allow={['ADMIN', 'PARENT']} />,
-            children: [{ path: childPath(paths.fees), element: <InvoicesPage /> }],
+            children: [
+              { path: childPath(paths.fees), element: <FeesPage /> },
+              { path: childPath(paths.feeCollect), element: <FeeCollectPage /> },
+            ],
           },
           { path: childPath(paths.notices), element: <NoticesPage /> },
           ...upcomingRoutes,

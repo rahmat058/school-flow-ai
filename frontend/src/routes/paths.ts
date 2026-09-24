@@ -18,6 +18,8 @@ export const paths = {
   studentDetail: '/students/:id',
   attendance: '/attendance',
   fees: '/fees',
+  /** Pattern for one student's collect view; build links with `feeCollectPath()`. */
+  feeCollect: '/fees/collect/:studentId',
   homework: '/homework',
   exams: '/exams',
   timetable: '/timetable',
@@ -40,4 +42,9 @@ export function childPath(path: string): string {
 /** `/students/std_1` — the profile route for one student. */
 export function studentProfilePath(id: string): string {
   return paths.studentDetail.replace(':id', id)
+}
+
+/** `/fees/collect/std_1` — the collect view for one student. */
+export function feeCollectPath(id: string): string {
+  return paths.feeCollect.replace(':studentId', id)
 }

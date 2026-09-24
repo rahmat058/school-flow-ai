@@ -3,7 +3,7 @@ import { humanizeEnum } from '@/lib/format'
 import type { RecordStatus, FeeStanding } from '@/types/people'
 import type { InvoiceStatus, PaymentStatus } from '@/types/fees'
 
-type BadgeStatus = InvoiceStatus | PaymentStatus | RecordStatus | FeeStanding
+type BadgeStatus = InvoiceStatus | PaymentStatus | RecordStatus | FeeStanding | 'CLEAR'
 
 const statusStyles: Record<BadgeStatus, string> = {
   PAID: 'bg-success-soft text-success',
@@ -15,6 +15,7 @@ const statusStyles: Record<BadgeStatus, string> = {
   REFUNDED: 'bg-canvas text-ink-muted',
   ACTIVE: 'bg-success-soft text-success',
   INACTIVE: 'bg-canvas text-ink-muted',
+  CLEAR: 'bg-success-soft text-success',
 }
 
 interface StatusBadgeProps {

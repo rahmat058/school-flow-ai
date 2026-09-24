@@ -23,14 +23,14 @@ frontend/
 │   │   └── guards/           # ProtectedRoute, PublicOnlyRoute, RoleGuard, guardDecision
 │   ├── pages/                # Route-level screens
 │   │   ├── auth/             # Login, Signup, VerifyOtp, ForgotPassword, ResetPassword
-│   │   ├── admin/            # Students, Invoices
+│   │   ├── admin/            # Students, StudentProfile, Teachers, Fees, FeeCollect
 │   │   └── …                 # teacher/, student/, parent/ as those phases land
 │   ├── components/
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   ├── dashboard/        # StatGrid, StatCard, CollectionChart, RecentPaymentsTable, AiInsightsCard, OverviewHeader
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
-│   ├── features/             # auth/, dashboard/, students/, notices/, fees/, school/
-│   │                         # each: components/hooks + query hooks in api.ts
+│   ├── features/             # auth/, dashboard/, students/, teachers/, classes/, subjects/, notices/, fees/, school/
+│   │                         # each: components/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
 │   ├── services/             # apiClient.ts (axios + interceptors), mockAdapter.ts (demo API)
 │   ├── store/                # Zustand stores — auth session
 │   ├── hooks/                # useControllableState, useToast

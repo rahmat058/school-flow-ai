@@ -84,8 +84,9 @@ phase assigned — see §18.
 | `invoice_status`      | `PENDING`, `PARTIAL`, `PAID`, `OVERDUE`                                                   | `fee_invoices.status`           |
 | `payment_status`      | `PENDING`, `PAID`, `FAILED`, `REFUNDED`                                                   | `fee_payments.status`           |
 | `payment_provider`    | `STRIPE`, `SSLCOMMERZ`, `MANUAL`                                                          | `fee_payments.provider`         |
-| `payment_method`      | `CARD`, `MOBILE_BANKING`, `NET_BANKING`, `CASH`, `CHEQUE`                                 | `fee_payments.method`           |
+| `payment_method`      | `CARD`, `MOBILE_BANKING`, `NET_BANKING`, `CASH`, `CHEQUE`, `DEMAND_DRAFT`, `ONLINE`       | `fee_payments.method`           |
 | `concession_type`     | `PERCENTAGE`, `FIXED`                                                                     | `concessions.type`              |
+| `concession_category` | `SIBLING`, `MERIT`, `SC_ST`, `CUSTOM`, `STAFF_WARD`                                       | `concessions.category`          |
 | `concession_status`   | `PENDING`, `APPROVED`, `REJECTED`                                                         | `concessions.status`            |
 | `material_type`       | `PDF`, `NOTES`, `WORKSHEET`, `PAPER`                                                      | `study_materials.type`          |
 | `exam_type`           | `UNIT`, `MID`, `FINAL`                                                                    | `exams.type`                    |
@@ -919,6 +920,7 @@ erDiagram
   fee_structures ||--o{ fee_heads : "composed of"
   students ||--o{ fee_invoices : "is billed"
   fee_structures ||--o{ fee_invoices : "generates"
+  fee_heads ||--o{ fee_invoices : "billed as"
   fee_invoices ||--o{ fee_payments : "is settled by"
   students ||--o{ fee_payments : "pays"
   users ||--o{ fee_payments : "records"
@@ -970,7 +972,9 @@ erDiagram
 <!-- table: fee_heads · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
 A line item inside a structure — tuition, transport, lab, etc. A **child table** rather than the JSONB
-array `PRD.md` §3 allowed, so collection reports can group by head.
+array `PRD.md` §3 allowed, so collection reports can group by head. The head also owns the **due date**
+the class is charged against — the date the Fee structure screen edits and the "Add fee head" form
+collects — while the invoice it raises may carry a later, per-student date.
 
 | Column             | Type            | Null | Key | Notes                 |
 | ------------------ | --------------- | ---- | --- | --------------------- |
@@ -980,6 +984,8 @@ array `PRD.md` §3 allowed, so collection reports can group by head.
 | `name`             | `text`          | no   |     |                       |
 | `amount_paise`     | `integer`       | no   |     | paise                 |
 | `frequency`        | `fee_frequency` | no   |     | `MONTHLY`…`ONE_TIME`  |
+| `due_date`         | `date`          | no   |     | ISO `YYYY-MM-DD`      |
+| `description`      | `text`          | yes  |     |                       |
 | `created_at`       | `timestamptz`   | no   |     |                       |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `fee_structure_id` → `fee_structures.id`
@@ -987,11 +993,13 @@ array `PRD.md` §3 allowed, so collection reports can group by head.
 
 **Indexes** — `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`.
 
-**Constraints** — `check (amount_paise >= 0)`; a head is deleted with its structure.
+**Constraints** — `check (amount_paise >= 0)`; a head is deleted with its structure. Raising an invoice
+copies the head's `due_date` onto `fee_invoices.due_date`, which the collect flow may override per student.
 
 ```mermaid
 erDiagram
   fee_structures ||--o{ fee_heads : "composed of"
+  fee_heads ||--o{ fee_invoices : "billed as"
   fee_heads ||--o{ concessions : "discounts"
   fee_heads {
     uuid id PK
@@ -999,6 +1007,7 @@ erDiagram
     text name
     integer amount_paise
     fee_frequency frequency
+    date due_date
   }
 ```
 
@@ -1008,7 +1017,9 @@ erDiagram
 
 A billable demand for one student, generated in bulk per class. `paid_paise` accumulates across payments
 so `PARTIAL` can be topped up; `receipt_no` is assigned on the first successful payment from
-`receipt_sequences` inside the payment transaction.
+`receipt_sequences` inside the payment transaction. `fee_head_id` records which head the demand was
+raised from — it is what titles the row on the collect screen and the ledger — and is null for a
+lump-sum demand.
 
 | Column             | Type             | Null | Key | Notes                    |
 | ------------------ | ---------------- | ---- | --- | ------------------------ |
@@ -1016,6 +1027,7 @@ so `PARTIAL` can be topped up; `receipt_no` is assigned on the first successful 
 | `school_id`        | `uuid`           | no   | FK  | → `schools.id`           |
 | `student_id`       | `uuid`           | no   | FK  | → `students.id`          |
 | `fee_structure_id` | `uuid`           | no   | FK  | → `fee_structures.id`    |
+| `fee_head_id`      | `uuid`           | yes  | FK  | → `fee_heads.id`         |
 | `amount_paise`     | `integer`        | no   |     | gross, before concession |
 | `discount_paise`   | `integer`        | no   |     | default `0`              |
 | `paid_paise`       | `integer`        | no   |     | default `0`              |
@@ -1023,18 +1035,21 @@ so `PARTIAL` can be topped up; `receipt_no` is assigned on the first successful 
 | `status`           | `invoice_status` | no   |     | default `PENDING`        |
 | `receipt_no`       | `text`           | yes  |     | null until first payment |
 | `issued_at`        | `timestamptz`    | yes  |     |                          |
+| `notes`            | `text`           | yes  |     |                          |
 | `created_at`       | `timestamptz`    | no   |     |                          |
 | `updated_at`       | `timestamptz`    | no   |     |                          |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `student_id` → `students.id` (restrict),
-`fee_structure_id` → `fee_structures.id` (restrict) · `unique (school_id, receipt_no)` (partial, where
-`receipt_no is not null`).
+`fee_structure_id` → `fee_structures.id` (restrict), `fee_head_id` → `fee_heads.id` (set null) ·
+`unique (school_id, receipt_no)` (partial, where `receipt_no is not null`).
 
 **Indexes** — `unique (school_id, receipt_no)` partial, `(student_id, status)` (the pending/history
-path), `(school_id, status, due_date)`, `(fee_structure_id)`.
+path), `(school_id, status, due_date)`, `(fee_structure_id)`, `(fee_head_id)`.
 
 **Constraints** — `check (paid_paise <= amount_paise - discount_paise)`. Invoices are never deleted —
-they are financial records.
+they are financial records. `fee_head_id` and `fee_structure_id` are kept together on purpose: the head
+titles the row, the structure groups it for reporting, and a head removed later must not orphan the
+invoice — hence `set null`.
 
 ```mermaid
 erDiagram
@@ -1046,6 +1061,7 @@ erDiagram
     uuid id PK
     uuid student_id FK
     uuid fee_structure_id FK
+    uuid fee_head_id FK
     invoice_status status
     text receipt_no
   }
@@ -1067,11 +1083,12 @@ A settlement against an invoice — online via Stripe/SSLCommerz, or offline rec
 | `recorded_by_id`    | `uuid`             | yes  | FK  | → `users.id`, manual only |
 | `amount_paise`      | `integer`          | no   |     |                           |
 | `provider`          | `payment_provider` | no   |     | `STRIPE`…`MANUAL`         |
-| `method`            | `payment_method`   | no   |     | `CARD`…`CHEQUE`           |
+| `method`            | `payment_method`   | no   |     | `CARD`…`ONLINE`           |
 | `provider_order_id` | `text`             | yes  |     | checkout session/order    |
 | `provider_txn_id`   | `text`             | yes  |     | webhook transaction id    |
 | `status`            | `payment_status`   | no   |     | default `PENDING`         |
 | `paid_at`           | `timestamptz`      | yes  |     |                           |
+| `remarks`           | `text`             | yes  |     | cheque/DD reference       |
 | `created_at`        | `timestamptz`      | no   |     |                           |
 | `updated_at`        | `timestamptz`      | no   |     |                           |
 
@@ -1083,7 +1100,8 @@ A settlement against an invoice — online via Stripe/SSLCommerz, or offline rec
 `(school_id, paid_at)`.
 
 **Constraints** — the partial unique key is the **webhook idempotency guard**; a replayed event must not
-double-credit the invoice. `check (amount_paise > 0)`.
+double-credit the invoice. `check (amount_paise > 0)`. `remarks` carries the counter receipt's free-text
+reference (cheque number, DD number, transfer id) and stays null for gateway payments.
 
 ```mermaid
 erDiagram
@@ -1104,23 +1122,27 @@ erDiagram
 <!-- table: concessions · module: FeesModule · prd: §4.6 · phase: 4 · tenant: yes · soft-delete: no -->
 
 A discount/scholarship for a student, scoped to one fee head, with an admin approval flow. Applied as
-`fee_invoices.discount_paise` at generation time.
+`fee_invoices.discount_paise` at generation time. `category` records **why** the concession was granted
+(sibling, merit, SC/ST, staff ward, custom) — a reporting dimension distinct from `type`, which is how
+the discount is expressed — and `fee_head_id` records **what** it discounts, null meaning every head in
+the student's structure.
 
-| Column           | Type                | Null | Key | Notes                |
-| ---------------- | ------------------- | ---- | --- | -------------------- |
-| `id`             | `uuid`              | no   | PK  |                      |
-| `school_id`      | `uuid`              | no   | FK  | → `schools.id`       |
-| `student_id`     | `uuid`              | no   | FK  | → `students.id`      |
-| `fee_head_id`    | `uuid`              | yes  | FK  | → `fee_heads.id`     |
-| `type`           | `concession_type`   | no   |     | `PERCENTAGE`/`FIXED` |
-| `percentage`     | `numeric`           | yes  |     | 0–100, 2dp           |
-| `amount_paise`   | `integer`           | yes  |     | when `FIXED`         |
-| `reason`         | `text`              | yes  |     |                      |
-| `status`         | `concession_status` | no   |     | default `PENDING`    |
-| `approved_by_id` | `uuid`              | yes  | FK  | → `users.id`         |
-| `approved_at`    | `timestamptz`       | yes  |     |                      |
-| `created_at`     | `timestamptz`       | no   |     |                      |
-| `updated_at`     | `timestamptz`       | no   |     |                      |
+| Column           | Type                  | Null | Key | Notes                  |
+| ---------------- | --------------------- | ---- | --- | ---------------------- |
+| `id`             | `uuid`                | no   | PK  |                        |
+| `school_id`      | `uuid`                | no   | FK  | → `schools.id`         |
+| `student_id`     | `uuid`                | no   | FK  | → `students.id`        |
+| `fee_head_id`    | `uuid`                | yes  | FK  | → `fee_heads.id`       |
+| `category`       | `concession_category` | no   |     | `SIBLING`…`STAFF_WARD` |
+| `type`           | `concession_type`     | no   |     | `PERCENTAGE`/`FIXED`   |
+| `percentage`     | `numeric`             | yes  |     | 0–100, 2dp             |
+| `amount_paise`   | `integer`             | yes  |     | when `FIXED`           |
+| `reason`         | `text`                | yes  |     |                        |
+| `status`         | `concession_status`   | no   |     | default `PENDING`      |
+| `approved_by_id` | `uuid`                | yes  | FK  | → `users.id`           |
+| `approved_at`    | `timestamptz`         | yes  |     |                        |
+| `created_at`     | `timestamptz`         | no   |     |                        |
+| `updated_at`     | `timestamptz`         | no   |     |                        |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `student_id` → `students.id` (restrict),
 `fee_head_id` → `fee_heads.id` (set null), `approved_by_id` → `users.id` (set null).
@@ -1128,8 +1150,9 @@ A discount/scholarship for a student, scoped to one fee head, with an admin appr
 **Indexes** — `(student_id, status)` (the approval queue), `(school_id, status)`, `(fee_head_id)`.
 
 **Constraints** — a `check` enforces exactly one of `percentage` / `amount_paise`, matching `type`.
-`approved_by_id` / `approved_at` are null while `status = PENDING`. No unique key — a student may hold
-several concessions.
+`category` is required — it is why the concession was granted, and the dimension the Concessions screen
+reports on. `approved_by_id` / `approved_at` are null while `status = PENDING`. No unique key — a student
+may hold several concessions.
 
 ```mermaid
 erDiagram
@@ -1140,6 +1163,7 @@ erDiagram
     uuid id PK
     uuid student_id FK
     uuid fee_head_id FK
+    concession_category category
     concession_type type
     concession_status status
   }
@@ -1721,6 +1745,7 @@ history; `cascade` is only for rows that cannot exist alone.
 | `fee_invoices`              | `school_id`        | `schools.id`        | restrict  |
 | `fee_invoices`              | `student_id`       | `students.id`       | restrict  |
 | `fee_invoices`              | `fee_structure_id` | `fee_structures.id` | restrict  |
+| `fee_invoices`              | `fee_head_id`      | `fee_heads.id`      | set null  |
 | `fee_payments`              | `school_id`        | `schools.id`        | restrict  |
 | `fee_payments`              | `invoice_id`       | `fee_invoices.id`   | restrict  |
 | `fee_payments`              | `student_id`       | `students.id`       | restrict  |
@@ -1770,42 +1795,42 @@ Every index, by table. `unique (…)` marks constraint-backed indexes; the rest 
 on `school_id` (alone or leading a composite) are what the tenant guard relies on, so every tenant table
 has one.
 
-| Table                       | Indexes                                                                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schools`                   | `unique (slug)`, `(subscription_status)`                                                                                                           |
-| `users`                     | `unique (email)`, `(school_id, role)`                                                                                                              |
-| `otps`                      | `(email, purpose)`, `(expires_at)`, `(school_id)`                                                                                                  |
-| `refresh_tokens`            | `unique (token_hash)`, `(user_id, expires_at)` — no `school_id` column; scopes through `users`                                                     |
-| `teachers`                  | `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`                                                                       |
-| `teacher_classes`           | `unique (teacher_id, class_id)`, `(school_id)`, `(class_id)`                                                                                       |
-| `students`                  | `unique (user_id)`, `unique (school_id, admission_no)`, `unique (class_id, roll_no) where deleted_at is null`, `(school_id, status)`, `(class_id)` |
-| `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                          |
-| `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                            |
-| `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                           |
-| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                  |
-| `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`   |
-| `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                              |
-| `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                  |
-| `study_materials`           | `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`                                                                                      |
-| `timetables`                | `unique (class_id, day, academic_year)`, `(school_id)`                                                                                             |
-| `periods`                   | `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)`                                                                                       |
-| `fee_structures`            | `unique (school_id, class_id, academic_year, name)`, `(class_id)`                                                                                  |
-| `fee_heads`                 | `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`                                                                             |
-| `fee_invoices`              | `unique (school_id, receipt_no) where receipt_no is not null`, `(student_id, status)`, `(school_id, status, due_date)`, `(fee_structure_id)`       |
-| `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`              |
-| `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                     |
-| `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                  |
-| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                                |
-| `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                      |
-| `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                                 |
-| `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                             |
-| `conversations`             | `(school_id, last_message_at desc)`                                                                                                                |
-| `conversation_participants` | `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)`                                                                                    |
-| `messages`                  | `(conversation_id, created_at desc)`, `(school_id)`, `(sender_id)`                                                                                 |
-| `notices`                   | `(school_id, published_at desc)`, `(published_by_id)`                                                                                              |
-| `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                   |
-| `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                       |
-| `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                               |
+| Table                       | Indexes                                                                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schools`                   | `unique (slug)`, `(subscription_status)`                                                                                                                      |
+| `users`                     | `unique (email)`, `(school_id, role)`                                                                                                                         |
+| `otps`                      | `(email, purpose)`, `(expires_at)`, `(school_id)`                                                                                                             |
+| `refresh_tokens`            | `unique (token_hash)`, `(user_id, expires_at)` — no `school_id` column; scopes through `users`                                                                |
+| `teachers`                  | `unique (user_id)`, `unique (school_id, employee_no)`, `(school_id, status)`                                                                                  |
+| `teacher_classes`           | `unique (teacher_id, class_id)`, `(school_id)`, `(class_id)`                                                                                                  |
+| `students`                  | `unique (user_id)`, `unique (school_id, admission_no)`, `unique (class_id, roll_no) where deleted_at is null`, `(school_id, status)`, `(class_id)`            |
+| `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                                     |
+| `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                                       |
+| `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                                      |
+| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                             |
+| `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`              |
+| `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                                         |
+| `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                             |
+| `study_materials`           | `(school_id, class_id, subject_id, type)`, `(uploaded_by_id)`                                                                                                 |
+| `timetables`                | `unique (class_id, day, academic_year)`, `(school_id)`                                                                                                        |
+| `periods`                   | `(timetable_id, order_index)`, `(school_id)`, `(teacher_id)`                                                                                                  |
+| `fee_structures`            | `unique (school_id, class_id, academic_year, name)`, `(class_id)`                                                                                             |
+| `fee_heads`                 | `unique (fee_structure_id, name)`, `(school_id)`, `(fee_structure_id)`                                                                                        |
+| `fee_invoices`              | `unique (school_id, receipt_no) where receipt_no is not null`, `(student_id, status)`, `(school_id, status, due_date)`, `(fee_structure_id)`, `(fee_head_id)` |
+| `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`                         |
+| `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                                |
+| `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                             |
+| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                                           |
+| `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                                 |
+| `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                                            |
+| `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                                        |
+| `conversations`             | `(school_id, last_message_at desc)`                                                                                                                           |
+| `conversation_participants` | `unique (conversation_id, user_id)`, `(school_id)`, `(user_id)`                                                                                               |
+| `messages`                  | `(conversation_id, created_at desc)`, `(school_id)`, `(sender_id)`                                                                                            |
+| `notices`                   | `(school_id, published_at desc)`, `(published_by_id)`                                                                                                         |
+| `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                              |
+| `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                                  |
+| `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                                          |
 
 ## 15. Table Inventory
 
@@ -1939,7 +1964,7 @@ writing migrations:
 
 ## 19. Full Schema ERD
 
-The whole database in one diagram — all 34 tables, all 88 foreign keys (§13) plus the 2 logical links,
+The whole database in one diagram — all 34 tables, all 89 foreign keys (§13) plus the 2 logical links,
 themed to the design tokens in [`Design.md`](./Design.md) (indigo primary, `ink` text, `line` rules).
 Identity, foreign-key, and unique-key columns only; full column lists live in the per-table sections
 above.
@@ -2037,6 +2062,7 @@ erDiagram
   timetables ||--o{ periods : "contains"
   fee_structures ||--o{ fee_heads : "composed of"
   fee_structures ||--o{ fee_invoices : "generates"
+  fee_heads ||--o{ fee_invoices : "billed as"
   fee_heads ||--o{ concessions : "discounts"
   fee_invoices ||--o{ fee_payments : "is settled by"
   receipt_sequences ||..o{ fee_invoices : "numbers"
@@ -2162,12 +2188,14 @@ erDiagram
     uuid fee_structure_id FK
     integer amount_paise
     fee_frequency frequency
+    date due_date
   }
   fee_invoices {
     uuid id PK
     uuid school_id FK
     uuid student_id FK
     uuid fee_structure_id FK
+    uuid fee_head_id FK
     invoice_status status
     text receipt_no
   }
@@ -2186,6 +2214,7 @@ erDiagram
     uuid student_id FK
     uuid fee_head_id FK
     uuid approved_by_id FK
+    concession_category category
     concession_type type
     concession_status status
   }

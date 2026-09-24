@@ -26,7 +26,7 @@ backend/
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes + subjects
 │   ├── attendance/
-│   ├── fees/                 # structures, invoices, payments, concessions
+│   ├── fees/                 # structures + heads, invoices, payments, receipts, reports, concessions
 │   ├── homework/
 │   ├── timetables/
 │   ├── exams/                # exams, results, report cards

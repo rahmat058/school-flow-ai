@@ -225,33 +225,60 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints** — every money-writing route runs in a transaction; read Behavior below before starting one
 
+Structures & heads
+
 - [ ] `POST /api/v1/fees/structures` — structure with its heads `(admin)`
-- [ ] `GET /api/v1/fees/structures` — filter by class/academic year `(admin)`
+- [ ] `GET /api/v1/fees/structures` — filter by class/academic year; each structure carries its heads, head count and sum of amounts, so the Fee structure tab renders the response directly `(admin)`
 - [ ] `GET /api/v1/fees/structures/:id` `(admin)`
 - [ ] `PATCH /api/v1/fees/structures/:id` `(admin)`
 - [ ] `DELETE /api/v1/fees/structures/:id` `(admin)`
+- [ ] `POST /api/v1/fees/heads` — add one head to a class's structure (title, amount, frequency, due date, academic year, description); 409 `FEE_HEAD_EXISTS` when that structure already has the title `(admin)`
+- [ ] `PATCH /api/v1/fees/heads/:id` — partial update of the same fields; a head cannot move between structures `(admin)`
+- [ ] `DELETE /api/v1/fees/heads/:id` — the head stops being chargeable; invoices already raised from it are kept `(admin)`
+
+Collect
+
 - [ ] `POST /api/v1/fees/invoices/generate` — bulk generation per class (transactional batch insert) `(admin)`
-- [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status `(admin)` — the frontend already calls this
+- [ ] `POST /api/v1/fees/invoices` — raise **one** invoice for a student from a fee head (the collect page's `+ Invoice`); 400 when the head belongs to another class, 409 `FEE_INVOICE_EXISTS` when that head is already invoiced for the student `(admin)`
+- [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status `(admin)`
 - [ ] `GET /api/v1/fees/invoices/:id` — invoice + its payments `(admin, parent of child)`
+- [ ] `GET /api/v1/fees/collect/summary?classId=&status=` — the Collect fee tab's cards (total/paid/pending students, collected/pending totals) scoped by the active filters `(admin)`
+- [ ] `GET /api/v1/fees/collect/students?classId=&status=` — paginated class-wise fee-status rows: what each student was billed, what came in, what is left and the resolved status `(admin)`
+- [ ] `GET /api/v1/fees/collect/student/:studentId` — one student's collect payload: outstanding dues, the class structure's heads with their concession and net amount, and the payment history `(admin, parent of child)`
 - [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances `(admin)`
 - [ ] `GET /api/v1/fees/history/:studentId` — payment history `(admin, parent of child)`
-- [ ] `GET /api/v1/fees/summary` — collection totals for the dashboard `(admin)` — the frontend already calls this
+- [ ] `GET /api/v1/fees/summary` — collection totals for the fees dashboard's stat cards `(admin)`
+- [ ] `GET /api/v1/fees/dashboard` — the fees dashboard's charts (twelve-month collected/pending trend, class-wise collection) plus the pending/defaulter list `(admin)`
+- [ ] `GET /api/v1/fees/payments/:id/receipt` — the receipt payload for one payment `(admin, parent of child)`
 - [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz `(admin, student own, parent of child)`
 - [ ] `POST /api/v1/fees/payments/verify` — signature/IPN verification, provider callback `(public)`
-- [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque payment `(admin)`
+- [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque/DD payment against one invoice; the amount may not exceed the invoice's outstanding balance `(admin)`
 - [ ] `POST /api/v1/webhooks/stripe` — Stripe events, signature verified `(public)`
 - [ ] `POST /api/v1/webhooks/sslcommerz` — SSLCommerz IPN, verified `(public)`
+
+Reports
+
+- [ ] `GET /api/v1/fees/reports/day-book?date=` — the collections on one date (defaulting to the most recent collection day) with its transaction count and total `(admin)`
+- [ ] `GET /api/v1/fees/reports/class?classId=&academicYear=` — per-student invoiced / paid / balance and a resolved `CLEAR`-or-status flag for one class `(admin)`
+- [ ] `GET /api/v1/fees/reports/defaulters?classId=` — every demand with a balance left, most overdue first `(admin)`
+- [ ] `GET /api/v1/fees/reports/student-ledger?studentId=` — one student's full ledger (one row per invoice) with invoiced / paid / balance totals `(admin, parent of child)`
+- [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export `(admin)`
+- [ ] `GET /api/v1/fees/reports/export?type=&format=csv` — streaming CSV of any fee report above `(admin)`
+
+Concessions
+
 - [ ] `POST /api/v1/fees/concessions` — record a concession request `(admin)`
 - [ ] `GET /api/v1/fees/concessions` — filter by status `(admin)`
 - [ ] `GET /api/v1/fees/concessions/:id` `(admin)`
 - [ ] `PATCH /api/v1/fees/concessions/:id` — the approval decision `(admin)`
 - [ ] `DELETE /api/v1/fees/concessions/:id` `(admin)`
-- [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export `(admin)`
 
 **Behavior**
 
 - Atomic payment confirmation in a database transaction (payment + invoice status + receipt number sequence)
 - Both webhook handlers verify the provider signature before touching an invoice (see §6)
+- The **receipt is derived, not stored**: `GET /fees/payments/:id/receipt` joins the payment, its invoice, the student and the fee head
+- The collect summary, the dashboard series and every report are **aggregates** computed server-side (SQL `group by` / RPC) — the frontend never rolls up a list it fetched
 - AI fee-reminder text generator (see §4.12)
 
 ### 4.7 Homework & Assignment Module (`HomeworkModule`)
