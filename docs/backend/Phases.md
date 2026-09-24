@@ -14,6 +14,7 @@
 - [ ] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
 - [ ] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard
+- [ ] Permissions — `GET /permissions` (the catalogue), `GET /permissions/staff`, `GET`/`PUT /users/:userId/permissions`, plus `@RequirePermission()` + `PermissionsGuard`; a new account's grants are seeded from the PRD §2 role matrix
 
 **Done when:** a school registers and verifies by OTP, the admin logs in, and a protected route rejects wrong roles.
 

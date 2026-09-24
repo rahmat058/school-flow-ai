@@ -35,6 +35,7 @@ import type {
   StudentLedgerRow,
 } from '@/types/fees'
 import type { ChatMessageListItem, ConversationListItem, Notice, NoticePriority } from '@/types/communication'
+import type { PermissionGroupRow, StaffPermissionRow, UserPermissions } from '@/types/permission'
 import type { Homework, HomeworkListItem } from '@/types/homework'
 import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
 import type {
@@ -76,6 +77,7 @@ import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
 import { conversations, messages } from '@/data/chat'
+import { permissions, userPermissions } from '@/data/permissions'
 import { homework, homeworkSubmissions } from '@/data/homework'
 import { periods, timetables, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
@@ -1234,6 +1236,64 @@ function conversationMessages(conversationId: string, userId: string): ChatMessa
       sentAt: message.createdAt,
       read: message.readAt !== null,
     }))
+}
+
+/** The catalogue grouped for the editor, groups in catalogue order. */
+function permissionGroups(): PermissionGroupRow[] {
+  return [...new Set(permissions.map((permission) => permission.group))].map((group) => ({
+    group,
+    permissions: permissions
+      .filter((permission) => permission.group === group)
+      .sort((left, right) => left.sortOrder - right.sortOrder),
+  }))
+}
+
+function grantedKeysFor(userId: string): string[] {
+  const keyById = new Map(permissions.map((permission) => [permission.id, permission.key]))
+
+  return userPermissions
+    .filter((grant) => grant.userId === userId)
+    .flatMap((grant) => {
+      const key = keyById.get(grant.permissionId)
+      return key ? [key] : []
+    })
+}
+
+/** One account's grants plus the identity the editor header shows. */
+function userPermissionSummary(userId: string): UserPermissions | undefined {
+  const user = users.find((item) => item.id === userId)
+  if (!user) return undefined
+
+  return {
+    userId,
+    name: `${user.firstName} ${user.lastName}`,
+    email: user.email,
+    employeeNo: findTeacher(user.profileId)?.employeeNo ?? '—',
+    grantedKeys: grantedKeysFor(userId),
+    totalCount: permissions.length,
+  }
+}
+
+/** The staff picker: active teachers with how many permissions each holds, newest employee first. */
+function staffPermissionRows(): StaffPermissionRow[] {
+  return users
+    .filter((user) => user.role === 'TEACHER')
+    .flatMap((user) => {
+      const teacher = findTeacher(user.profileId)
+      if (!teacher || teacher.status !== 'ACTIVE') return []
+
+      return [
+        {
+          userId: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          employeeNo: teacher.employeeNo,
+          grantedCount: grantedKeysFor(user.id).length,
+          totalCount: permissions.length,
+        },
+      ]
+    })
+    .sort((left, right) => right.employeeNo.localeCompare(left.employeeNo))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2508,6 +2568,60 @@ const routes: Route[] = [
       }
 
       return ok<ChatMessageListItem[]>(conversationMessages(String(params.conversationId), String(userId)))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/permissions',
+    handler: () => ok<PermissionGroupRow[]>(permissionGroups()),
+  },
+  {
+    method: 'GET',
+    path: '/permissions/staff',
+    handler: () => ok<StaffPermissionRow[]>(staffPermissionRows()),
+  },
+  {
+    method: 'GET',
+    path: '/users/:userId/permissions',
+    handler: ({ params }) => {
+      const summary = userPermissionSummary(String(params.userId))
+      return summary ? ok(summary) : fail(404, 'USER_NOT_FOUND', 'User not found')
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/users/:userId/permissions',
+    handler: ({ params, body, userId }) => {
+      const user = users.find((item) => item.id === params.userId)
+      if (!user) return fail(404, 'USER_NOT_FOUND', 'User not found')
+
+      const submitted = Array.isArray(body.keys) ? (body.keys as string[]) : []
+      const catalogue = new Map(permissions.map((permission) => [permission.key, permission]))
+      const unknown = submitted.find((key) => !catalogue.has(key))
+
+      if (unknown) return fail(400, 'PERMISSION_INVALID', `${unknown} is not a known permission`, ['keys'])
+
+      // `PUT` replaces the set, so this user's rows go and the submitted ones are written instead.
+      for (let index = userPermissions.length - 1; index >= 0; index -= 1) {
+        if (userPermissions[index].userId === user.id) userPermissions.splice(index, 1)
+      }
+
+      for (const key of new Set(submitted)) {
+        const permission = catalogue.get(key)
+        if (!permission) continue
+
+        userPermissions.push({
+          id: `upm_${user.id}_${permission.id}_${userPermissions.length + 1}`,
+          schoolId: SCHOOL_ID,
+          userId: user.id,
+          permissionId: permission.id,
+          grantedById: userId,
+          createdAt: new Date().toISOString(),
+        })
+      }
+
+      const summary = userPermissionSummary(user.id)
+      return summary ? ok(summary) : fail(404, 'USER_NOT_FOUND', 'User not found')
     },
   },
 ]

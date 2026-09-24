@@ -70,34 +70,36 @@ phase assigned — see §18.
 
 ## 2. Enums
 
-| Enum                  | Values                                                                                    | Column                          |
-| --------------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
-| `role`                | `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`                                                   | `users.role`                    |
-| `subscription_status` | `TRIAL`, `ACTIVE`, `SUSPENDED`, `CANCELLED`                                               | `schools.subscription_status`   |
-| `record_status`       | `ACTIVE`, `INACTIVE`                                                                      | `teachers`/`students`/`parents` |
-| `gender`              | `MALE`, `FEMALE`, `OTHER`                                                                 | `students.gender`               |
-| `blood_group`         | `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`                                          | `students.blood_group`          |
-| `parent_relation`     | `FATHER`, `MOTHER`, `GUARDIAN`                                                            | `parent_students.relation`      |
-| `otp_purpose`         | `REGISTER`, `RESET_PASSWORD`, `INVITE`                                                    | `otps.purpose`                  |
-| `attendance_status`   | `PRESENT`, `ABSENT`, `LEAVE`, `LATE`                                                      | `attendance.status`             |
-| `fee_frequency`       | `MONTHLY`, `QUARTERLY`, `ANNUAL`, `ONE_TIME`                                              | `fee_heads.frequency`           |
-| `invoice_status`      | `PENDING`, `PARTIAL`, `PAID`, `OVERDUE`                                                   | `fee_invoices.status`           |
-| `payment_status`      | `PENDING`, `PAID`, `FAILED`, `REFUNDED`                                                   | `fee_payments.status`           |
-| `payment_provider`    | `STRIPE`, `SSLCOMMERZ`, `MANUAL`                                                          | `fee_payments.provider`         |
-| `payment_method`      | `CARD`, `MOBILE_BANKING`, `NET_BANKING`, `CASH`, `CHEQUE`, `DEMAND_DRAFT`, `ONLINE`       | `fee_payments.method`           |
-| `concession_type`     | `PERCENTAGE`, `FIXED`                                                                     | `concessions.type`              |
-| `concession_category` | `SIBLING`, `MERIT`, `SC_ST`, `CUSTOM`, `STAFF_WARD`                                       | `concessions.category`          |
-| `concession_status`   | `PENDING`, `APPROVED`, `REJECTED`                                                         | `concessions.status`            |
-| `material_type`       | `PDF`, `NOTES`, `WORKSHEET`, `PAPER`                                                      | `study_materials.type`          |
-| `exam_type`           | `UNIT`, `MID`, `FINAL`                                                                    | `exams.type`                    |
-| `weekday`             | `MON`, `TUE`, `WED`, `THU`, `FRI`, `SAT`, `SUN`                                           | `timetables.day`                |
-| `notice_audience`     | `ALL`, `TEACHERS`, `STUDENTS`, `PARENTS`                                                  | `notices`/`events.audience`     |
-| `notice_priority`     | `HIGH`, `MEDIUM`, `LOW`                                                                   | `notices.priority`              |
-| `ai_feature`          | `CHAT`, `REPORT_COMMENT`, `FEE_REMINDER`, `NOTICE`, `EVENT_PLAN`, `HOMEWORK_HELP`, `QUIZ` | `ai_conversations.feature`      |
+| Enum                  | Values                                                                                                                 | Column                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `role`                | `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`                                                                                | `users.role`                    |
+| `subscription_status` | `TRIAL`, `ACTIVE`, `SUSPENDED`, `CANCELLED`                                                                            | `schools.subscription_status`   |
+| `record_status`       | `ACTIVE`, `INACTIVE`                                                                                                   | `teachers`/`students`/`parents` |
+| `gender`              | `MALE`, `FEMALE`, `OTHER`                                                                                              | `students.gender`               |
+| `blood_group`         | `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`                                                                       | `students.blood_group`          |
+| `parent_relation`     | `FATHER`, `MOTHER`, `GUARDIAN`                                                                                         | `parent_students.relation`      |
+| `otp_purpose`         | `REGISTER`, `RESET_PASSWORD`, `INVITE`                                                                                 | `otps.purpose`                  |
+| `attendance_status`   | `PRESENT`, `ABSENT`, `LEAVE`, `LATE`                                                                                   | `attendance.status`             |
+| `fee_frequency`       | `MONTHLY`, `QUARTERLY`, `ANNUAL`, `ONE_TIME`                                                                           | `fee_heads.frequency`           |
+| `invoice_status`      | `PENDING`, `PARTIAL`, `PAID`, `OVERDUE`                                                                                | `fee_invoices.status`           |
+| `payment_status`      | `PENDING`, `PAID`, `FAILED`, `REFUNDED`                                                                                | `fee_payments.status`           |
+| `payment_provider`    | `STRIPE`, `SSLCOMMERZ`, `MANUAL`                                                                                       | `fee_payments.provider`         |
+| `payment_method`      | `CARD`, `MOBILE_BANKING`, `NET_BANKING`, `CASH`, `CHEQUE`, `DEMAND_DRAFT`, `ONLINE`                                    | `fee_payments.method`           |
+| `concession_type`     | `PERCENTAGE`, `FIXED`                                                                                                  | `concessions.type`              |
+| `concession_category` | `SIBLING`, `MERIT`, `SC_ST`, `CUSTOM`, `STAFF_WARD`                                                                    | `concessions.category`          |
+| `concession_status`   | `PENDING`, `APPROVED`, `REJECTED`                                                                                      | `concessions.status`            |
+| `material_type`       | `PDF`, `NOTES`, `WORKSHEET`, `PAPER`                                                                                   | `study_materials.type`          |
+| `exam_type`           | `UNIT`, `MID`, `FINAL`                                                                                                 | `exams.type`                    |
+| `weekday`             | `MON`, `TUE`, `WED`, `THU`, `FRI`, `SAT`, `SUN`                                                                        | `timetables.day`                |
+| `notice_audience`     | `ALL`, `TEACHERS`, `STUDENTS`, `PARENTS`                                                                               | `notices`/`events.audience`     |
+| `notice_priority`     | `HIGH`, `MEDIUM`, `LOW`                                                                                                | `notices.priority`              |
+| `permission_group`    | `STUDENTS`, `ATTENDANCE`, `EXAMS`, `HOMEWORK`, `TIMETABLE`, `FEES`, `NOTICES`, `MATERIALS`, `COMMUNICATION`, `REPORTS` | `permissions.group`             |
+| `ai_feature`          | `CHAT`, `REPORT_COMMENT`, `FEE_REMINDER`, `NOTICE`, `EVENT_PLAN`, `HOMEWORK_HELP`, `QUIZ`                              | `ai_conversations.feature`      |
 
 ## 3. Feature ERD — Foundation & Auth
 
-`PRD.md` §4.1 (registration + OTP), §4.2 (auth/RBAC), and the §4.3 profile tables. Phases 1–2.
+`PRD.md` §4.1 (registration + OTP), §4.2 (auth/RBAC + the permission catalogue), and the §4.3 profile
+tables. Phases 1–2.
 
 ```mermaid
 erDiagram
@@ -113,6 +115,10 @@ erDiagram
   users ||..o{ otps : "matched by email"
   students ||--o{ parent_students : "has guardians"
   parents ||--o{ parent_students : "has children"
+  schools ||--o{ user_permissions : "scopes"
+  users ||--o{ user_permissions : "holds"
+  users ||--o{ user_permissions : "grants"
+  permissions ||--o{ user_permissions : "granted as"
 ```
 
 ### `schools`
@@ -478,6 +484,80 @@ erDiagram
     uuid parent_id FK
     uuid student_id FK
     parent_relation relation
+  }
+```
+
+### `permissions`
+
+<!-- table: permissions · module: AuthModule · prd: §4.2 · phase: 1 · tenant: no · soft-delete: no -->
+
+The platform-wide catalogue of assignable permissions. Rows are seeded, not user-edited: `key` is what a
+route checks (`@RequirePermission('students.edit')`), and `group`/`label`/`sort_order` are what the Roles &
+Permissions editor renders. There is deliberately no `school_id` — the catalogue is identical for every
+school (§16).
+
+| Column       | Type               | Null | Key | Notes                  |
+| ------------ | ------------------ | ---- | --- | ---------------------- |
+| `id`         | `uuid`             | no   | PK  |                        |
+| `key`        | `text`             | no   | UK  | e.g. `students.edit`   |
+| `group`      | `permission_group` | no   |     | the editor's heading   |
+| `label`      | `text`             | no   |     | human label            |
+| `sort_order` | `integer`          | no   |     | order within the group |
+| `created_at` | `timestamptz`      | no   |     |                        |
+
+**Keys** — PK `id` · `unique (key)`.
+
+**Indexes** — `unique (key)`, `(group, sort_order)`.
+
+**Constraints** — `check (key ~ '^[a-z_]+(\.[a-z_]+)+$')` — a dotted `resource.action` key, so a typo cannot
+create a permission that no route ever checks.
+
+```mermaid
+erDiagram
+  permissions ||--o{ user_permissions : "granted as"
+  permissions {
+    uuid id PK
+    text key UK
+    permission_group group
+  }
+```
+
+### `user_permissions`
+
+<!-- table: user_permissions · module: AuthModule · prd: §4.2 · phase: 1 · tenant: yes · soft-delete: no -->
+
+One granted permission for one account — the **effective** set. A new account is seeded from the role matrix
+in `PRD.md` §2 at creation, and this table is authoritative afterwards, which is what lets the editor turn a
+role default **off**: the `PUT` replaces the set rather than merging into it.
+
+| Column          | Type          | Null | Key | Notes                      |
+| --------------- | ------------- | ---- | --- | -------------------------- |
+| `id`            | `uuid`        | no   | PK  |                            |
+| `school_id`     | `uuid`        | no   | FK  | → `schools.id`             |
+| `user_id`       | `uuid`        | no   | FK  | → `users.id`               |
+| `permission_id` | `uuid`        | no   | FK  | → `permissions.id`         |
+| `granted_by_id` | `uuid`        | yes  | FK  | → `users.id`, who saved it |
+| `created_at`    | `timestamptz` | no   |     |                            |
+
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `user_id` → `users.id` (cascade),
+`permission_id` → `permissions.id` (cascade — retiring a catalogue row drops its grants), `granted_by_id` →
+`users.id` (set null) · `unique (user_id, permission_id)`.
+
+**Indexes** — `unique (user_id, permission_id)`, `(school_id)`, `(permission_id)`.
+
+**Constraints** — none beyond the unique. A grant is removed, never soft-deleted, so there is no `deleted_at`.
+
+```mermaid
+erDiagram
+  users ||--o{ user_permissions : "holds"
+  users ||--o{ user_permissions : "grants"
+  permissions ||--o{ user_permissions : "granted as"
+  user_permissions {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+    uuid permission_id FK
+    uuid granted_by_id FK
   }
 ```
 
@@ -1802,9 +1882,14 @@ history; `cascade` is only for rows that cannot exist alone.
 | `events`                    | `created_by_id`    | `users.id`          | restrict  |
 | `ai_conversations`          | `school_id`        | `schools.id`        | restrict  |
 | `ai_conversations`          | `user_id`          | `users.id`          | cascade   |
+| `user_permissions`          | `school_id`        | `schools.id`        | restrict  |
+| `user_permissions`          | `user_id`          | `users.id`          | cascade   |
+| `user_permissions`          | `permission_id`    | `permissions.id`    | cascade   |
+| `user_permissions`          | `granted_by_id`    | `users.id`          | set null  |
 
 `otps` has no FK to `users` — matching is by `email` (§3). `receipt_sequences` has no FK to
-`fee_invoices`; that link is logical only.
+`fee_invoices`; that link is logical only. `permissions` has no FK at all — it is the platform-wide
+catalogue, and the tenancy lives on `user_permissions`.
 
 ## 14. Index Plan
 
@@ -1848,10 +1933,12 @@ has one.
 | `notice_classes`            | primary key `(notice_id, class_id)`, `(class_id)`, `(school_id)`                                                                                              |
 | `events`                    | `(school_id, event_date)`, `(created_by_id)`                                                                                                                  |
 | `ai_conversations`          | `(user_id, feature, created_at desc)`, `(school_id)`                                                                                                          |
+| `permissions`               | `unique (key)`, `(group, sort_order)`                                                                                                                         |
+| `user_permissions`          | `unique (user_id, permission_id)`, `(school_id)`, `(permission_id)`                                                                                           |
 
 ## 15. Table Inventory
 
-All 34 tables, with the section that documents each one.
+All 36 tables, with the section that documents each one.
 
 | #   | Table                       | Feature section | PRD   | Phase |
 | --- | --------------------------- | --------------- | ----- | ----- |
@@ -1889,12 +1976,15 @@ All 34 tables, with the section that documents each one.
 | 32  | `notice_classes`            | §11 Notices     | §4.11 | 5     |
 | 33  | `events`                    | §11 Notices     | §4.11 | 5     |
 | 34  | `ai_conversations`          | §12 AI          | §4.12 | 5     |
+| 35  | `permissions`               | §3 Foundation   | §4.2  | 1     |
+| 36  | `user_permissions`          | §3 Foundation   | §4.2  | 1     |
 
 ## 16. Cross-Cutting Concerns
 
 **Tenancy.** Every tenant table carries a non-null `school_id` and every query is scoped by it via the
 tenant guard (`Rules.md`, `Memory.md`). Exceptions: `schools` (it _is_ the tenant), `refresh_tokens`
-(scopes through `users`), and `notice_classes` (inherits scope from its notice). The backend connects
+(scopes through `users`), `notice_classes` (inherits scope from its notice), and `permissions` (a
+platform-wide catalogue shared by every school — `user_permissions` is the row that carries the tenant). The backend connects
 with the Supabase **service-role key**, which **bypasses RLS** — so tenant isolation is enforced in
 application code, and any RLS policies added later are defence-in-depth, not the primary control.
 
@@ -1917,7 +2007,7 @@ Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tab
 | PRD feature               | Feature ERD | Tables                                                                                            |
 | ------------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
 | §4.1 Registration & OTP   | §3          | `schools`, `users`, `otps`                                                                        |
-| §4.2 Auth & RBAC          | §3          | `users`, `refresh_tokens`                                                                         |
+| §4.2 Auth & RBAC          | §3          | `users`, `refresh_tokens`, `permissions`, `user_permissions`                                      |
 | §4.3 User management      | §3          | `teachers`, `teacher_classes`, `students`, `parents`, `parent_students`                           |
 | §4.4 Classes & subjects   | §4          | `classes`, `subjects` (+ `students.class_id`)                                                     |
 | §4.5 Attendance           | §5          | `attendance`                                                                                      |
@@ -1980,15 +2070,19 @@ writing migrations:
     Documents tab renders its empty state from it, but no `student_documents` table exists yet. Either add one
     (student, title, kind, storage key, size, uploaded by/at — mirroring `study_materials`) before the upload flow
     is built, or drop the endpoint.
+15. **Per-user vs role permissions** — `user_permissions` holds each account's **effective** set and is what the
+    editor replaces; role defaults are applied at account creation from the matrix in `PRD.md` §2 rather than
+    stored in a `role_permissions` table. That keeps the matrix the single source for defaults, but it means the
+    defaults live in code — move them into a table if roles should ever be editable at runtime.
 
 ## 19. Full Schema ERD
 
-The whole database in one diagram — all 34 tables, all 89 foreign keys (§13) plus the 2 logical links,
+The whole database in one diagram — all 36 tables, all 93 foreign keys (§13) plus the 2 logical links,
 themed to the design tokens in [`Design.md`](./Design.md) (indigo primary, `ink` text, `line` rules).
 Identity, foreign-key, and unique-key columns only; full column lists live in the per-table sections
 above.
 
-It is dense by construction — `schools` alone fans out to 31 tables — so the per-feature ERDs in §3–§12
+It is dense by construction — `schools` alone fans out to 32 tables — so the per-feature ERDs in §3–§12
 remain the readable view. This one is the map: every table and every relationship in a single frame.
 
 ```mermaid
@@ -2091,6 +2185,10 @@ erDiagram
   conversations ||--o{ conversation_participants : "includes"
   conversations ||--o{ messages : "contains"
   notices ||--o{ notice_classes : "targets"
+  schools ||--o{ user_permissions : "scopes"
+  users ||--o{ user_permissions : "holds"
+  users ||--o{ user_permissions : "grants"
+  permissions ||--o{ user_permissions : "granted as"
   schools {
     uuid id PK
     text slug UK
@@ -2324,6 +2422,18 @@ erDiagram
     uuid user_id FK
     ai_feature feature
     jsonb messages
+  }
+  permissions {
+    uuid id PK
+    text key UK
+    permission_group group
+  }
+  user_permissions {
+    uuid id PK
+    uuid school_id FK
+    uuid user_id FK
+    uuid permission_id FK
+    uuid granted_by_id FK
   }
 ```
 

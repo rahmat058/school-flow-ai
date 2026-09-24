@@ -63,6 +63,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | Study material (upload)          | ✅    | ✅                   | download            | view         |
 | Notices (publish)                | ✅    | ❌                   | view                | view         |
 | Chat                             | ✅    | ✅                   | ✅                  | ✅           |
+| Roles & permissions (manage)     | ✅    | ❌                   | ❌                  | ❌           |
 | AI Assistant                     | all 7 | report-comment, quiz | homework-help, quiz | ❌           |
 | Reports & exports                | ✅    | limited              | ❌                  | ❌           |
 
@@ -95,10 +96,12 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **Event** — title, date, description, audience
 - **Conversation** — participants → **ConversationParticipant** join table (per-caller read state in `lastReadAt`); lastMessageAt
 - **Message** — conversationId, senderId, body, readAt
+- **Permission** — key (`resource.action`), group, label, sortOrder — the platform-wide catalogue
+- **UserPermission** — userId, permissionId, grantedById — one account's effective grant
 - **Otp** — email, codeHash, expiresAt, attempts, purpose (`REGISTER | RESET_PASSWORD | INVITE`)
 - **AiConversation** — userId, feature, messages (JSONB)
 
-**Indexes**: `(schoolId)` on all tables; composite indexes on Attendance(classId, date), FeeInvoice(studentId, status), Message(conversationId, createdAt).
+**Indexes**: `(schoolId)` on all tenant tables; composite indexes on Attendance(classId, date), FeeInvoice(studentId, status), Message(conversationId, createdAt), UserPermission(userId, permissionId). `Permission` is the one table with no tenant column — its unique `key` is the index.
 
 ---
 
@@ -128,7 +131,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.2 Authentication & RBAC (`AuthModule`)
 
-**Tables:** `users`, `refresh_tokens` · Database.md §3
+**Tables:** `users`, `refresh_tokens`, `permissions`, `user_permissions` · Database.md §3
 
 **Endpoints**
 
@@ -139,10 +142,19 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)`
 - [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)`
 - [ ] `GET /api/v1/auth/me` — current user + school + role `(authenticated)`
+- [ ] `GET /api/v1/permissions` — the assignable catalogue, grouped and ordered for the editor `(admin)`
+- [ ] `GET /api/v1/permissions/staff` — the staff picker: every active teacher with their grant count `(admin)`
+- [ ] `GET /api/v1/users/:userId/permissions` — one account's granted keys `(admin)`
+- [ ] `PUT /api/v1/users/:userId/permissions` — replace that account's grant set (the body carries the whole set, so a role default can be turned off) `(admin)`
 
 **Behavior**
 
 - Passport `JwtStrategy` + `JwtAuthGuard` (global); `RolesGuard` + `@Roles(Role.ADMIN)` decorator per route
+- Fine-grained check runs after the role check: `@RequirePermission('students.edit')` + `PermissionsGuard`
+  against the account's granted `user_permissions` keys
+- `permissions` is **platform-wide** (no `school_id`); `user_permissions` holds each account's **effective** set
+  and carries the tenant. A new account is seeded from the §2 matrix at creation, and the `PUT` replaces the set
+  afterwards — which is what lets an admin turn a role default off
 - bcrypt hashing (12 rounds)
 - Refresh token rotation; hashed refresh tokens stored server-side
 - Teachers/students/parents receive auto-generated credentials via email on creation

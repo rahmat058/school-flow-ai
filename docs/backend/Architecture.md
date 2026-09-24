@@ -2,7 +2,7 @@
 
 ## App flow
 
-React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis. Email jobs render a React Email template to HTML and deliver it through Resend.
+React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis. Email jobs render a React Email template to HTML and deliver it through Resend.
 
 Layers: **Controller → Service → Supabase client → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
@@ -17,11 +17,11 @@ backend/
 │   ├── app.module.ts
 │   ├── database/             # Supabase client module (global injectable service)
 │   ├── common/               # guards, decorators, filters, interceptors, pipes
-│   │   ├── guards/           # jwt-auth, roles, tenant
-│   │   ├── decorators/       # @Roles, @CurrentUser, @SchoolId
+│   │   ├── guards/           # jwt-auth, roles, permissions, tenant
+│   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
 │   │   ├── filters/          # global exception filter
 │   │   └── interceptors/     # response envelope, logging
-│   ├── auth/                 # strategies, guards, dto
+│   ├── auth/                 # strategies, guards, dto + the RBAC catalogue & per-user grants
 │   ├── schools/              # registration, OTP, settings
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes + subjects

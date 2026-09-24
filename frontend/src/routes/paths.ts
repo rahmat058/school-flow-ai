@@ -26,6 +26,7 @@ export const paths = {
   materials: '/materials',
   notices: '/notices',
   chat: '/chat',
+  permissions: '/permissions',
   reports: '/reports',
   settings: '/settings',
 

@@ -6,7 +6,7 @@
 - DTO + `class-validator` for every request body/query — no untyped `req.body` access
 - Supabase client for all DB access through the global `database/` module; multi-write operations (registration, payment confirmation, result publishing) run in a database transaction (Supabase RPC)
 - Postgres enums (or CHECK constraints) for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
-- `@Roles()` + `RolesGuard` on role-restricted routes; tenant scope (`schoolId`) applied in every query
+- `@Roles()` + `RolesGuard` for the coarse role check, then `@RequirePermission()` + `PermissionsGuard` against `user_permissions` for a fine-grained grant; tenant scope (`schoolId`) applied in every query
 - Response envelope + error envelope via global interceptor/filter — services throw `HttpException` subclasses, never shape responses manually
 - `@nestjs/throttler` on auth/OTP/AI endpoints
 - Emails: one React Email component per message (`.tsx` in `src/mail/templates/`), rendered to HTML with `render()` and sent through Resend — templates are code, reviewed like any module

@@ -11,6 +11,7 @@ import {
   HomeworkPage,
   NotFoundPage,
   NoticesPage,
+  PermissionsPage,
   StudentProfilePage,
   StudentsPage,
   TeachersPage,
@@ -70,7 +71,10 @@ export const privateRoutes: RouteObject[] = [
           },
           {
             element: <RoleGuard allow={['ADMIN']} />,
-            children: [{ path: childPath(paths.teachers), element: <TeachersPage /> }],
+            children: [
+              { path: childPath(paths.teachers), element: <TeachersPage /> },
+              { path: childPath(paths.permissions), element: <PermissionsPage /> },
+            ],
           },
           {
             // Guardians may open their own child's profile, so parents are allowed here.

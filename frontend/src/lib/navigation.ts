@@ -9,6 +9,7 @@ import {
   Megaphone,
   MessagesSquare,
   Settings,
+  ShieldCheck,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ export const navItems: NavItem[] = [
   { label: 'Notices', href: '/notices', icon: Megaphone, roles: EVERYONE },
   { label: 'Communication', href: '/chat', icon: MessagesSquare, roles: EVERYONE },
   { label: 'Reports', href: '/reports', icon: FileSpreadsheet, roles: ['ADMIN', 'TEACHER'] },
+  { label: 'Roles & permissions', href: '/permissions', icon: ShieldCheck, roles: ['ADMIN'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['ADMIN'] },
 ]
 
