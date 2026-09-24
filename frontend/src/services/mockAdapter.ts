@@ -35,6 +35,7 @@ import type {
   StudentLedgerRow,
 } from '@/types/fees'
 import type { Notice } from '@/types/communication'
+import type { Homework, HomeworkListItem } from '@/types/homework'
 import type {
   BloodGroup,
   Guardian,
@@ -72,6 +73,7 @@ import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
+import { homework, homeworkSubmissions } from '@/data/homework'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
 
@@ -286,6 +288,60 @@ function teacherListItems(): TeacherListItem[] {
       }),
     }
   })
+}
+
+/**
+ * Homework grid read model: the assignment plus its joined class, subject and author, the
+ * submission roll-up and the status derived from the due date — computed here, the way the
+ * backend's list query would, so the card renders what it is handed rather than aggregating.
+ */
+function homeworkListItems(): HomeworkListItem[] {
+  const today = dateOffset(0)
+
+  return (
+    homework
+      // A soft-deleted assignment keeps its row (and its submissions) but leaves the grid.
+      .filter((assignment) => assignment.deletedAt === null)
+      .map((assignment) => {
+        const classRoom = classes.find((item) => item.id === assignment.classId)
+        const subject = findSubject(assignment.subjectId)
+        const teacher = findTeacher(assignment.teacherId)
+        const roster = students.filter(
+          (student) => student.classId === assignment.classId && student.status === 'ACTIVE',
+        )
+
+        return {
+          id: assignment.id,
+          classId: assignment.classId,
+          className: classRoom ? classLabel(classRoom) : 'Unassigned',
+          subjectId: assignment.subjectId,
+          subjectName: subject?.name ?? '—',
+          teacherId: assignment.teacherId,
+          teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : '—',
+          title: assignment.title,
+          description: assignment.description,
+          dueDate: assignment.dueDate,
+          maxMarks: assignment.maxMarks,
+          attachments: assignment.attachments,
+          submittedCount: homeworkSubmissions.filter((submission) => submission.homeworkId === assignment.id).length,
+          totalStudents: roster.length,
+          status: assignment.dueDate < today ? 'OVERDUE' : 'ACTIVE',
+        }
+      })
+  )
+}
+
+/** `GET /homework` is role-scoped: staff see the school, a student their class, a parent their children's. */
+function homeworkVisibleTo(assignment: HomeworkListItem, user: AuthUser | undefined): boolean {
+  if (!user || user.role === 'ADMIN' || user.role === 'TEACHER') return true
+  if (user.role === 'STUDENT') return assignment.classId === user.classId
+
+  const childClassIds = parentStudents
+    .filter((link) => link.parentId === user.profileId)
+    .map((link) => findStudent(link.studentId)?.classId)
+    .filter((classId): classId is string => Boolean(classId))
+
+  return childClassIds.includes(assignment.classId)
 }
 
 function fullNameParts(fullName: string): { firstName: string; lastName: string } {
@@ -1577,6 +1633,150 @@ const routes: Route[] = [
 
       const { items, meta } = paginate(filtered, params)
       return ok<Notice[]>(items, meta)
+    },
+  },
+  {
+    method: 'GET',
+    path: '/homework',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      const term = searchTerm(params)
+      const classId = params.classId ? String(params.classId) : ''
+      const subjectId = params.subjectId ? String(params.subjectId) : ''
+      const status = params.status ? String(params.status) : ''
+
+      const filtered = homeworkListItems()
+        .filter((assignment) => homeworkVisibleTo(assignment, user))
+        .filter((assignment) => (classId ? assignment.classId === classId : true))
+        .filter((assignment) => (subjectId ? assignment.subjectId === subjectId : true))
+        .filter((assignment) => (status ? assignment.status === status : true))
+        .filter((assignment) =>
+          matches(term, [
+            assignment.title,
+            assignment.subjectName,
+            assignment.className,
+            assignment.teacherName,
+            assignment.description,
+          ]),
+        )
+        // Soonest due first, so the grid reads as a to-do queue.
+        .sort((left, right) => left.dueDate.localeCompare(right.dueDate) || left.title.localeCompare(right.title))
+
+      return ok<HomeworkListItem[]>(filtered)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/homework',
+    handler: ({ body, userId }) => {
+      const classId = String(body.classId ?? '')
+      const subjectId = String(body.subjectId ?? '')
+      const title = String(body.title ?? '').trim()
+      const dueDate = String(body.dueDate ?? '')
+
+      if (!classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'HOMEWORK_INVALID', 'Choose a class for the assignment', ['classId'])
+      }
+
+      const subject = findSubject(subjectId)
+      if (!subject) return fail(400, 'HOMEWORK_INVALID', 'Choose a subject for the assignment', ['subjectId'])
+      if (subject.classId !== classId) {
+        return fail(400, 'HOMEWORK_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
+      }
+      if (!title) return fail(400, 'HOMEWORK_INVALID', 'A title is required', ['title'])
+      if (!dueDate) return fail(400, 'HOMEWORK_INVALID', 'A due date is required', ['dueDate'])
+
+      const maxMarks =
+        body.maxMarks === null || body.maxMarks === undefined || body.maxMarks === '' ? null : Number(body.maxMarks)
+      if (maxMarks !== null && (!Number.isFinite(maxMarks) || maxMarks <= 0)) {
+        return fail(400, 'HOMEWORK_INVALID', 'Max marks must be greater than zero', ['maxMarks'])
+      }
+
+      // The author of record: a teacher's own profile, or the subject's teacher when an admin assigns
+      // on their behalf.
+      const user = users.find((item) => item.id === userId)
+      const teacherId = user?.role === 'TEACHER' && user.profileId ? user.profileId : (subject.teacherId ?? 'tch_1')
+
+      const assignment: Homework = {
+        id: `hw_${homework.length + 1}`,
+        schoolId: SCHOOL_ID,
+        classId,
+        subjectId,
+        teacherId,
+        title,
+        description: body.description ? String(body.description) : null,
+        dueDate,
+        maxMarks,
+        attachments: [],
+        deletedAt: null,
+      }
+
+      homework.push(assignment)
+      return created(homeworkListItems().find((row) => row.id === assignment.id))
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/homework/:id',
+    handler: ({ params, body }) => {
+      const assignment = homework.find((item) => item.id === params.id && item.deletedAt === null)
+      if (!assignment) return fail(404, 'HOMEWORK_NOT_FOUND', 'Assignment not found')
+
+      // Resolve the pair before writing: a class-only change must not leave the assignment holding a
+      // subject from the class it just left, and neither field is written until the two agree.
+      const classId = body.classId === undefined ? assignment.classId : String(body.classId)
+      const subjectId = body.subjectId === undefined ? assignment.subjectId : String(body.subjectId)
+
+      if (!classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'HOMEWORK_INVALID', 'Choose a class for the assignment', ['classId'])
+      }
+
+      const subject = findSubject(subjectId)
+      if (!subject) return fail(400, 'HOMEWORK_INVALID', 'Choose a subject for the assignment', ['subjectId'])
+      if (subject.classId !== classId) {
+        return fail(400, 'HOMEWORK_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
+      }
+
+      assignment.classId = classId
+      assignment.subjectId = subjectId
+
+      if (body.title !== undefined) {
+        const title = String(body.title).trim()
+        if (!title) return fail(400, 'HOMEWORK_INVALID', 'A title is required', ['title'])
+        assignment.title = title
+      }
+
+      if (body.description !== undefined) {
+        assignment.description = body.description ? String(body.description) : null
+      }
+
+      if (body.dueDate !== undefined) {
+        const dueDate = String(body.dueDate)
+        if (!dueDate) return fail(400, 'HOMEWORK_INVALID', 'A due date is required', ['dueDate'])
+        assignment.dueDate = dueDate
+      }
+
+      if (body.maxMarks !== undefined) {
+        const maxMarks = body.maxMarks === null || body.maxMarks === '' ? null : Number(body.maxMarks)
+        if (maxMarks !== null && (!Number.isFinite(maxMarks) || maxMarks <= 0)) {
+          return fail(400, 'HOMEWORK_INVALID', 'Max marks must be greater than zero', ['maxMarks'])
+        }
+        assignment.maxMarks = maxMarks
+      }
+
+      return ok(homeworkListItems().find((row) => row.id === assignment.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/homework/:id',
+    handler: ({ params }) => {
+      const assignment = homework.find((item) => item.id === params.id && item.deletedAt === null)
+      if (!assignment) return fail(404, 'HOMEWORK_NOT_FOUND', 'Assignment not found')
+
+      // Soft delete (Database.md §6): the row survives so submissions keep their parent.
+      assignment.deletedAt = new Date().toISOString()
+      return ok({ deleted: true })
     },
   },
   {

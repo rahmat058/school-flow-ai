@@ -9,6 +9,7 @@ interface HomeworkSpec {
   title: string
   description: string
   dueInDays: number
+  maxMarks: number | null
   attachments: string[]
 }
 
@@ -19,6 +20,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Fractions — worksheet 4B',
     description: 'Complete exercises 1–12. Show all working.',
     dueInDays: 2,
+    maxMarks: 20,
     attachments: ['https://res.cloudinary.com/school-flow/worksheets/fractions-4b.pdf'],
   },
   {
@@ -27,6 +29,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Essay: my neighbourhood',
     description: 'Write 200 words describing your neighbourhood.',
     dueInDays: 4,
+    maxMarks: null,
     attachments: [],
   },
   {
@@ -35,6 +38,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Plant cell diagram',
     description: 'Draw and label a plant cell, then list three differences from an animal cell.',
     dueInDays: 1,
+    maxMarks: 10,
     attachments: ['https://res.cloudinary.com/school-flow/worksheets/plant-cell.pdf'],
   },
   {
@@ -43,6 +47,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Algebra practice set 7',
     description: 'Solve the linear equations in set 7.',
     dueInDays: -1,
+    maxMarks: 25,
     attachments: [],
   },
   {
@@ -51,6 +56,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Reading comprehension — unit 5',
     description: 'Read the passage and answer questions 1–8.',
     dueInDays: 3,
+    maxMarks: 15,
     attachments: ['https://res.cloudinary.com/school-flow/worksheets/unit-5-reading.pdf'],
   },
   {
@@ -59,6 +65,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Spreadsheet basics',
     description: 'Build a marks table and add SUM and AVERAGE formulas.',
     dueInDays: 5,
+    maxMarks: null,
     attachments: [],
   },
   {
@@ -67,6 +74,7 @@ const SPECS: HomeworkSpec[] = [
     title: 'Map skills exercise',
     description: 'Locate the districts on the outline map supplied in class.',
     dueInDays: 2,
+    maxMarks: 20,
     attachments: [],
   },
   {
@@ -75,7 +83,44 @@ const SPECS: HomeworkSpec[] = [
     title: 'Acids and bases — lab report',
     description: 'Write up the litmus and pH tests from Thursday’s practical.',
     dueInDays: 6,
+    maxMarks: 30,
     attachments: ['https://res.cloudinary.com/school-flow/worksheets/acids-bases.pdf'],
+  },
+  {
+    classIndex: 2,
+    subjectIndex: 1,
+    title: 'Grammar worksheet — tenses',
+    description: 'Fill in the correct tense in each sentence, then rewrite five of your own.',
+    dueInDays: 7,
+    maxMarks: 10,
+    attachments: [],
+  },
+  {
+    classIndex: 1,
+    subjectIndex: 6,
+    title: 'Fitness log — one week',
+    description: 'Record your daily activity for a week and note how you felt afterwards.',
+    dueInDays: -2,
+    maxMarks: null,
+    attachments: [],
+  },
+  {
+    classIndex: 3,
+    subjectIndex: 5,
+    title: 'Typing practice — level 3',
+    description: 'Finish level 3 in the typing tutor and note your accuracy score.',
+    dueInDays: 1,
+    maxMarks: null,
+    attachments: [],
+  },
+  {
+    classIndex: 4,
+    subjectIndex: 4,
+    title: 'Neighbourhood map',
+    description: 'Draw a map of the roads around your home and mark the school route.',
+    dueInDays: 4,
+    maxMarks: 20,
+    attachments: [],
   },
 ]
 
@@ -91,7 +136,9 @@ export const homework: Homework[] = SPECS.map((spec, index) => {
     title: spec.title,
     description: spec.description,
     dueDate: dateOffset(spec.dueInDays),
+    maxMarks: spec.maxMarks,
     attachments: spec.attachments,
+    deletedAt: null,
   }
 })
 

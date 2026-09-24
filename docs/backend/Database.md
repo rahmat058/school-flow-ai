@@ -689,7 +689,8 @@ erDiagram
 <!-- table: homework · module: HomeworkModule · prd: §4.7 · phase: 3 · tenant: yes · soft-delete: yes -->
 
 An assignment posted by a teacher to one class + subject. `attachments` holds Cloudinary URLs;
-`due_date` is the late-submission boundary.
+`due_date` is the late-submission boundary, and `max_marks` is the optional ceiling a graded
+submission is scored against.
 
 | Column        | Type          | Null | Key | Notes           |
 | ------------- | ------------- | ---- | --- | --------------- |
@@ -701,6 +702,7 @@ An assignment posted by a teacher to one class + subject. `attachments` holds Cl
 | `title`       | `text`        | no   |     |                 |
 | `description` | `text`        | yes  |     |                 |
 | `due_date`    | `date`        | no   |     |                 |
+| `max_marks`   | `integer`     | yes  |     | Optional marks  |
 | `attachments` | `text[]`      | no   |     | default `'{}'`  |
 | `created_at`  | `timestamptz` | no   |     |                 |
 | `updated_at`  | `timestamptz` | no   |     |                 |
@@ -712,6 +714,7 @@ An assignment posted by a teacher to one class + subject. `attachments` holds Cl
 **Indexes** — `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`.
 
 **Constraints** — no natural key; deletion is soft so submissions keep their parent.
+`check (max_marks is null or max_marks > 0)`.
 
 ```mermaid
 erDiagram
@@ -726,6 +729,7 @@ erDiagram
     uuid subject_id FK
     uuid teacher_id FK
     date due_date
+    integer max_marks
   }
 ```
 
@@ -2145,6 +2149,7 @@ erDiagram
     uuid subject_id FK
     uuid teacher_id FK
     date due_date
+    integer max_marks
   }
   homework_submissions {
     uuid id PK

@@ -31,4 +31,5 @@ export const FeeCollectPage = lazy(async () => ({
   default: (await import('@/pages/admin/FeeCollectPage')).FeeCollectPage,
 }))
 export const NoticesPage = lazy(async () => ({ default: (await import('@/pages/NoticesPage')).NoticesPage }))
+export const HomeworkPage = lazy(async () => ({ default: (await import('@/pages/HomeworkPage')).HomeworkPage }))
 export const NotFoundPage = lazy(async () => ({ default: (await import('@/pages/NotFoundPage')).NotFoundPage }))

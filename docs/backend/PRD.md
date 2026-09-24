@@ -287,8 +287,8 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary) `(admin, teacher)`
-- [ ] `GET /api/v1/homework?classId=&subjectId=` — list, scoped to the caller's role `(admin, teacher, student, parent of child)`
+- [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary): `title`, `description`, `dueDate`, optional `maxMarks` `(admin, teacher)`
+- [ ] `GET /api/v1/homework?classId=&subjectId=&search=&status=` — list, scoped to the caller's role; each row carries its class / subject / author joins, the submission roll-up and a derived `status` `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/homework/:id` — detail + attachments `(admin, teacher, student, parent of child)`
 - [ ] `PATCH /api/v1/homework/:id` `(admin, teacher)`
 - [ ] `DELETE /api/v1/homework/:id` `(admin, teacher)`
@@ -300,6 +300,9 @@ Concessions
 
 - `isLate` computed against `dueDate` on submission
 - Parent visibility into child's homework status
+- A list row's `status` is derived, never stored: `OVERDUE` once `dueDate` has passed, `ACTIVE` otherwise
+- `maxMarks` is an optional ceiling a graded submission is scored against — `null` means the task is unmarked
+- `DELETE /homework/:id` is a soft delete (`deleted_at`), so submissions keep their parent
 
 ### 4.8 Timetable Management (`TimetablesModule`)
 

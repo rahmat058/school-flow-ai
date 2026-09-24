@@ -7,6 +7,7 @@ import {
   DashboardPage,
   FeeCollectPage,
   FeesPage,
+  HomeworkPage,
   NotFoundPage,
   NoticesPage,
   StudentProfilePage,
@@ -24,11 +25,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.attendance,
     title: 'Attendance',
     description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-  {
-    path: paths.homework,
-    title: 'Homework',
-    description: 'Assignment creation, student submissions and grading arrive in Phase 3.',
   },
   {
     path: paths.exams,
@@ -96,6 +92,8 @@ export const privateRoutes: RouteObject[] = [
               { path: childPath(paths.feeCollect), element: <FeeCollectPage /> },
             ],
           },
+          // Readable by every role; the page itself withholds the write controls from students and parents.
+          { path: childPath(paths.homework), element: <HomeworkPage /> },
           { path: childPath(paths.notices), element: <NoticesPage /> },
           ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },
