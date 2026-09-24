@@ -50,6 +50,17 @@ import type {
 import type { Homework, HomeworkListItem } from '@/types/homework'
 import type { MaterialDetail, MaterialListItem, MaterialType, StudyMaterial } from '@/types/materials'
 import type {
+  AttendanceReport,
+  AttendanceReportRow,
+  ExamPaperOption,
+  ExamResultRow,
+  ExamResultsReport,
+  FinanceReport,
+  PendingFeeRecord,
+  ReportTrendPoint,
+  ReportsOverview,
+} from '@/types/reports'
+import type {
   ClassTimetable,
   MyTimetable,
   Period,
@@ -79,7 +90,7 @@ import { activeSchool } from '@/data/school'
 import { classLabel, classes, findClass } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, maxMarks, reportCards } from '@/data/exams'
-import { gradeForPercentage } from '@/lib/grades'
+import { gradeForPercentage, isPass, percentageOf } from '@/lib/grades'
 import { findSubject, subjects } from '@/data/subjects'
 import {
   concessions,
@@ -93,7 +104,7 @@ import {
   structureForClass,
 } from '@/data/fees'
 import { formatPaise, humanizeEnum } from '@/lib/format'
-import { MATERIAL_TYPE_VALUES, NOTICE_PRIORITY_VALUES } from '@/lib/options'
+import { MATERIAL_TYPE_VALUES, MONTH_LABELS_SHORT, NOTICE_PRIORITY_VALUES } from '@/lib/options'
 import { materialFileError } from '@/lib/validation'
 import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
@@ -1666,6 +1677,206 @@ function generationOf(conversation: AiConversation): AiGeneration | undefined {
 }
 
 // ---------------------------------------------------------------------------------------------
+// reports — aggregates. The ReportsModule owns no tables: every figure below is rolled up from the
+// modules that do, the way the backend's RPCs and materialized views would.
+// ---------------------------------------------------------------------------------------------
+
+/** Twelve months of collection, oldest first — the same register the fees dashboard reads. */
+function feeTrendReport(): ReportTrendPoint[] {
+  return feeDashboard().collectionTrend.map((point) => ({
+    label: point.label,
+    collectedPaise: point.collectedPaise,
+    pendingPaise: point.pendingPaise,
+  }))
+}
+
+function reportsOverview(): ReportsOverview {
+  const summary = feeCollectionSummary()
+
+  return {
+    activeStudents: students.filter((student) => student.status === 'ACTIVE').length,
+    activeTeachers: teachers.filter((teacher) => teacher.status === 'ACTIVE').length,
+    collectedPaise: summary.collectedPaise,
+    pendingPaise: summary.pendingPaise,
+    feeTrend: feeTrendReport(),
+    classes: classes.map((classRoom) => ({
+      id: classRoom.id,
+      label: classLabel(classRoom),
+      grade: classRoom.grade,
+      section: classRoom.section,
+    })),
+  }
+}
+
+/** The register for one month, grouped by class. A class with no register day is left out entirely. */
+function attendanceReport(month: number, year: number, classId: string): AttendanceReport {
+  const prefix = `${year}-${String(month).padStart(2, '0')}`
+  const records = attendance
+    .filter((record) => record.attendanceDate.startsWith(prefix))
+    .filter((record) => (classId ? record.classId === classId : true))
+  const attendedCount = (rows: typeof records) =>
+    rows.filter((record) => record.status === 'PRESENT' || record.status === 'LATE').length
+
+  const byClass: AttendanceReportRow[] = classes
+    .filter((classRoom) => (classId ? classRoom.id === classId : true))
+    .flatMap((classRoom) => {
+      const classRecords = records.filter((record) => record.classId === classRoom.id)
+      if (classRecords.length === 0) return []
+
+      const present = attendedCount(classRecords)
+
+      return [
+        {
+          classId: classRoom.id,
+          className: classLabel(classRoom),
+          present,
+          total: classRecords.length,
+          percentage: Math.round((present / classRecords.length) * 100),
+        },
+      ]
+    })
+
+  const present = attendedCount(records)
+  const total = records.length
+
+  return {
+    month,
+    year,
+    label: `${MONTH_LABELS_SHORT[month - 1] ?? ''} ${year}`,
+    byClass,
+    totals: { present, total, percentage: total === 0 ? 0 : Math.round((present / total) * 100) },
+  }
+}
+
+/** Only papers whose exam has already been sat can be reported on, newest exam first. */
+function examPaperOptions(): ExamPaperOption[] {
+  return examSubjects
+    .flatMap((paper) => {
+      const exam = exams.find((item) => item.id === paper.examId)
+      if (!exam || examStatusOf(exam) !== 'COMPLETED') return []
+
+      const subject = findSubject(paper.subjectId)
+      const classRoom = findClass(exam.classId)
+      if (!subject || !classRoom) return []
+
+      return [
+        {
+          id: paper.id,
+          examId: exam.id,
+          subjectId: paper.subjectId,
+          label: `${exam.name} — ${subject.name} — ${classLabel(classRoom)}`,
+          status: examStatusOf(exam),
+        },
+      ]
+    })
+    .sort((left, right) => {
+      const leftExam = exams.find((item) => item.id === left.examId)
+      const rightExam = exams.find((item) => item.id === right.examId)
+
+      return (
+        (rightExam?.startDate ?? '').localeCompare(leftExam?.startDate ?? '') || left.label.localeCompare(right.label)
+      )
+    })
+}
+
+/** The school's grade bands, in order — a distribution chart keeps a stable set of categories. */
+const GRADE_ORDER = ['A+', 'A', 'B', 'C', 'D', 'F']
+
+/** One paper's marks for its class: every student, their grade and whether they passed. */
+function examResultsReport(paperId: string): ExamResultsReport | undefined {
+  const paper = examSubjects.find((item) => item.id === paperId)
+  if (!paper) return undefined
+
+  const exam = exams.find((item) => item.id === paper.examId)
+  const subject = findSubject(paper.subjectId)
+  const classRoom = exam ? findClass(exam.classId) : undefined
+  if (!exam || !subject || !classRoom) return undefined
+
+  const rows: ExamResultRow[] = students
+    .filter((student) => student.classId === exam.classId && student.status === 'ACTIVE')
+    .sort((left, right) => left.rollNo - right.rollNo)
+    .map((student) => {
+      const result = examResults.find(
+        (entry) => entry.examId === exam.id && entry.studentId === student.id && entry.subjectId === paper.subjectId,
+      )
+      // An absent student holds no mark — they are in the roster but out of the average.
+      const marks = result && !result.isAbsent ? result.obtainedMarks : null
+      const percentage = marks === null ? null : percentageOf(marks, paper.maxMarks)
+
+      return {
+        studentId: student.id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        admissionNo: student.admissionNo,
+        rollNo: student.rollNo,
+        marks,
+        maxMarks: paper.maxMarks,
+        percentage,
+        grade: percentage === null ? null : gradeForPercentage(percentage),
+        passed: percentage === null ? null : isPass(percentage),
+      }
+    })
+
+  const scored = rows.filter((row) => row.percentage !== null)
+  const passed = scored.filter((row) => row.passed).length
+  const average =
+    scored.length === 0
+      ? 0
+      : Math.round(scored.reduce((total, row) => total + (row.percentage ?? 0), 0) / scored.length)
+
+  return {
+    paperId: paper.id,
+    paperLabel: `${exam.name} — ${subject.name} — ${classLabel(classRoom)}`,
+    examName: exam.name,
+    subjectName: subject.name,
+    className: classLabel(classRoom),
+    examDate: paper.examDate,
+    maxMarks: paper.maxMarks,
+    totalStudents: rows.length,
+    passed,
+    failed: scored.length - passed,
+    averagePercentage: average,
+    gradeDistribution: GRADE_ORDER.map((grade) => ({
+      grade,
+      students: scored.filter((row) => row.grade === grade).length,
+    })).filter((bucket) => bucket.students > 0),
+    rows,
+  }
+}
+
+/** Collection totals plus every invoice still carrying a balance, most urgent first. */
+function financeReport(): FinanceReport {
+  const summary = feeCollectionSummary()
+
+  const pending: PendingFeeRecord[] = invoiceListItems()
+    .filter((invoice) => outstanding(invoice) > 0)
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => ({
+      invoiceId: invoice.id,
+      studentId: invoice.studentId,
+      studentName: invoice.studentName,
+      className: invoice.className,
+      feeTitle: invoice.title,
+      // Net of any concession, so Total − Paid = Balance holds on the row.
+      totalPaise: invoice.amountPaise - invoice.discountPaise,
+      paidPaise: invoice.paidPaise,
+      balancePaise: outstanding(invoice),
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }))
+
+  const billed = summary.collectedPaise + summary.pendingPaise
+
+  return {
+    totalCollectedPaise: summary.collectedPaise,
+    totalPendingPaise: summary.pendingPaise,
+    collectionRate: billed === 0 ? 0 : Math.round((summary.collectedPaise / billed) * 100),
+    monthly: feeTrendReport(),
+    pending,
+    pendingCount: pending.length,
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // routes
 // ---------------------------------------------------------------------------------------------
 const routes: Route[] = [
@@ -2577,6 +2788,42 @@ const routes: Route[] = [
       material.deletedAt = new Date().toISOString()
       return ok({ deleted: true })
     },
+  },
+  {
+    method: 'GET',
+    path: '/reports/overview',
+    handler: () => ok<ReportsOverview>(reportsOverview()),
+  },
+  {
+    method: 'GET',
+    path: '/reports/attendance',
+    handler: ({ params }) => {
+      const today = new Date()
+      const month = params.month ? Number(params.month) : today.getMonth() + 1
+      const year = params.year ? Number(params.year) : today.getFullYear()
+
+      return ok<AttendanceReport>(attendanceReport(month, year, params.classId ? String(params.classId) : ''))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/reports/exam-results/papers',
+    handler: () => ok<ExamPaperOption[]>(examPaperOptions()),
+  },
+  {
+    method: 'GET',
+    path: '/reports/exam-results',
+    handler: ({ params }) => {
+      const report = examResultsReport(String(params.paperId ?? ''))
+      if (!report) return fail(404, 'REPORT_PAPER_NOT_FOUND', 'Exam paper not found')
+
+      return ok<ExamResultsReport>(report)
+    },
+  },
+  {
+    method: 'GET',
+    path: '/reports/finance',
+    handler: () => ok<FinanceReport>(financeReport()),
   },
   {
     method: 'GET',

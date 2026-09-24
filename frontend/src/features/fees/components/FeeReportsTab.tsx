@@ -12,7 +12,7 @@ import { formatDate, formatPaise, humanizeEnum } from '@/lib/format'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useClassReport, useDayBook, useDefaulters, useStudentLedger, useStudentOptions } from '@/features/fees/api'
-import { downloadCsv } from '@/features/fees/lib/csv'
+import { downloadCsv } from '@/lib/csv'
 import type { ClassReportRow, DayBookRow, DefaulterRow, StudentLedgerRow } from '@/types/fees'
 
 export function FeeReportsTab() {

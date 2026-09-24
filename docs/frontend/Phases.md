@@ -36,7 +36,7 @@
 - [ ] Fees module — Dashboard (cards, collection charts, pending/defaulter list), Fee structure (per-class fee heads), Collect fee (class-wise status → individual collect page, invoice from structure, manual payment + printable receipt), Reports (day book, class report, defaulters, student ledger + CSV) and Concessions
 - [ ] Stripe / SSLCommerz checkout integration
 - [ ] Exam schedule, marks entry, publish, report card view
-- [ ] Reports screens with CSV export
+- [x] Reports screens with CSV export
 
 **Done when:** a parent pays a fee online and views a published report card.
 

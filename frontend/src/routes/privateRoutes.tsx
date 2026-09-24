@@ -15,6 +15,7 @@ import {
   NotFoundPage,
   NoticesPage,
   PermissionsPage,
+  ReportsPage,
   StudentProfilePage,
   StudentsPage,
   TeachersPage,
@@ -31,11 +32,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.attendance,
     title: 'Attendance',
     description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-  {
-    path: paths.reports,
-    title: 'Reports',
-    description: 'Attendance, financial and student reports with CSV export arrive in Phase 4.',
   },
   {
     path: paths.settings,
@@ -60,7 +56,10 @@ export const privateRoutes: RouteObject[] = [
           { index: true, element: <DashboardPage /> },
           {
             element: <RoleGuard allow={['ADMIN', 'TEACHER']} />,
-            children: [{ path: childPath(paths.students), element: <StudentsPage /> }],
+            children: [
+              { path: childPath(paths.students), element: <StudentsPage /> },
+              { path: childPath(paths.reports), element: <ReportsPage /> },
+            ],
           },
           {
             element: <RoleGuard allow={['ADMIN']} />,

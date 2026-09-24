@@ -495,16 +495,22 @@ Concessions
 
 **Endpoints**
 
-- [ ] `GET /api/v1/reports/attendance?from=&to=&classId=` — attendance aggregates `(admin, teacher)`
-- [ ] `GET /api/v1/reports/financial?from=&to=` — collected/pending/concessions `(admin)`
+- [ ] `GET /api/v1/reports/overview` — active students and teachers, collected and pending totals, the twelve-month collected-vs-pending series and the class catalogue `(admin, teacher)`
+- [ ] `GET /api/v1/reports/attendance?month=&year=&classId=` — the register for one month: `present`, `total` and `percentage` per class plus the school totals `(admin, teacher)`
+- [ ] `GET /api/v1/reports/exam-results/papers` — the selectable papers (one exam's subject for one class), completed exams only, newest exam first `(admin, teacher)`
+- [ ] `GET /api/v1/reports/exam-results?paperId=` — one paper: every student's mark, percentage, grade and outcome, plus `totalStudents`/`passed`/`failed`/`averagePercentage` and the grade distribution; 404 `REPORT_PAPER_NOT_FOUND` for an unknown paper `(admin, teacher)`
+- [ ] `GET /api/v1/reports/finance` — collected and pending totals, the collection rate, the twelve-month series and every invoice still carrying a balance (total, paid, balance, due date, status), soonest-due first `(admin, teacher)`
 - [ ] `GET /api/v1/reports/students/:id` — academic profile report `(admin, teacher, parent of child)`
 - [ ] `GET /api/v1/reports/export?type=&format=csv` — streaming CSV of any report above `(admin)`
 - [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance rate plus its per-day trend, class performance per class, a recent-activity feed merged from payments/submissions/notices, upcoming exams (dated today or later), invoices with an outstanding balance, and dated calendar entries (events + exam days); chart series (Recharts-ready: plain labelled series, no chart config) `(admin)`
 
 **Behavior**
 
-- Aggregations via SQL (`group by`/aggregate through Supabase RPC) and PostgreSQL materialized views for heavy reports
-- CSV streaming export for large datasets
+- The module owns **no tables**: every figure is aggregated from the modules that do — attendance, fees, exams, classes, people — the way the SQL/RPC projections in `Database.md` §16 would. Aggregations via SQL (`group by`/aggregate through Supabase RPC) and PostgreSQL materialized views for the heavy ones; CSV streaming export for large datasets
+- `reports/attendance` counts **present and late** as attended, and a class with no register day in the period is **omitted** rather than reported as zero — an empty month returns empty rows, not an error
+- `reports/exam-results` reports **one paper**, not a whole exam, because the screen reads one subject at a time. A student with no mark (absent, or an unmarked paper) counts in `totalStudents` but is out of `passed`/`failed`/`averagePercentage`, and the grade distribution only carries the bands that occur, in the school's grade order (`docs/frontend/Design.md` bands via `gradeForPercentage`)
+- `reports/finance` bills a row **net of concession** (`amount − discount`), so `total − paid = balance` holds on every row, and the collection rate is `collected ÷ (collected + pending)`
+- `reports/overview` and `reports/finance` read the **same** twelve-month series as `GET /fees/dashboard`, so the two screens cannot disagree; the frontend exports its CSVs client-side, which is why `/reports/export` stays a documented server option for large datasets rather than the path the screens take
 
 ### 4.15 Email Notifications (`MailModule` — Resend)
 

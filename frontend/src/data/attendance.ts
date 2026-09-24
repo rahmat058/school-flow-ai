@@ -2,8 +2,11 @@ import type { AttendanceRecord, AttendanceStatus } from '@/types/attendance'
 import { SCHOOL_ID, recentSchoolDays } from '@/data/seed'
 import { students } from '@/data/students'
 
-/** How far back the generated register goes. */
-const REGISTER_DAYS = recentSchoolDays(12)
+/**
+ * How far back the generated register goes — a full term, so the reports' month picker has more than
+ * one month on record. The dashboard takes only the newest seven days of it.
+ */
+const REGISTER_DAYS = recentSchoolDays(60)
 
 /**
  * Mostly present, with a deterministic sprinkling of absences/lates so analytics have something to

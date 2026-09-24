@@ -21,6 +21,22 @@ export const CLASS_GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 
 export const CLASS_SECTIONS = ['A', 'B'] as const
 
+/** Short month names, index 0 = January — the reports' month picker and the fee trend's axis. */
+export const MONTH_LABELS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const
+
 /** The school's subjects — `data/subjects.ts` fans these across every class. */
 export const SUBJECT_NAMES = [
   'English',
@@ -239,3 +255,9 @@ export const materialTypeOptions: FieldOption[] = MATERIAL_TYPE_VALUES.map((valu
 }))
 
 export const materialTypeFilterOptions: FieldOption[] = [{ value: '', label: 'All types' }, ...materialTypeOptions]
+
+/** The reports' month picker — the value is the 1-based month the API takes. */
+export const monthOptions: FieldOption[] = MONTH_LABELS_SHORT.map((label, offset) => ({
+  value: String(offset + 1),
+  label,
+}))

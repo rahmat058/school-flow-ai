@@ -14,6 +14,7 @@ type BadgeStatus =
   | ExamStatus
   | 'PASS'
   | 'FAIL'
+  | 'ABSENT'
   | 'PUBLISHED'
   | 'DRAFT'
   | 'CLEAR'
@@ -36,6 +37,7 @@ const statusStyles: Record<BadgeStatus, string> = {
   COMPLETED: 'bg-success-soft text-success',
   PASS: 'bg-success-soft text-success',
   FAIL: 'bg-error-soft text-error',
+  ABSENT: 'bg-canvas text-ink-muted',
   PUBLISHED: 'bg-success-soft text-success',
   DRAFT: 'bg-canvas text-ink-muted',
 }
