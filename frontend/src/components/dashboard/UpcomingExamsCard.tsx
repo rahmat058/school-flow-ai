@@ -1,6 +1,6 @@
-import { CalendarDays, FileText } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
+import { CalendarDays, FileText } from 'lucide-react'
 import type { UpcomingExam } from '@/types/dashboard'
 
 interface UpcomingExamsCardProps {
