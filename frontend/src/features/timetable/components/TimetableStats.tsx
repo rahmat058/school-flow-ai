@@ -1,26 +1,38 @@
 import { BookOpen, CalendarDays, ListOrdered, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import type { LucideIcon } from 'lucide-react'
-import type { TimetableStats as TimetableStatsData } from '@/types/timetable'
+import type { TeacherTimetableStats, TimetableStats } from '@/types/timetable'
+
+/** The two roll-up shapes the tiles can show, told apart by the scope they come with. */
+export type TimetableStatsInput =
+  { scope: 'CLASS'; stats: TimetableStats } | { scope: 'TEACHER'; stats: TeacherTimetableStats }
 
 interface TimetableStatsProps {
-  stats: TimetableStatsData | null
+  /** Null while the week is still loading, which is when the tiles are skeletons. */
+  input: TimetableStatsInput | null
 }
 
-/** The week's roll-ups, aggregated by the API — the page never counts the grid itself. */
-export function TimetableStats({ stats }: TimetableStatsProps) {
-  const tiles: Array<{ label: string; value: number; icon: LucideIcon }> = [
-    { label: 'Period rows', value: stats?.periodRows ?? 0, icon: ListOrdered },
-    { label: 'Weekly slots', value: stats?.weeklySlots ?? 0, icon: CalendarDays },
-    { label: 'Subjects', value: stats?.subjects ?? 0, icon: BookOpen },
-    { label: 'Teachers', value: stats?.teachers ?? 0, icon: Users },
-  ]
+/** The roll-ups, aggregated by the API — the view never counts the grid itself. */
+export function TimetableStats({ input }: TimetableStatsProps) {
+  const tiles: Array<{ label: string; value: number; icon: LucideIcon }> =
+    input?.scope === 'TEACHER'
+      ? [
+          { label: 'Weekly lessons', value: input.stats.weeklyLessons, icon: CalendarDays },
+          { label: 'Classes', value: input.stats.classes, icon: Users },
+          { label: 'Subjects', value: input.stats.subjects, icon: BookOpen },
+        ]
+      : [
+          { label: 'Period rows', value: input?.stats.periodRows ?? 0, icon: ListOrdered },
+          { label: 'Weekly slots', value: input?.stats.weeklySlots ?? 0, icon: CalendarDays },
+          { label: 'Subjects', value: input?.stats.subjects ?? 0, icon: BookOpen },
+          { label: 'Teachers', value: input?.stats.teachers ?? 0, icon: Users },
+        ]
 
-  if (!stats) {
+  if (!input) {
     return (
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-23 rounded-xl" />
+        {tiles.map((tile) => (
+          <Skeleton key={tile.label} className="h-23 rounded-xl" />
         ))}
       </section>
     )

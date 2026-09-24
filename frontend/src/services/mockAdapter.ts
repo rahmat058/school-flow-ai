@@ -47,7 +47,16 @@ import type {
   TestListItem,
 } from '@/types/exams'
 import type { Homework, HomeworkListItem } from '@/types/homework'
-import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
+import type {
+  ClassTimetable,
+  MyTimetable,
+  Period,
+  TeacherTimetableDay,
+  Timetable,
+  TimetableDay,
+  TimetablePeriodRow,
+  Weekday,
+} from '@/types/timetable'
 import type {
   BloodGroup,
   Guardian,
@@ -1473,6 +1482,87 @@ function rebuildReportCards(examId: string): void {
       aiComment: null,
       publishedAt: exam.publishedAt,
     })
+  }
+}
+
+/**
+ * The caller's own week, resolved by role — a teacher's lessons across the classes they teach, or
+ * the class of a student (or of a parent's child). Admins read a class by id instead.
+ */
+function myTimetableOf(userId: string | null): MyTimetable | undefined {
+  const user = users.find((item) => item.id === userId)
+  if (!user) return undefined
+
+  if (user.role === 'TEACHER') {
+    const teacher = findTeacher(user.profileId)
+    if (!teacher) return undefined
+
+    // Every class shares one period structure, so the first class speaks for the week's rows.
+    const template = timetables[0]
+    const periods = template ? labelRows(periodRowsOf(template)) : []
+
+    const days: TeacherTimetableDay[] = weekdays.map((day) => {
+      // The demo double-books a teacher by construction, so the first class in a row takes that cell.
+      const byRow = new Map<number, { period: Period; classId: string }>()
+
+      for (const item of timetables) {
+        if (item.day !== day) continue
+
+        for (const period of periodRowsOf(item)) {
+          if (period.isBreak || period.teacherId !== teacher.id) continue
+          if (!byRow.has(period.orderIndex)) byRow.set(period.orderIndex, { period, classId: item.classId })
+        }
+      }
+
+      return {
+        day,
+        slots: periods.map((row) => {
+          const found = byRow.get(row.orderIndex)
+          const classRoom = found ? classes.find((room) => room.id === found.classId) : undefined
+
+          return {
+            subjectId: found?.period.subjectId ?? null,
+            subjectName: found?.period.subjectId ? (findSubject(found.period.subjectId)?.name ?? null) : null,
+            classId: found?.classId ?? null,
+            className: classRoom ? classLabel(classRoom) : null,
+            room: found?.period.room ?? null,
+          }
+        }),
+      }
+    })
+
+    const lessons = days.flatMap((day) => day.slots).filter((slot) => slot.subjectId !== null)
+    const classIds = new Set(lessons.map((slot) => slot.classId).filter((id): id is string => id !== null))
+
+    return {
+      scope: 'TEACHER',
+      label: `${teacher.firstName} ${teacher.lastName}`,
+      note: `Your week across ${classIds.size} ${classIds.size === 1 ? 'class' : 'classes'}.`,
+      periods,
+      days,
+      stats: {
+        weeklyLessons: lessons.length,
+        classes: classIds.size,
+        subjects: new Set(lessons.map((slot) => slot.subjectName).filter((name) => name !== null)).size,
+      },
+    }
+  }
+
+  // A student's own class, or the class of a parent's child.
+  const studentId =
+    user.role === 'STUDENT'
+      ? user.profileId
+      : (parentStudents.find((link) => link.parentId === user.profileId)?.studentId ?? null)
+  const student = studentId ? findStudent(studentId) : undefined
+  const classRoom = classes.find((room) => room.id === student?.classId)
+  const week = classRoom ? classTimetable(classRoom.id) : undefined
+  if (!classRoom || !week) return undefined
+
+  return {
+    scope: 'CLASS',
+    label: classLabel(classRoom),
+    note: user.role === 'PARENT' ? "Your child's weekly timetable." : 'Your class timetable.',
+    timetable: week,
   }
 }
 
@@ -3149,6 +3239,14 @@ const routes: Route[] = [
 
       const sheet = resultSheet(exam.id)
       return sheet ? ok(sheet) : fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/timetables/me',
+    handler: ({ userId }) => {
+      const mine = myTimetableOf(userId)
+      return mine ? ok<MyTimetable>(mine) : fail(404, 'TIMETABLE_NOT_FOUND', 'No timetable for this account')
     },
   },
 ]

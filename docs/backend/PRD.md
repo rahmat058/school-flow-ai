@@ -327,6 +327,7 @@ Concessions
 - [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
 - [ ] `GET /api/v1/timetables/class/:classId` — the class's week in one payload: `periods` (the rows), `days` (each carrying one slot per row) and the `stats` roll-ups `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
+- [ ] `GET /api/v1/timetables/me` — the caller's **own** week, resolved by role, in the same grid shape as a class week: a teacher's own lessons (each cell naming the class they are in, blank where they are free), a student's class, or a parent's child's class `(authenticated)`
 - [ ] `PATCH /api/v1/timetables/class/:classId/slots` — set one cell's `subjectId`/`teacherId`, or clear it by sending both null `(admin)`
 - [ ] `POST /api/v1/timetables/class/:classId/periods` — append a period row to the class's week, written to every day in one transaction `(admin)`
 - [ ] `DELETE /api/v1/timetables/class/:classId/periods/:orderIndex` — remove that row from every day and close the positions up `(admin)`
@@ -336,6 +337,10 @@ Concessions
 **Behavior**
 
 - Conflict detection: teacher double-booking validation before save
+- **Non-admins never pick a class**: `GET /timetables/me` resolves the caller's week server-side, so a teacher
+  reads their own lessons on the same days × periods grid — the period rows are shared by every class, and each
+  cell names the class they are in (blank where they are free) — while a student or a parent reads one class's
+  week read-only. The class routes stay the admin's, and are what the class picker and the editor drive
 - Break periods flagged via `isBreak` on Period
 - The week's period rows are stored per day but **managed class-wide**: adding or removing one applies to every day of the class and is addressed by `orderIndex`, so the days cannot drift apart
 - A row's label is the stored `label`, else `Period n` counted over teaching rows only — so the period after a break keeps its number

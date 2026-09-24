@@ -1,10 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, patch, post, remove } from '@/services/apiClient'
-import type { ClassTimetable, TimetablePeriodInput, TimetableSlotInput } from '@/types/timetable'
+import type { ClassTimetable, MyTimetable, TimetablePeriodInput, TimetableSlotInput } from '@/types/timetable'
 
 export const timetableKeys = {
   all: ['timetable'] as const,
   classWeek: (classId: string) => [...timetableKeys.all, 'class', classId] as const,
+  mine: () => [...timetableKeys.all, 'me'] as const,
+}
+
+/**
+ * The caller's own week, resolved by role on the server: a teacher's lessons, a student's class, a
+ * parent's child's class. Only the admin reads a class by id.
+ */
+export function useMyTimetable(enabled = true) {
+  return useQuery({
+    queryKey: timetableKeys.mine(),
+    queryFn: async () => (await get<MyTimetable>('/timetables/me')).data,
+    enabled,
+  })
 }
 
 /** The whole week in one payload: period rows, each day's slots and the stat roll-ups. */

@@ -10,20 +10,29 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useCurrentUser } from '@/store/auth'
 import { useClassOptions } from '@/features/classes/api'
-import { useClassTimetable, useDeletePeriodRow } from '@/features/timetable/api'
+import { useClassTimetable, useDeletePeriodRow, useMyTimetable } from '@/features/timetable/api'
 import { EditEntrySheet } from '@/features/timetable/components/EditEntrySheet'
 import type { EditEntryTarget } from '@/features/timetable/components/EditEntrySheet'
 import { ManagePeriodsSheet } from '@/features/timetable/components/ManagePeriodsSheet'
 import { TimetableBoard } from '@/features/timetable/components/TimetableBoard'
 import { TimetableStats } from '@/features/timetable/components/TimetableStats'
+import { classGridOf, teacherGridOf } from '@/features/timetable/lib/grid'
 import type { TimetablePeriodRow, Weekday } from '@/types/timetable'
 
+/**
+ * Only the admin picks a class and edits. A teacher reads their own lessons, a student their class's
+ * week and a parent their child's — all resolved by `GET /timetables/me`, so the view never has to
+ * work out which week it is allowed to see.
+ */
 export function TimetablePage() {
-  const { toast } = useToast()
   const user = useCurrentUser()
-  // The contract scopes timetable writes to the admin role; teachers and families read the week.
-  const canManage = user?.role === 'ADMIN'
 
+  return user?.role === 'ADMIN' ? <AdminTimetable /> : <MyWeek />
+}
+
+/** The whole school's timetables, class by class, with the editor. */
+function AdminTimetable() {
+  const { toast } = useToast()
   const classOptions = useClassOptions()
   const [selectedClassId, setSelectedClassId] = useState('')
   const classList = classOptions.data ?? []
@@ -87,7 +96,7 @@ export function TimetablePage() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">Weekly timetable</h1>
-          <p className="text-ink-muted text-[14px]">View and manage class schedules.</p>
+          <p className="text-ink-muted text-[14px]">Every class's week — pick one to view or edit it.</p>
         </div>
 
         <div className="flex items-center justify-end gap-3">
@@ -100,11 +109,11 @@ export function TimetablePage() {
             aria-label="Select a class"
           />
 
-          {canManage ? managePeriodsButton : null}
+          {managePeriodsButton}
         </div>
       </header>
 
-      <TimetableStats stats={data?.stats ?? null} />
+      <TimetableStats input={data ? { scope: 'CLASS', stats: data.stats } : null} />
 
       {timetable.isError ? (
         <Alert tone="error" title="Could not load the timetable">
@@ -118,16 +127,12 @@ export function TimetablePage() {
         <EmptyState
           icon={CalendarDays}
           title="No timetable yet"
-          description={
-            canManage
-              ? 'Add the first period row and the week builds itself around it.'
-              : 'This class has no timetable published yet.'
-          }
-          action={canManage ? managePeriodsButton : null}
+          description="Add the first period row and the week builds itself around it."
+          action={managePeriodsButton}
         />
       ) : (
         <div className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card)">
-          <TimetableBoard timetable={data} canManage={canManage} onEditSlot={openEntry} />
+          <TimetableBoard grid={classGridOf(data)} canManage onEditCell={openEntry} />
         </div>
       )}
 
@@ -163,6 +168,59 @@ export function TimetablePage() {
         tone="danger"
         loading={deletePeriodRow.isPending}
       />
+    </div>
+  )
+}
+
+/** Everyone else: the caller's own week, read-only. */
+function MyWeek() {
+  const view = useMyTimetable()
+  const data = view.data
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">
+          {data?.scope === 'TEACHER' ? 'My schedule' : 'Class timetable'}
+        </h1>
+        <p className="text-ink-muted text-[14px]">
+          {data ? `${data.label} · ${data.note}` : 'Loading your timetable…'}
+        </p>
+      </header>
+
+      {view.isError ? (
+        <Alert tone="error" title="Could not load your timetable">
+          {view.error instanceof ApiError ? view.error.message : 'Please try again.'}
+        </Alert>
+      ) : null}
+
+      <TimetableStats
+        input={
+          data
+            ? data.scope === 'CLASS'
+              ? { scope: 'CLASS', stats: data.timetable.stats }
+              : { scope: 'TEACHER', stats: data.stats }
+            : null
+        }
+      />
+
+      {view.isPending ? (
+        <Skeleton className="h-130 rounded-xl" />
+      ) : data?.scope === 'CLASS' ? (
+        <div className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card)">
+          <TimetableBoard grid={classGridOf(data.timetable)} canManage={false} />
+        </div>
+      ) : data?.scope === 'TEACHER' ? (
+        <div className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card)">
+          <TimetableBoard grid={teacherGridOf(data.periods, data.days)} canManage={false} emptyLabel="—" />
+        </div>
+      ) : (
+        <EmptyState
+          icon={CalendarDays}
+          title="No timetable yet"
+          description="Your timetable has not been published yet."
+        />
+      )}
     </div>
   )
 }

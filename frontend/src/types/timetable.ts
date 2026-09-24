@@ -88,3 +88,41 @@ export interface TimetablePeriodInput {
   endTime: string
   isBreak: boolean
 }
+
+/** A cell of a teacher's own grid: the subject they teach, and the class they are in. */
+export interface TeacherTimetableSlot {
+  subjectId: string | null
+  subjectName: string | null
+  classId: string | null
+  className: string | null
+  room: string | null
+}
+
+export interface TeacherTimetableDay {
+  day: Weekday
+  /** One entry per period row, in the same order as `periods` — a class grid's shape. */
+  slots: TeacherTimetableSlot[]
+}
+
+/** A teacher's own roll-ups: how much they teach, not what one class contains. */
+export interface TeacherTimetableStats {
+  weeklyLessons: number
+  classes: number
+  subjects: number
+}
+
+/**
+ * `GET /timetables/me` — the caller's own week. A teacher's is their lessons laid out on the same
+ * grid, each cell naming the class they are in; a student's (or a parent's child's) is that class's
+ * grid. Admins use the class routes, which are what the class picker drives.
+ */
+export type MyTimetable =
+  | { scope: 'CLASS'; label: string; note: string; timetable: ClassTimetable }
+  | {
+      scope: 'TEACHER'
+      label: string
+      note: string
+      periods: TimetablePeriodRow[]
+      days: TeacherTimetableDay[]
+      stats: TeacherTimetableStats
+    }
