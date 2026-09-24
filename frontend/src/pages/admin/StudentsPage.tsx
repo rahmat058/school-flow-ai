@@ -12,6 +12,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { ConfirmDialog } from '@/components/ui/Modal'
+import { feeStandingOptions } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useDeleteStudent, useStudents } from '@/features/students/api'
@@ -61,12 +62,6 @@ export function StudentsPage() {
   const classSelectOptions = [
     { value: '', label: 'All classes' },
     ...(classOptions.data ?? []).map((option) => ({ value: option.id, label: option.label })),
-  ]
-  const feeSelectOptions = [
-    { value: '', label: 'All fee status' },
-    { value: 'PAID', label: 'Paid' },
-    { value: 'UNPAID', label: 'Unpaid' },
-    { value: 'OVERDUE', label: 'Overdue' },
   ]
 
   function openCreate() {
@@ -215,7 +210,7 @@ export function StudentsPage() {
 
         <Select
           className="max-w-[200px]"
-          options={feeSelectOptions}
+          options={feeStandingOptions}
           value={feeStanding}
           onValueChange={(value) =>
             setFeeStanding(value === 'PAID' || value === 'UNPAID' || value === 'OVERDUE' ? value : '')

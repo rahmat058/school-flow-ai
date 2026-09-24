@@ -1,14 +1,8 @@
 import { cn } from '@/lib/cn'
 import { formatDate, formatPaise } from '@/lib/format'
+import { INVOICE_STATUS_LABELS } from '@/lib/options'
 import { Avatar } from '@/components/ui/Avatar'
 import type { PendingFee } from '@/types/dashboard'
-
-const STATUS_LABELS: Record<PendingFee['status'], string> = {
-  PENDING: 'Pending',
-  PARTIAL: 'Part paid',
-  OVERDUE: 'Overdue',
-  PAID: 'Paid',
-}
 
 interface PendingFeesCardProps {
   fees: PendingFee[]
@@ -46,7 +40,7 @@ export function PendingFeesCard({ fees }: PendingFeesCardProps) {
                 <p className="text-ink truncate text-[13px] font-medium">{fee.studentName}</p>
                 <p className="text-ink-muted mt-0.5 truncate text-[12px]">
                   {fee.className ? `${fee.className} · ` : ''}
-                  {STATUS_LABELS[fee.status]} · due {formatDate(fee.dueDate, 'dd MMM')}
+                  {INVOICE_STATUS_LABELS[fee.status]} · due {formatDate(fee.dueDate, 'dd MMM')}
                 </p>
               </div>
 

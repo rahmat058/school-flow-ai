@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { homeworkStatusOptions } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useCurrentUser } from '@/store/auth'
@@ -15,12 +16,6 @@ import { useDeleteHomework, useHomework } from '@/features/homework/api'
 import { HomeworkCard } from '@/features/homework/components/HomeworkCard'
 import { HomeworkFormSheet } from '@/features/homework/components/HomeworkFormSheet'
 import type { HomeworkListItem, HomeworkStatus } from '@/types/homework'
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'All status' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'OVERDUE', label: 'Overdue' },
-]
 
 export function HomeworkPage() {
   const { toast } = useToast()
@@ -132,7 +127,7 @@ export function HomeworkPage() {
 
         <Select
           className="max-w-40"
-          options={STATUS_OPTIONS}
+          options={homeworkStatusOptions}
           value={status}
           onValueChange={(value) => setStatus(value as HomeworkStatus | '')}
           aria-label="Filter by status"

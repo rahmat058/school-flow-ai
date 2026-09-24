@@ -8,11 +8,13 @@ export interface ClassRoom {
   classTeacherId: string | null
 }
 
+export type SubjectName = 'English' | 'Mathematics' | 'Science' | 'Social Studies' | 'ICT' | 'Physical Education'
+
 export interface Subject {
   id: string
   schoolId: string
   classId: string
-  name: string
+  name: SubjectName
   code: string
   teacherId: string | null
 }

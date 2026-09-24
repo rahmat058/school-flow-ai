@@ -8,18 +8,12 @@ import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
+import { feeFrequencyOptions } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useCreateFeeHead, useUpdateFeeHead } from '@/features/fees/api'
 import type { FeeFrequency, FeeHeadInput, FeeHeadRow } from '@/types/fees'
-
-const FREQUENCY_OPTIONS = [
-  { value: 'MONTHLY', label: 'Monthly' },
-  { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'ANNUAL', label: 'Annual' },
-  { value: 'ONE_TIME', label: 'One-time' },
-]
 
 interface FeeHeadSheetProps {
   open: boolean
@@ -173,7 +167,7 @@ export function FeeHeadSheet({ open, onClose, classId, academicYear, head }: Fee
             render={({ field }) => (
               <Select
                 label="Frequency"
-                options={FREQUENCY_OPTIONS}
+                options={feeFrequencyOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 error={errors.frequency?.message}

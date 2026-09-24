@@ -1,21 +1,24 @@
-import type { Subject } from '@/types/academic'
+import type { Subject, SubjectName } from '@/types/academic'
+import { SUBJECT_NAMES } from '@/lib/options'
 import { SCHOOL_ID } from '@/data/seed'
 import { classLabel, classes } from '@/data/classes'
 
 interface SubjectTemplate {
-  name: string
+  name: SubjectName
   code: string
 }
 
+const SUBJECT_CODES: Record<SubjectName, string> = {
+  English: 'ENG',
+  Mathematics: 'MAT',
+  Science: 'SCI',
+  'Social Studies': 'SST',
+  ICT: 'ICT',
+  'Physical Education': 'PED',
+}
+
 /** Taught in every class; codes are suffixed with the class (e.g. `MAT-5-A`). */
-const TEMPLATES: SubjectTemplate[] = [
-  { name: 'English', code: 'ENG' },
-  { name: 'Mathematics', code: 'MAT' },
-  { name: 'Science', code: 'SCI' },
-  { name: 'Social Studies', code: 'SST' },
-  { name: 'ICT', code: 'ICT' },
-  { name: 'Physical Education', code: 'PED' },
-]
+const TEMPLATES: SubjectTemplate[] = SUBJECT_NAMES.map((name) => ({ name, code: SUBJECT_CODES[name] }))
 
 export const subjectTemplates = TEMPLATES
 

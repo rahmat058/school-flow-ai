@@ -7,19 +7,12 @@ import { DataTable } from '@/components/ui/DataTable'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { formatPaise } from '@/lib/format'
+import { CONCESSION_CATEGORY_LABELS } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useConcessions, useDeleteConcession } from '@/features/fees/api'
 import { ConcessionSheet } from '@/features/fees/components/ConcessionSheet'
-import type { ConcessionCategory, ConcessionRow } from '@/types/fees'
-
-const CATEGORY_LABELS: Record<ConcessionCategory, string> = {
-  SIBLING: 'Sibling',
-  MERIT: 'Merit',
-  SC_ST: 'SC / ST',
-  STAFF_WARD: 'Staff ward',
-  CUSTOM: 'Custom',
-}
+import type { ConcessionRow } from '@/types/fees'
 
 export function ConcessionsTab() {
   const { toast } = useToast()
@@ -75,7 +68,7 @@ export function ConcessionsTab() {
       sortValue: (row) => row.category,
       cell: (row) => (
         <span className="bg-canvas text-ink-muted rounded-full px-2.5 py-1 text-[11px] font-medium">
-          {CATEGORY_LABELS[row.category]}
+          {CONCESSION_CATEGORY_LABELS[row.category]}
         </span>
       ),
     },
@@ -170,7 +163,7 @@ export function ConcessionsTab() {
         title="Remove this concession?"
         description={
           pendingDelete
-            ? `${pendingDelete.studentName}'s ${CATEGORY_LABELS[pendingDelete.category].toLowerCase()} concession stops applying to new invoices.`
+            ? `${pendingDelete.studentName}'s ${CONCESSION_CATEGORY_LABELS[pendingDelete.category].toLowerCase()} concession stops applying to new invoices.`
             : undefined
         }
         confirmLabel="Remove concession"

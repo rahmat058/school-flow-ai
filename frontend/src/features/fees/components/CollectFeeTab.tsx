@@ -8,6 +8,7 @@ import type { DataTableColumn } from '@/components/ui/DataTable'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { formatPaise } from '@/lib/format'
+import { invoiceStatusOptions } from '@/lib/options'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useCollectStudents, useCollectSummary } from '@/features/fees/api'
@@ -16,14 +17,6 @@ import { feeCollectPath } from '@/routes/paths'
 import type { ClassFeeStatusRow, InvoiceStatus } from '@/types/fees'
 
 const PAGE_SIZE = 10
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'All status' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'PARTIAL', label: 'Partial' },
-  { value: 'OVERDUE', label: 'Overdue' },
-  { value: 'PAID', label: 'Paid' },
-]
 
 export function CollectFeeTab() {
   const navigate = useNavigate()
@@ -151,7 +144,7 @@ export function CollectFeeTab() {
             />
             <Select
               className="max-w-[180px]"
-              options={STATUS_OPTIONS}
+              options={invoiceStatusOptions}
               value={status}
               onValueChange={(value) => {
                 setStatus(value as InvoiceStatus | '')

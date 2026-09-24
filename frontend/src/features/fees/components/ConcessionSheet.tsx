@@ -9,24 +9,12 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { cn } from '@/lib/cn'
+import { concessionCategoryOptions, concessionTypeOptions } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useConcessionFormOptions } from '@/features/fees/hooks/useConcessionFormOptions'
 import { useCreateConcession, useUpdateConcession } from '@/features/fees/api'
 import type { ConcessionCategory, ConcessionInput, ConcessionRow, ConcessionType } from '@/types/fees'
-
-const CATEGORY_OPTIONS = [
-  { value: 'SIBLING', label: 'Sibling' },
-  { value: 'MERIT', label: 'Merit' },
-  { value: 'SC_ST', label: 'SC / ST' },
-  { value: 'STAFF_WARD', label: 'Staff ward' },
-  { value: 'CUSTOM', label: 'Custom' },
-]
-
-const DISCOUNT_TYPES: Array<{ value: ConcessionType; label: string }> = [
-  { value: 'PERCENTAGE', label: 'Percent (%)' },
-  { value: 'FIXED', label: 'Flat ($)' },
-]
 
 interface ConcessionSheetProps {
   open: boolean
@@ -164,7 +152,7 @@ export function ConcessionSheet({ open, onClose, concession }: ConcessionSheetPr
             render={({ field }) => (
               <Select
                 label="Concession type"
-                options={CATEGORY_OPTIONS}
+                options={concessionCategoryOptions}
                 value={field.value}
                 onValueChange={field.onChange}
                 error={errors.category?.message}
@@ -179,7 +167,7 @@ export function ConcessionSheet({ open, onClose, concession }: ConcessionSheetPr
               name="type"
               render={({ field }) => (
                 <div className="bg-canvas inline-flex rounded-lg p-1">
-                  {DISCOUNT_TYPES.map((item) => (
+                  {concessionTypeOptions.map((item) => (
                     <button
                       key={item.value}
                       type="button"

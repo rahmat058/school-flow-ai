@@ -9,16 +9,10 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/hooks/useToast'
 import { formatPaise } from '@/lib/format'
+import { manualPaymentMethodOptions } from '@/lib/options'
 import { ApiError } from '@/services/apiClient'
 import { useRecordPayment } from '@/features/fees/api'
 import type { PaymentMethod, Receipt, StudentDueRow } from '@/types/fees'
-
-const METHOD_OPTIONS = [
-  { value: 'CASH', label: 'Cash' },
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'CHEQUE', label: 'Cheque' },
-  { value: 'DEMAND_DRAFT', label: 'DD' },
-]
 
 interface CollectPaymentSheetProps {
   open: boolean
@@ -124,7 +118,7 @@ export function CollectPaymentSheet({ open, onClose, due, studentName, onRecorde
           render={({ field }) => (
             <Select
               label="Payment mode"
-              options={METHOD_OPTIONS}
+              options={manualPaymentMethodOptions}
               value={field.value}
               onValueChange={field.onChange}
               error={errors.method?.message}

@@ -1,11 +1,9 @@
-import type { BloodGroup, Gender, Student } from '@/types/people'
+import type { Gender, Student } from '@/types/people'
+import { BLOOD_GROUP_VALUES } from '@/lib/options'
 import { SCHOOL_ID, dateOffset, personName } from '@/data/seed'
 import { classIds, classes } from '@/data/classes'
 
 const STUDENT_COUNT = 24
-
-/** Spread across the blood groups deterministically, so the roster is stable between loads. */
-const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 function genderFor(index: number): Gender {
   if (index % 5 === 0) return 'OTHER'
@@ -40,7 +38,7 @@ export const students: Student[] = Array.from({ length: STUDENT_COUNT }, (_, off
     // Age tracks the grade: grade 1 starts around six years old, rising a year per grade.
     dateOfBirth: dateOffset(-(365 * (5 + (classRoom?.grade ?? 1)) + 40 * index)),
     gender: genderFor(index),
-    bloodGroup: BLOOD_GROUPS[(index - 1) % BLOOD_GROUPS.length],
+    bloodGroup: BLOOD_GROUP_VALUES[(index - 1) % BLOOD_GROUP_VALUES.length],
     classId: classIdFor(index),
     rollNo: rollNoFor(index),
     status: 'ACTIVE',
