@@ -89,7 +89,8 @@ phase assigned — see §18.
 | `concession_category` | `SIBLING`, `MERIT`, `SC_ST`, `CUSTOM`, `STAFF_WARD`                                                                    | `concessions.category`          |
 | `concession_status`   | `PENDING`, `APPROVED`, `REJECTED`                                                                                      | `concessions.status`            |
 | `material_type`       | `PDF`, `NOTES`, `WORKSHEET`, `PAPER`                                                                                   | `study_materials.type`          |
-| `exam_type`           | `UNIT`, `MID`, `FINAL`                                                                                                 | `exams.type`                    |
+| `exam_type`           | `UNIT`, `MID`, `FINAL`, `ANNUAL`                                                                                       | `exams.type`                    |
+| `exam_kind`           | `TEST`, `EXAM`                                                                                                         | `exams.kind`                    |
 | `weekday`             | `MON`, `TUE`, `WED`, `THU`, `FRI`, `SAT`, `SUN`                                                                        | `timetables.day`                |
 | `notice_audience`     | `ALL`, `TEACHERS`, `STUDENTS`, `PARENTS`                                                                               | `notices`/`events.audience`     |
 | `notice_priority`     | `HIGH`, `MEDIUM`, `LOW`                                                                                                | `notices.priority`              |
@@ -1300,6 +1301,9 @@ erDiagram
 
 `PRD.md` §4.9. Phase 4.
 
+**Tests and exams share one table**: a `TEST` is one subject sat on one date (the Tests tab), an `EXAM` is a
+multi-subject window (the Exams tab), and only an `EXAM` produces report cards.
+
 ```mermaid
 erDiagram
   classes ||--o{ exams : "sits"
@@ -1317,22 +1321,24 @@ erDiagram
 
 <!-- table: exams · module: ExamsModule · prd: §4.9 · phase: 4 · tenant: yes · soft-delete: no -->
 
-An exam window for one class. `is_published` is the lock: once true, results are read-only and report
-cards exist. Publishing is one transaction (results → report cards → notifications).
+A test or exam window for one class, told apart by `kind`. `is_published` is the lock: once true, results are
+read-only and report cards exist. Publishing is one transaction (results → report cards → notifications).
 
-| Column         | Type          | Null | Key | Notes                |
-| -------------- | ------------- | ---- | --- | -------------------- |
-| `id`           | `uuid`        | no   | PK  |                      |
-| `school_id`    | `uuid`        | no   | FK  | → `schools.id`       |
-| `class_id`     | `uuid`        | no   | FK  | → `classes.id`       |
-| `name`         | `text`        | no   |     |                      |
-| `type`         | `exam_type`   | no   |     | `UNIT`/`MID`/`FINAL` |
-| `start_date`   | `date`        | no   |     |                      |
-| `end_date`     | `date`        | no   |     |                      |
-| `is_published` | `boolean`     | no   |     | default `false`      |
-| `published_at` | `timestamptz` | yes  |     |                      |
-| `created_at`   | `timestamptz` | no   |     |                      |
-| `updated_at`   | `timestamptz` | no   |     |                      |
+| Column         | Type          | Null | Key | Notes                         |
+| -------------- | ------------- | ---- | --- | ----------------------------- |
+| `id`           | `uuid`        | no   | PK  |                               |
+| `school_id`    | `uuid`        | no   | FK  | → `schools.id`                |
+| `class_id`     | `uuid`        | no   | FK  | → `classes.id`                |
+| `name`         | `text`        | no   |     |                               |
+| `kind`         | `exam_kind`   | no   |     | `TEST`/`EXAM`                 |
+| `type`         | `exam_type`   | no   |     | `UNIT`/`MID`/`FINAL`/`ANNUAL` |
+| `start_date`   | `date`        | no   |     |                               |
+| `end_date`     | `date`        | no   |     |                               |
+| `description`  | `text`        | yes  |     |                               |
+| `is_published` | `boolean`     | no   |     | default `false`               |
+| `published_at` | `timestamptz` | yes  |     |                               |
+| `created_at`   | `timestamptz` | no   |     |                               |
+| `updated_at`   | `timestamptz` | no   |     |                               |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict).
 
@@ -1351,6 +1357,7 @@ erDiagram
     uuid id PK
     uuid school_id FK
     uuid class_id FK
+    exam_kind kind
     exam_type type
     boolean is_published
   }
@@ -1363,22 +1370,23 @@ erDiagram
 Which subjects are examined, when, and for how many marks. `max_marks` bounds `results.obtained_marks`
 and feeds percentage computation.
 
-| Column       | Type      | Null | Key | Notes               |
-| ------------ | --------- | ---- | --- | ------------------- |
-| `id`         | `uuid`    | no   | PK  |                     |
-| `school_id`  | `uuid`    | no   | FK  | → `schools.id`      |
-| `exam_id`    | `uuid`    | no   | FK  | → `exams.id`        |
-| `subject_id` | `uuid`    | no   | FK  | → `subjects.id`     |
-| `exam_date`  | `date`    | no   |     |                     |
-| `max_marks`  | `integer` | no   |     |                     |
-| `pass_marks` | `integer` | yes  |     | default from scheme |
+| Column         | Type      | Null | Key | Notes                 |
+| -------------- | --------- | ---- | --- | --------------------- |
+| `id`           | `uuid`    | no   | PK  |                       |
+| `school_id`    | `uuid`    | no   | FK  | → `schools.id`        |
+| `exam_id`      | `uuid`    | no   | FK  | → `exams.id`          |
+| `subject_id`   | `uuid`    | no   | FK  | → `subjects.id`       |
+| `exam_date`    | `date`    | no   |     |                       |
+| `max_marks`    | `integer` | no   |     |                       |
+| `pass_marks`   | `integer` | yes  |     | default from scheme   |
+| `duration_min` | `integer` | no   |     | minutes, default `60` |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `exam_id` → `exams.id` (cascade),
 `subject_id` → `subjects.id` (restrict) · `unique (exam_id, subject_id)`.
 
 **Indexes** — `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`.
 
-**Constraints** — `check (pass_marks <= max_marks)` and `check (max_marks > 0)`.
+**Constraints** — `check (pass_marks <= max_marks)`, `check (max_marks > 0)` and `check (duration_min > 0)`.
 
 ```mermaid
 erDiagram
@@ -1407,6 +1415,7 @@ One student's mark in one subject of one exam. Bulk marks entry upserts on the u
 | `subject_id`     | `uuid`        | no   | FK  | → `subjects.id`             |
 | `obtained_marks` | `numeric`     | no   |     | ≤ `exam_subjects.max_marks` |
 | `is_absent`      | `boolean`     | no   |     | default `false`             |
+| `remarks`        | `text`        | yes  |     | teacher's note              |
 | `entered_by_id`  | `uuid`        | yes  | FK  | → `users.id`                |
 | `created_at`     | `timestamptz` | no   |     |                             |
 | `updated_at`     | `timestamptz` | no   |     |                             |
@@ -1922,7 +1931,7 @@ has one.
 | `fee_payments`              | `unique (provider, provider_txn_id) where provider_txn_id is not null`, `(invoice_id)`, `(provider_order_id)`, `(school_id, paid_at)`                         |
 | `concessions`               | `(student_id, status)`, `(school_id, status)`, `(fee_head_id)`                                                                                                |
 | `receipt_sequences`         | `unique (school_id, fiscal_year)`                                                                                                                             |
-| `exams`                     | `(school_id, class_id, type, start_date)`, `(class_id, start_date)`                                                                                           |
+| `exams`                     | `(school_id, kind, class_id, start_date)`, `(class_id, start_date)`                                                                                           |
 | `exam_subjects`             | `unique (exam_id, subject_id)`, `(school_id)`, `(subject_id)`                                                                                                 |
 | `results`                   | `unique (exam_id, student_id, subject_id)`, `(school_id)`, `(student_id, exam_id)`                                                                            |
 | `report_cards`              | `unique (exam_id, student_id)`, `(school_id)`, `(student_id, exam_id)`                                                                                        |
@@ -2347,6 +2356,7 @@ erDiagram
     uuid id PK
     uuid school_id FK
     uuid class_id FK
+    exam_kind kind
     exam_type type
     boolean is_published
   }

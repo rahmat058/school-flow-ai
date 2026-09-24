@@ -1,5 +1,6 @@
 import type { SubjectName } from '@/types/academic'
 import type { NoticePriority } from '@/types/communication'
+import type { ExamKind, ExamType } from '@/types/exams'
 import type { HomeworkStatus } from '@/types/homework'
 import type { BloodGroup, FeeStanding, Gender } from '@/types/people'
 import type { ConcessionCategory, ConcessionType, FeeFrequency, InvoiceStatus, PaymentMethod } from '@/types/fees'
@@ -75,6 +76,10 @@ export const HOMEWORK_STATUS_VALUES = ['ACTIVE', 'OVERDUE'] as const satisfies r
 
 export const NOTICE_PRIORITY_VALUES = ['HIGH', 'MEDIUM', 'LOW'] as const satisfies readonly NoticePriority[]
 
+export const EXAM_TYPE_VALUES = ['UNIT', 'MID', 'FINAL', 'ANNUAL'] as const satisfies readonly ExamType[]
+
+export const EXAM_KIND_VALUES = ['TEST', 'EXAM'] as const satisfies readonly ExamKind[]
+
 export const CONCESSION_CATEGORY_VALUES = [
   'SIBLING',
   'MERIT',
@@ -132,6 +137,18 @@ const NOTICE_PRIORITY_LABELS: Record<NoticePriority, string> = {
   LOW: 'Low',
 }
 
+export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
+  UNIT: 'Unit',
+  MID: 'Mid-term',
+  FINAL: 'Final',
+  ANNUAL: 'Annual',
+}
+
+const EXAM_KIND_LABELS: Record<ExamKind, string> = {
+  TEST: 'Test',
+  EXAM: 'Scheduled exam',
+}
+
 export const CONCESSION_CATEGORY_LABELS: Record<ConcessionCategory, string> = {
   SIBLING: 'Sibling',
   MERIT: 'Merit',
@@ -179,6 +196,16 @@ export const concessionTypeOptions: FieldOption[] = CONCESSION_TYPE_VALUES.map((
 export const noticePriorityOptions: FieldOption[] = NOTICE_PRIORITY_VALUES.map((value) => ({
   value,
   label: NOTICE_PRIORITY_LABELS[value],
+}))
+
+export const examTypeOptions: FieldOption[] = EXAM_TYPE_VALUES.map((value) => ({
+  value,
+  label: EXAM_TYPE_LABELS[value],
+}))
+
+export const examKindOptions: FieldOption[] = EXAM_KIND_VALUES.map((value) => ({
+  value,
+  label: EXAM_KIND_LABELS[value],
 }))
 
 export const invoiceStatusOptions: FieldOption[] = [

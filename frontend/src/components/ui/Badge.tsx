@@ -1,10 +1,22 @@
 import { cn } from '@/lib/cn'
 import { humanizeEnum } from '@/lib/format'
 import type { NoticePriority } from '@/types/communication'
+import type { ExamStatus } from '@/types/exams'
 import type { RecordStatus, FeeStanding } from '@/types/people'
 import type { InvoiceStatus, PaymentStatus } from '@/types/fees'
 
-type BadgeStatus = InvoiceStatus | PaymentStatus | RecordStatus | FeeStanding | NoticePriority | 'CLEAR'
+type BadgeStatus =
+  | InvoiceStatus
+  | PaymentStatus
+  | RecordStatus
+  | FeeStanding
+  | NoticePriority
+  | ExamStatus
+  | 'PASS'
+  | 'FAIL'
+  | 'PUBLISHED'
+  | 'DRAFT'
+  | 'CLEAR'
 
 const statusStyles: Record<BadgeStatus, string> = {
   PAID: 'bg-success-soft text-success',
@@ -20,6 +32,12 @@ const statusStyles: Record<BadgeStatus, string> = {
   HIGH: 'bg-error-soft text-error',
   MEDIUM: 'bg-warning-soft text-warning',
   LOW: 'bg-canvas text-ink-muted',
+  UPCOMING: 'bg-warning-soft text-warning',
+  COMPLETED: 'bg-success-soft text-success',
+  PASS: 'bg-success-soft text-success',
+  FAIL: 'bg-error-soft text-error',
+  PUBLISHED: 'bg-success-soft text-success',
+  DRAFT: 'bg-canvas text-ink-muted',
 }
 
 interface StatusBadgeProps {

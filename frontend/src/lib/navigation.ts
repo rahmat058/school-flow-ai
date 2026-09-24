@@ -29,7 +29,7 @@ export const navItems: NavItem[] = [
   { label: 'Attendance', href: '/attendance', icon: CalendarCheck, roles: ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] },
   { label: 'Fees', href: '/fees', icon: Wallet, roles: ['ADMIN', 'PARENT'] },
   { label: 'Homework', href: '/homework', icon: ClipboardList, roles: EVERYONE },
-  { label: 'Exams', href: '/exams', icon: GraduationCap, roles: EVERYONE },
+  { label: 'Tests & exams', href: '/exams', icon: GraduationCap, roles: EVERYONE },
   { label: 'Timetable', href: '/timetable', icon: CalendarDays, roles: EVERYONE },
   { label: 'Materials', href: '/materials', icon: BookOpen, roles: EVERYONE },
   { label: 'Notices', href: '/notices', icon: Megaphone, roles: EVERYONE },

@@ -86,9 +86,9 @@ All tables live in the Supabase project (`supabase/` migrations are the source o
 - **Concession** — studentId, type, percentage/amount, status, approvedById
 - **Homework** — classId, subjectId, teacherId, title, description, dueDate, attachments (string[])
 - **HomeworkSubmission** — homeworkId, studentId, files (string[]), submittedAt, isLate, grade, remarks
-- **Exam** — classId, name, type (`UNIT | MID | FINAL`), startDate, endDate
-- **ExamSubject** — examId, subjectId, date, maxMarks
-- **Result** — examId, studentId, subjectId, obtainedMarks
+- **Exam** — classId, name, kind (`TEST | EXAM`), type (`UNIT | MID | FINAL | ANNUAL`), startDate, endDate, description
+- **ExamSubject** — examId, subjectId, date, maxMarks, durationMin
+- **Result** — examId, studentId, subjectId, obtainedMarks, isAbsent, remarks
 - **ReportCard** — examId, studentId, totalMarks, percentage, grade, rank, aiComment
 - **Timetable** — classId, day (`MON`–`SUN`), periods → **Period** child table (startTime, endTime, subjectId, teacherId, isBreak)
 - **StudyMaterial** — classId, subjectId, title, type (`PDF | NOTES | WORKSHEET | PAPER`), fileUrl
@@ -348,13 +348,14 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/exams` — schedule with subjects and max marks `(admin, teacher)`
-- [ ] `GET /api/v1/exams` — filter by class/type/status `(admin, teacher, student, parent of child)`
+- [ ] `POST /api/v1/exams` — schedule one class's assessment: `kind: TEST` takes a single `subjectId` with its date, total marks and duration; `kind: EXAM` takes a `subjects[]` set, each paper carrying its own date, marks and duration `(admin, teacher)`
+- [ ] `GET /api/v1/exams` — filter by `kind` (TEST/EXAM), `classId`, `subjectId`, type and status `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/exams/:id` — exam with its subjects `(admin, teacher, student, parent of child)`
-- [ ] `PATCH /api/v1/exams/:id` `(admin)`
-- [ ] `DELETE /api/v1/exams/:id` `(admin)`
+- [ ] `GET /api/v1/exams/:id/results` — the marks sheet: every subject with its entry count, the class roster and every entry so far, so the grid loads all subjects at once `(admin, teacher)`
+- [ ] `PATCH /api/v1/exams/:id` — edit; the body replaces the subject set whole, and a published exam is refused with 409 `EXAM_PUBLISHED` `(admin, teacher)`
+- [ ] `DELETE /api/v1/exams/:id` — removes the exam with its papers, marks and report cards `(admin)`
 - [ ] `GET /api/v1/exams/schedule?classId=` — dated schedule `(admin, teacher, student, parent of child)`
-- [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry per class/subject (`upsert` per student/subject) `(admin, teacher)`
+- [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry: the sheet's changed cells, upserted on `(exam, student, subject)`; a mark above its paper's total is a 400 and a published exam a 409 `(admin, teacher)`
 - [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(admin, teacher)`
 - [ ] `POST /api/v1/exams/:id/unpublish` — admin-only rollback `(admin)`
 - [ ] `GET /api/v1/results/student/:studentId?examId=` `(admin, teacher, student own, parent of child)`
@@ -362,6 +363,13 @@ Concessions
 
 **Behavior**
 
+- A **test is one subject, an exam is many** — both live in `exams`, told apart by `kind`, so the Results tab enters
+  marks for either through one code path. Only an `EXAM` produces report cards
+- A list row's `status` is **derived**, never stored: `COMPLETED` once `endDate` has passed, `UPCOMING` otherwise
+- Each paper carries its own `examDate`, `maxMarks` and `durationMin`; a mark above that paper's total is refused,
+  so the ceiling is enforced per subject rather than per exam
+- `POST /exams/:id/marks` upserts the cells the grid sends, and `remarks` is the teacher's free-text note beside a
+  mark — it does not affect the grade
 - Grade computation from school grading scheme (JSONB in School.settings)
 - Results locked after publish; unpublish is admin-only
 

@@ -36,6 +36,16 @@ import type {
 } from '@/types/fees'
 import type { ChatMessageListItem, ConversationListItem, Notice, NoticePriority } from '@/types/communication'
 import type { PermissionGroupRow, StaffPermissionRow, UserPermissions } from '@/types/permission'
+import type {
+  Exam,
+  ExamKind,
+  ExamListItem,
+  ExamStatus,
+  ExamSubjectRow,
+  ExamType,
+  ResultSheet,
+  TestListItem,
+} from '@/types/exams'
 import type { Homework, HomeworkListItem } from '@/types/homework'
 import type { ClassTimetable, Period, Timetable, TimetableDay, TimetablePeriodRow, Weekday } from '@/types/timetable'
 import type {
@@ -57,7 +67,8 @@ import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, sch
 import { activeSchool } from '@/data/school'
 import { classLabel, classes } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
-import { examResults, examSubjects, exams, gradeForPercentage, maxMarks } from '@/data/exams'
+import { examResults, examSubjects, exams, maxMarks, reportCards } from '@/data/exams'
+import { gradeForPercentage } from '@/lib/grades'
 import { findSubject, subjects } from '@/data/subjects'
 import {
   concessions,
@@ -1294,6 +1305,175 @@ function staffPermissionRows(): StaffPermissionRow[] {
       ]
     })
     .sort((left, right) => right.employeeNo.localeCompare(left.employeeNo))
+}
+
+/** Derived from the dates, never stored — `COMPLETED` once the window has closed. */
+function examStatusOf(exam: Exam): ExamStatus {
+  return exam.endDate < dateOffset(0) ? 'COMPLETED' : 'UPCOMING'
+}
+
+/** The papers of one exam, resolved for the subject schedule and the edit form. */
+function examSubjectRowsOf(examId: string): ExamSubjectRow[] {
+  return examSubjects
+    .filter((paper) => paper.examId === examId)
+    .sort((left, right) => left.examDate.localeCompare(right.examDate))
+    .flatMap((paper) => {
+      const subject = findSubject(paper.subjectId)
+      if (!subject) return []
+
+      return [
+        {
+          id: paper.id,
+          subjectId: paper.subjectId,
+          subjectName: subject.name,
+          subjectCode: subject.code.split('-')[0],
+          examDate: paper.examDate,
+          maxMarks: paper.maxMarks,
+          durationMin: paper.durationMin,
+        },
+      ]
+    })
+}
+
+/** The Tests tab's rows — a single-subject assessment, newest date first. */
+function testListItems(): TestListItem[] {
+  return exams
+    .filter((exam) => exam.kind === 'TEST')
+    .flatMap((exam) => {
+      const paper = examSubjects.find((item) => item.examId === exam.id)
+      const classRoom = classes.find((item) => item.id === exam.classId)
+      const subject = paper ? findSubject(paper.subjectId) : undefined
+      if (!paper || !subject) return []
+
+      return [
+        {
+          id: exam.id,
+          name: exam.name,
+          classId: exam.classId,
+          className: classRoom ? classLabel(classRoom) : 'Unassigned',
+          subjectId: paper.subjectId,
+          subjectName: subject.name,
+          subjectCode: subject.code.split('-')[0],
+          examDate: paper.examDate,
+          maxMarks: paper.maxMarks,
+          durationMin: paper.durationMin,
+          status: examStatusOf(exam),
+          isPublished: exam.isPublished,
+        },
+      ]
+    })
+    .sort((left, right) => right.examDate.localeCompare(left.examDate))
+}
+
+/** The Exams tab's rows — a multi-subject window, carried with its subject schedule. */
+function examListItems(): ExamListItem[] {
+  return exams
+    .filter((exam) => exam.kind === 'EXAM')
+    .map((exam) => {
+      const classRoom = classes.find((item) => item.id === exam.classId)
+
+      return {
+        id: exam.id,
+        name: exam.name,
+        type: exam.type,
+        classId: exam.classId,
+        className: classRoom ? classLabel(classRoom) : 'Unassigned',
+        startDate: exam.startDate,
+        endDate: exam.endDate,
+        status: examStatusOf(exam),
+        isPublished: exam.isPublished,
+        subjects: examSubjectRowsOf(exam.id),
+      }
+    })
+    .sort((left, right) => right.startDate.localeCompare(left.startDate))
+}
+
+/** The marks sheet: every subject with its entry count, the class roster, and the marks so far. */
+function resultSheet(examId: string): ResultSheet | undefined {
+  const exam = exams.find((item) => item.id === examId)
+  if (!exam) return undefined
+
+  const classRoom = classes.find((item) => item.id === exam.classId)
+  const papers = examSubjectRowsOf(exam.id)
+
+  return {
+    examId: exam.id,
+    examName: exam.name,
+    type: exam.type,
+    kind: exam.kind,
+    classId: exam.classId,
+    className: classRoom ? classLabel(classRoom) : 'Unassigned',
+    isPublished: exam.isPublished,
+    subjects: papers.map((paper) => ({
+      subjectId: paper.subjectId,
+      subjectName: paper.subjectName,
+      subjectCode: paper.subjectCode,
+      examDate: paper.examDate,
+      maxMarks: paper.maxMarks,
+      enteredCount: examResults.filter((result) => result.examId === exam.id && result.subjectId === paper.subjectId)
+        .length,
+    })),
+    students: students
+      .filter((student) => student.classId === exam.classId && student.status === 'ACTIVE')
+      .sort((left, right) => left.rollNo - right.rollNo)
+      .map((student) => ({
+        studentId: student.id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        admissionNo: student.admissionNo,
+        rollNo: student.rollNo,
+      })),
+    entries: examResults
+      .filter((result) => result.examId === exam.id)
+      .map((result) => ({
+        studentId: result.studentId,
+        subjectId: result.subjectId,
+        marks: result.isAbsent ? null : result.obtainedMarks,
+        remarks: result.remarks,
+        isAbsent: result.isAbsent,
+      })),
+  }
+}
+
+/** Written at publish time (`PRD.md` §4.9): totals, percentage, grade and the class rank. */
+function rebuildReportCards(examId: string): void {
+  for (let index = reportCards.length - 1; index >= 0; index -= 1) {
+    if (reportCards[index].examId === examId) reportCards.splice(index, 1)
+  }
+
+  const exam = exams.find((item) => item.id === examId)
+  if (!exam || exam.kind !== 'EXAM' || !exam.isPublished) return
+
+  const totalMarks = examSubjects
+    .filter((paper) => paper.examId === exam.id)
+    .reduce((total, paper) => total + paper.maxMarks, 0)
+  if (totalMarks === 0) return
+
+  const scored = students
+    .filter((student) => student.classId === exam.classId)
+    .map((student) => {
+      const obtainedMarks = examResults
+        .filter((result) => result.examId === exam.id && result.studentId === student.id)
+        .reduce((total, result) => total + result.obtainedMarks, 0)
+
+      return { student, obtainedMarks, percentage: Number(((obtainedMarks / totalMarks) * 100).toFixed(2)) }
+    })
+  const ranked = [...scored].sort((left, right) => right.percentage - left.percentage)
+
+  for (const entry of scored) {
+    reportCards.push({
+      id: `rc_${exam.id}_${entry.student.id}`,
+      schoolId: SCHOOL_ID,
+      examId: exam.id,
+      studentId: entry.student.id,
+      totalMarks,
+      obtainedMarks: entry.obtainedMarks,
+      percentage: entry.percentage,
+      grade: gradeForPercentage(entry.percentage),
+      rank: ranked.findIndex((item) => item.student.id === entry.student.id) + 1,
+      aiComment: null,
+      publishedAt: exam.publishedAt,
+    })
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2622,6 +2802,353 @@ const routes: Route[] = [
 
       const summary = userPermissionSummary(user.id)
       return summary ? ok(summary) : fail(404, 'USER_NOT_FOUND', 'User not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/exams',
+    handler: ({ params }) => {
+      const kind = params.kind ? String(params.kind) : 'EXAM'
+      const classId = params.classId ? String(params.classId) : ''
+      const subjectId = params.subjectId ? String(params.subjectId) : ''
+
+      if (kind === 'TEST') {
+        return ok<TestListItem[]>(
+          testListItems()
+            .filter((test) => (classId ? test.classId === classId : true))
+            .filter((test) => (subjectId ? test.subjectId === subjectId : true)),
+        )
+      }
+
+      return ok<ExamListItem[]>(examListItems().filter((exam) => (classId ? exam.classId === classId : true)))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/exams',
+    handler: ({ body }) => {
+      const kind = (body.kind ? String(body.kind) : 'EXAM') as ExamKind
+      const classId = String(body.classId ?? '')
+      const name = String(body.name ?? '').trim()
+
+      if (!classes.some((item) => item.id === classId)) {
+        return fail(400, 'EXAM_INVALID', 'Choose a class', ['classId'])
+      }
+      if (!name) return fail(400, 'EXAM_INVALID', 'A title is required', ['name'])
+
+      if (kind === 'TEST') {
+        const subjectId = String(body.subjectId ?? '')
+        if (!subjects.some((item) => item.id === subjectId && item.classId === classId)) {
+          return fail(400, 'EXAM_INVALID', 'Choose a subject taught in that class', ['subjectId'])
+        }
+
+        const examDate = String(body.examDate ?? '')
+        if (!examDate) return fail(400, 'EXAM_INVALID', 'A date is required', ['examDate'])
+
+        const maxMarks = Number(body.maxMarks ?? 0)
+        const durationMin = Number(body.durationMin ?? 0)
+        if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
+          return fail(400, 'EXAM_INVALID', 'Total marks must be greater than zero', ['maxMarks'])
+        }
+        if (!Number.isFinite(durationMin) || durationMin <= 0) {
+          return fail(400, 'EXAM_INVALID', 'A duration is required', ['durationMin'])
+        }
+
+        const test: Exam = {
+          id: `test_${exams.length + 1}`,
+          schoolId: SCHOOL_ID,
+          classId,
+          name,
+          kind: 'TEST',
+          type: 'UNIT',
+          startDate: examDate,
+          endDate: examDate,
+          description: body.description ? String(body.description) : null,
+          isPublished: false,
+          publishedAt: null,
+        }
+
+        exams.push(test)
+        examSubjects.push({
+          id: `exs_${test.id}`,
+          schoolId: SCHOOL_ID,
+          examId: test.id,
+          subjectId,
+          examDate,
+          maxMarks,
+          passMarks: Math.round(maxMarks * 0.4),
+          durationMin,
+        })
+
+        return created(testListItems().find((row) => row.id === test.id))
+      }
+
+      const startDate = String(body.startDate ?? '')
+      const endDate = String(body.endDate ?? '')
+      const rows = Array.isArray(body.subjects) ? (body.subjects as Array<Record<string, unknown>>) : []
+
+      if (!startDate || !endDate) {
+        return fail(400, 'EXAM_INVALID', 'Start and end dates are required', ['startDate', 'endDate'])
+      }
+      if (endDate < startDate) {
+        return fail(400, 'EXAM_INVALID', 'The end date must not precede the start', ['endDate'])
+      }
+      if (rows.length === 0) return fail(400, 'EXAM_INVALID', 'Select at least one subject', ['subjects'])
+
+      // Every paper is validated before any of them is written.
+      for (const row of rows) {
+        if (!subjects.some((item) => item.id === String(row.subjectId) && item.classId === classId)) {
+          return fail(400, 'EXAM_INVALID', 'A chosen subject is not taught in that class', ['subjects'])
+        }
+        if (!String(row.examDate ?? '')) return fail(400, 'EXAM_INVALID', 'Every subject needs a date', ['subjects'])
+      }
+
+      const exam: Exam = {
+        id: `exam_new_${exams.length + 1}`,
+        schoolId: SCHOOL_ID,
+        classId,
+        name,
+        kind: 'EXAM',
+        type: (body.type ? String(body.type) : 'MID') as ExamType,
+        startDate,
+        endDate,
+        description: body.description ? String(body.description) : null,
+        isPublished: false,
+        publishedAt: null,
+      }
+
+      exams.push(exam)
+      for (const row of rows) {
+        const maxMarks = Number(row.maxMarks ?? 0)
+
+        examSubjects.push({
+          id: `exs_${exam.id}_${String(row.subjectId)}`,
+          schoolId: SCHOOL_ID,
+          examId: exam.id,
+          subjectId: String(row.subjectId),
+          examDate: String(row.examDate),
+          maxMarks,
+          passMarks: Math.round(maxMarks * 0.4),
+          durationMin: Number(row.durationMin ?? 0),
+        })
+      }
+
+      return created(examListItems().find((item) => item.id === exam.id))
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/exams/:id',
+    handler: ({ params, body }) => {
+      const exam = exams.find((item) => item.id === params.id)
+      if (!exam) return fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+      if (exam.isPublished) return fail(409, 'EXAM_PUBLISHED', 'Unpublish the exam before editing it')
+
+      if (body.name !== undefined) {
+        const name = String(body.name).trim()
+        if (!name) return fail(400, 'EXAM_INVALID', 'A title is required', ['name'])
+        exam.name = name
+      }
+      if (body.description !== undefined) {
+        exam.description = body.description ? String(body.description) : null
+      }
+
+      if (exam.kind === 'TEST') {
+        const paper = examSubjects.find((item) => item.examId === exam.id)
+        if (!paper) return fail(404, 'EXAM_NOT_FOUND', 'Test paper not found')
+
+        if (body.subjectId !== undefined) {
+          const subjectId = String(body.subjectId)
+          if (!subjects.some((item) => item.id === subjectId && item.classId === exam.classId)) {
+            return fail(400, 'EXAM_INVALID', 'Choose a subject taught in that class', ['subjectId'])
+          }
+          paper.subjectId = subjectId
+        }
+        if (body.examDate !== undefined) {
+          const examDate = String(body.examDate)
+          if (!examDate) return fail(400, 'EXAM_INVALID', 'A date is required', ['examDate'])
+          paper.examDate = examDate
+          exam.startDate = examDate
+          exam.endDate = examDate
+        }
+        if (body.maxMarks !== undefined) {
+          const maxMarks = Number(body.maxMarks)
+          if (!Number.isFinite(maxMarks) || maxMarks <= 0) {
+            return fail(400, 'EXAM_INVALID', 'Total marks must be greater than zero', ['maxMarks'])
+          }
+          paper.maxMarks = maxMarks
+        }
+        if (body.durationMin !== undefined) paper.durationMin = Number(body.durationMin)
+
+        return ok(testListItems().find((row) => row.id === exam.id))
+      }
+
+      if (body.type !== undefined) exam.type = String(body.type) as ExamType
+      if (body.startDate !== undefined) exam.startDate = String(body.startDate)
+      if (body.endDate !== undefined) exam.endDate = String(body.endDate)
+      if (exam.endDate < exam.startDate) {
+        return fail(400, 'EXAM_INVALID', 'The end date must not precede the start', ['endDate'])
+      }
+
+      if (Array.isArray(body.subjects)) {
+        const rows = body.subjects as Array<Record<string, unknown>>
+        if (rows.length === 0) return fail(400, 'EXAM_INVALID', 'Select at least one subject', ['subjects'])
+
+        for (const row of rows) {
+          if (!subjects.some((item) => item.id === String(row.subjectId) && item.classId === exam.classId)) {
+            return fail(400, 'EXAM_INVALID', 'A chosen subject is not taught in that class', ['subjects'])
+          }
+        }
+
+        // The form sends the set it ended with, so the papers are replaced rather than merged.
+        for (let index = examSubjects.length - 1; index >= 0; index -= 1) {
+          if (examSubjects[index].examId === exam.id) examSubjects.splice(index, 1)
+        }
+        for (const row of rows) {
+          const maxMarks = Number(row.maxMarks ?? 0)
+
+          examSubjects.push({
+            id: `exs_${exam.id}_${String(row.subjectId)}`,
+            schoolId: SCHOOL_ID,
+            examId: exam.id,
+            subjectId: String(row.subjectId),
+            examDate: String(row.examDate),
+            maxMarks,
+            passMarks: Math.round(maxMarks * 0.4),
+            durationMin: Number(row.durationMin ?? 0),
+          })
+        }
+
+        // A dropped paper takes its marks with it, the way the cascade would.
+        const kept = new Set(rows.map((row) => String(row.subjectId)))
+        for (let index = examResults.length - 1; index >= 0; index -= 1) {
+          if (examResults[index].examId === exam.id && !kept.has(examResults[index].subjectId)) {
+            examResults.splice(index, 1)
+          }
+        }
+      }
+
+      return ok(examListItems().find((item) => item.id === exam.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/exams/:id',
+    handler: ({ params }) => {
+      const index = exams.findIndex((item) => item.id === params.id)
+      if (index < 0) return fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+
+      const examId = exams[index].id
+      exams.splice(index, 1)
+      // The papers, marks and report cards go with it.
+      for (let at = examSubjects.length - 1; at >= 0; at -= 1) {
+        if (examSubjects[at].examId === examId) examSubjects.splice(at, 1)
+      }
+      for (let at = examResults.length - 1; at >= 0; at -= 1) {
+        if (examResults[at].examId === examId) examResults.splice(at, 1)
+      }
+      for (let at = reportCards.length - 1; at >= 0; at -= 1) {
+        if (reportCards[at].examId === examId) reportCards.splice(at, 1)
+      }
+
+      return ok({ deleted: true })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/exams/:id/results',
+    handler: ({ params }) => {
+      const sheet = resultSheet(String(params.id))
+      return sheet ? ok(sheet) : fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+    },
+  },
+  {
+    method: 'POST',
+    path: '/exams/:id/marks',
+    handler: ({ params, body, userId }) => {
+      const exam = exams.find((item) => item.id === params.id)
+      if (!exam) return fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+      if (exam.isPublished) return fail(409, 'EXAM_PUBLISHED', 'Unpublish the exam before editing marks')
+
+      const entries = Array.isArray(body.entries) ? (body.entries as Array<Record<string, unknown>>) : []
+
+      // Validated in full first, so a bad cell cannot leave the sheet half-written.
+      for (const entry of entries) {
+        const paper = examSubjects.find((item) => item.examId === exam.id && item.subjectId === String(entry.subjectId))
+        if (!paper) return fail(400, 'EXAM_INVALID', 'That subject is not part of this exam', ['subjectId'])
+
+        const raw = entry.marks === null || entry.marks === undefined || entry.marks === '' ? null : Number(entry.marks)
+        if (raw !== null && (!Number.isFinite(raw) || raw < 0)) {
+          return fail(400, 'EXAM_INVALID', 'Marks must be zero or more', ['marks'])
+        }
+        if (raw !== null && raw > paper.maxMarks) {
+          return fail(400, 'EXAM_INVALID', `Marks cannot exceed ${paper.maxMarks} for this paper`, ['marks'])
+        }
+      }
+
+      for (const entry of entries) {
+        const studentId = String(entry.studentId ?? '')
+        const subjectId = String(entry.subjectId ?? '')
+        const raw = entry.marks === null || entry.marks === undefined || entry.marks === '' ? null : Number(entry.marks)
+        const remarks = entry.remarks ? String(entry.remarks) : null
+        const existing = examResults.find(
+          (item) => item.examId === exam.id && item.studentId === studentId && item.subjectId === subjectId,
+        )
+
+        if (existing) {
+          existing.obtainedMarks = raw ?? 0
+          existing.remarks = remarks
+          existing.isAbsent = raw === null
+          existing.enteredById = userId
+        } else {
+          examResults.push({
+            id: `res_${exam.id}_${studentId}_${subjectId}`,
+            schoolId: SCHOOL_ID,
+            examId: exam.id,
+            studentId,
+            subjectId,
+            obtainedMarks: raw ?? 0,
+            isAbsent: raw === null,
+            remarks,
+            enteredById: userId,
+          })
+        }
+      }
+
+      const sheet = resultSheet(exam.id)
+      return sheet ? ok(sheet) : fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+    },
+  },
+  {
+    method: 'POST',
+    path: '/exams/:id/publish',
+    handler: ({ params }) => {
+      const exam = exams.find((item) => item.id === params.id)
+      if (!exam) return fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+
+      // One transaction in the contract: flag → report cards → notifications.
+      exam.isPublished = true
+      exam.publishedAt = new Date().toISOString()
+      rebuildReportCards(exam.id)
+
+      const sheet = resultSheet(exam.id)
+      return sheet ? ok(sheet) : fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+    },
+  },
+  {
+    method: 'POST',
+    path: '/exams/:id/unpublish',
+    handler: ({ params }) => {
+      const exam = exams.find((item) => item.id === params.id)
+      if (!exam) return fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
+
+      exam.isPublished = false
+      exam.publishedAt = null
+      // Withdrawing the report cards is the rollback (admin-only in the contract).
+      rebuildReportCards(exam.id)
+
+      const sheet = resultSheet(exam.id)
+      return sheet ? ok(sheet) : fail(404, 'EXAM_NOT_FOUND', 'Exam not found')
     },
   },
 ]

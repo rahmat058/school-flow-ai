@@ -6,6 +6,7 @@ import { RoleGuard } from '@/routes/guards/RoleGuard'
 import {
   ChatPage,
   DashboardPage,
+  ExamsPage,
   FeeCollectPage,
   FeesPage,
   HomeworkPage,
@@ -28,11 +29,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.attendance,
     title: 'Attendance',
     description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-  {
-    path: paths.exams,
-    title: 'Exams & results',
-    description: 'Exam scheduling, marks entry, publishing and report cards arrive in Phase 4.',
   },
   {
     path: paths.materials,
@@ -94,6 +90,7 @@ export const privateRoutes: RouteObject[] = [
           { path: childPath(paths.timetable), element: <TimetablePage /> },
           { path: childPath(paths.notices), element: <NoticesPage /> },
           { path: childPath(paths.chat), element: <ChatPage /> },
+          { path: childPath(paths.exams), element: <ExamsPage /> },
           ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },
         ],

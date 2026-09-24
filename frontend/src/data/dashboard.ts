@@ -12,7 +12,7 @@ import { dateOffset, dateTimeOffset } from '@/data/seed'
 import { students } from '@/data/students'
 import { attendance, registerDays } from '@/data/attendance'
 import { classLabel, classes } from '@/data/classes'
-import { examResults, examSubjects, exams, maxMarks } from '@/data/exams'
+import { examResults, examSubjects, exams } from '@/data/exams'
 import { homework, homeworkSubmissions } from '@/data/homework'
 import { events, notices } from '@/data/notices'
 import { feeInvoices, feePayments } from '@/data/fees'
@@ -117,13 +117,19 @@ const classPerformance: ChartPoint[] = classes.map((classRoom) => {
   const classStudentIds = new Set(
     students.filter((student) => student.classId === classRoom.id).map((student) => student.id),
   )
-  const marks = examResults.filter((result) => classStudentIds.has(result.studentId))
-  const average =
-    marks.length === 0 ? 0 : marks.reduce((total, result) => total + result.obtainedMarks, 0) / marks.length
+  const marks = examResults
+    .filter((result) => classStudentIds.has(result.studentId))
+    // Each paper is scored against its own total, so a 20-mark test and a 100-mark paper compare.
+    .map((result) => {
+      const paper = examSubjects.find((item) => item.examId === result.examId && item.subjectId === result.subjectId)
+      return paper && paper.maxMarks > 0 ? (result.obtainedMarks / paper.maxMarks) * 100 : null
+    })
+    .filter((value): value is number => value !== null)
+  const average = marks.length === 0 ? 0 : marks.reduce((total, value) => total + value, 0) / marks.length
 
   return {
     label: classLabel(classRoom),
-    value: Number(((average / maxMarks) * 100).toFixed(1)),
+    value: Number(average.toFixed(1)),
   }
 })
 
