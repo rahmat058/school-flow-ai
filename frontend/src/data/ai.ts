@@ -28,7 +28,7 @@ export const aiConversations: AiConversation[] = [
     schoolId: SCHOOL_ID,
     userId: 'usr_tch_1',
     feature: 'QUIZ',
-    title: 'Fractions quiz — class 5A',
+    title: 'Fractions quiz — class 5-A',
     messageCount: 4,
     createdAt: dateTimeOffset(-1, 9, 15),
     updatedAt: dateTimeOffset(-1, 9, 22),

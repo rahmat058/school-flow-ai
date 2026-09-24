@@ -29,7 +29,7 @@ export const feeStructures: FeeStructure[] = classes.map((classRoom, offset) => 
   schoolId: SCHOOL_ID,
   classId: classRoom.id,
   academicYear: ACADEMIC_YEAR,
-  name: `${classLabel(classRoom)} — ${ACADEMIC_YEAR}`,
+  name: `Class ${classLabel(classRoom)} — ${ACADEMIC_YEAR}`,
 }))
 
 export const feeHeads: FeeHead[] = feeStructures.flatMap((structure, structureOffset) =>

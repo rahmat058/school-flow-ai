@@ -27,7 +27,7 @@ export const messages: ChatMessage[] = [
     id: 'msg_1',
     conversationId: 'cnv_1',
     senderId: 'usr_admin_1',
-    body: 'Good morning. Could you share the class 5A attendance summary for last week?',
+    body: 'Good morning. Could you share the class 5-A attendance summary for last week?',
     readAt: dateTimeOffset(0, 9, 5),
     createdAt: dateTimeOffset(0, 8, 52),
   },

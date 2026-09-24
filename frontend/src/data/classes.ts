@@ -30,19 +30,23 @@ export const classes: ClassRoom[] = CLASS_GRADES.flatMap((grade, gradeOffset) =>
 export const classIds: string[] = classes.map((classRoom) => classRoom.id)
 
 /**
- * Look a class up by the name it is spoken with, so seed data can say "class 5A" without knowing
+ * Look a class up by the name it is spoken with, so seed data can say "class 5-A" without knowing
  * which id that happens to be — the prose and the id cannot drift apart.
  */
 export function classIdFor(grade: number, section: string): string {
   const classRoom = classes.find((room) => room.grade === grade && room.section === section)
 
-  if (!classRoom) throw new Error(`No class ${grade}${section} exists`)
+  if (!classRoom) throw new Error(`No class ${classLabelFor(grade, section)} exists`)
 
   return classRoom.id
 }
 
+export function classLabelFor(grade: number, section: string): string {
+  return `${grade}-${section}`
+}
+
 export function classLabel(classRoom: ClassRoom): string {
-  return `Class ${classRoom.grade}${classRoom.section}`
+  return classLabelFor(classRoom.grade, classRoom.section)
 }
 
 export function findClass(id: string | null): ClassRoom | undefined {

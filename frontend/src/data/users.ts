@@ -96,7 +96,7 @@ export const demoAccounts: DemoAccount[] = [
   },
   {
     role: 'STUDENT',
-    label: 'Class 1A student',
+    label: 'Class 1-A student',
     email: 'ayesha.khan1@student.brightfuture.edu',
     password: DEMO_PASSWORD,
     userId: 'usr_std_1',

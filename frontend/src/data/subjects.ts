@@ -1,13 +1,13 @@
 import type { Subject } from '@/types/academic'
 import { SCHOOL_ID } from '@/data/seed'
-import { classes } from '@/data/classes'
+import { classLabel, classes } from '@/data/classes'
 
 interface SubjectTemplate {
   name: string
   code: string
 }
 
-/** Taught in every class; codes are suffixed with the class (e.g. `MAT-5A`). */
+/** Taught in every class; codes are suffixed with the class (e.g. `MAT-5-A`). */
 const TEMPLATES: SubjectTemplate[] = [
   { name: 'English', code: 'ENG' },
   { name: 'Mathematics', code: 'MAT' },
@@ -26,7 +26,7 @@ export const subjects: Subject[] = classes.flatMap((classRoom, classOffset) =>
     schoolId: SCHOOL_ID,
     classId: classRoom.id,
     name: template.name,
-    code: `${template.code}-${classRoom.grade}${classRoom.section}`,
+    code: `${template.code}-${classLabel(classRoom)}`,
     // Rotate teachers so classes do not all share one teacher.
     teacherId: `tch_${((classOffset + subjectOffset) % 8) + 1}`,
   })),

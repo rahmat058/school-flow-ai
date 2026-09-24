@@ -122,7 +122,7 @@ const classPerformance: ChartPoint[] = classes.map((classRoom) => {
     marks.length === 0 ? 0 : marks.reduce((total, result) => total + result.obtainedMarks, 0) / marks.length
 
   return {
-    label: `${classRoom.grade}${classRoom.section}`,
+    label: classLabel(classRoom),
     value: Number(((average / maxMarks) * 100).toFixed(1)),
   }
 })

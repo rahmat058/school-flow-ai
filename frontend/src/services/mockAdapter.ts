@@ -410,7 +410,7 @@ function studentFees(id: string): StudentFees {
   return { summary: { paidPaise, duePaise, totalPaise: paidPaise + duePaise }, rows }
 }
 
-/** A roll number is unique within its class — the roster cannot show 5A twice. */
+/** A roll number is unique within its class — the roster cannot show 5-A twice. */
 function rollTaken(classId: string, rollNo: number, exceptStudentId?: string): boolean {
   return students.some(
     (item) =>
