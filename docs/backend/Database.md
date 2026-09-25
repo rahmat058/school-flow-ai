@@ -2103,7 +2103,8 @@ invoice generation, payment confirmation (payment + invoice + receipt number), e
 projections, not tables: `mv_attendance_monthly` (attendance % per class/month — backs
 `GET /reports/attendance`), `mv_fee_collection` (collected/pending/concessions per period — backs
 `GET /reports/overview` and `GET /reports/finance`), plus on-demand RPCs for the defaulter list,
-`GET /reports/exam-results` (a paper's marks per student) and `GET /dashboard/admin`. No table is added
+`GET /reports/exam-results` (a paper's marks per student), `GET /dashboard/admin` and
+`GET /dashboard/student` (one student's own day, scoped by the session). No table is added
 by the module — every figure is read from the tables above.
 
 ## 17. Feature Coverage

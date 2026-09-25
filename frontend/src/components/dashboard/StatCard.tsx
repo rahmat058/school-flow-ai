@@ -9,6 +9,7 @@ interface StatCardProps {
 
 export function StatCard({ metric }: StatCardProps) {
   const Icon = metric.icon
+  const hasTrend = metric.direction !== undefined
   const isPositive = metric.direction === 'up'
   const TrendIcon = isPositive ? ArrowUpRight : ArrowDownRight
 
@@ -26,14 +27,19 @@ export function StatCard({ metric }: StatCardProps) {
         <p className="font-display text-ink text-[28px] leading-none font-semibold tracking-[-0.03em]">
           {metric.value}
         </p>
-        <span
-          className={cn(
-            'inline-flex items-center gap-0.5 text-[13px] font-medium',
-            isPositive ? 'text-success' : 'text-error',
-          )}>
-          <TrendIcon className="size-3.5" strokeWidth={2} />
-          {metric.delta}
-        </span>
+        {hasTrend ? (
+          <span
+            className={cn(
+              'inline-flex items-center gap-0.5 text-[13px] font-medium',
+              isPositive ? 'text-success' : 'text-error',
+            )}>
+            <TrendIcon className="size-3.5" strokeWidth={2} />
+            {metric.delta}
+          </span>
+        ) : (
+          // No better-or-worse reading — the caption stays ink while the icon chip carries the tone.
+          <span className="text-ink-muted text-[13px]">{metric.delta}</span>
+        )}
       </div>
     </article>
   )

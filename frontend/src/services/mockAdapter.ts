@@ -1,3 +1,5 @@
+// `Receipt` is already a fees type in this file's imports, so the icon takes a suffix.
+import { CalendarCheck, GraduationCap, Receipt as ReceiptIcon, Wallet } from 'lucide-react'
 import { AxiosError } from 'axios'
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
@@ -94,6 +96,17 @@ import type {
   Gender,
 } from '@/types/people'
 import type { BackupJob, GradingScale, NotificationSettings, SecuritySettings, TermStructure } from '@/types/school'
+import type {
+  IconTone,
+  StatMetric,
+  StudentAttendanceDay,
+  StudentDashboard,
+  StudentDay,
+  StudentInvoice,
+  StudentNotice,
+  StudentTimetableSlot,
+  UpcomingExam,
+} from '@/types/dashboard'
 import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes, findClass } from '@/data/classes'
@@ -112,7 +125,7 @@ import {
   headsForStructure,
   structureForClass,
 } from '@/data/fees'
-import { formatPaise, humanizeEnum } from '@/lib/format'
+import { formatDate, formatPaise, humanizeEnum } from '@/lib/format'
 import {
   GRADING_SCALE_VALUES,
   MATERIAL_TYPE_VALUES,
@@ -122,14 +135,14 @@ import {
 } from '@/lib/options'
 import { materialFileError } from '@/lib/validation'
 import { findStudent, students } from '@/data/students'
-import { attendance } from '@/data/attendance'
+import { attendance, registerDays } from '@/data/attendance'
 import { parents, parentStudents } from '@/data/parents'
 import { notices } from '@/data/notices'
 import { conversations, messages } from '@/data/chat'
 import { permissions, userPermissions } from '@/data/permissions'
 import { homework, homeworkSubmissions } from '@/data/homework'
 import { studyMaterials } from '@/data/materials'
-import { periods, timetables, weekdays } from '@/data/timetable'
+import { periods, timetables, weekdayLabels, weekdays } from '@/data/timetable'
 import { dashboardSummary } from '@/data/dashboard'
 import { demoAccounts, users } from '@/data/users'
 import { aiConversations } from '@/data/ai'
@@ -2007,6 +2020,158 @@ function financeReport(): FinanceReport {
 }
 
 // ---------------------------------------------------------------------------------------------
+// dashboard — the student's own day. Attendance, fees, the class timetable and the notices they are
+// in the audience of are all roll-ups of rows that exist, computed here rather than in the view.
+// ---------------------------------------------------------------------------------------------
+
+/** JS weekday index → the timetable's own keys. */
+const WEEKDAY_KEYS: Weekday[] = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+function studentDashboard(studentId: string): StudentDashboard | undefined {
+  const student = findStudent(studentId)
+  if (!student) return undefined
+
+  const today = dateOffset(0)
+  const classRoom = findClass(student.classId)
+  const className = classRoom ? classLabel(classRoom) : 'Unassigned'
+
+  // Attendance: the same totals the profile's Attendance tab shows, plus the last few register days.
+  const totals = studentAttendance(studentId)?.totals ?? { total: 0, present: 0, absent: 0, late: 0, rate: 0 }
+  const recent: StudentAttendanceDay[] = registerDays.slice(0, 8).map((date) => {
+    const record = attendance.find((item) => item.studentId === studentId && item.attendanceDate === date)
+
+    return { date, className, status: record?.status ?? 'ABSENT' }
+  })
+
+  // Fees: billed net of concession, so paid + pending is what the student actually owes.
+  const invoices = feeInvoices.filter((invoice) => invoice.studentId === studentId)
+  const paidPaise = invoices.reduce((total, invoice) => total + invoice.paidPaise, 0)
+  const pendingPaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
+  const totalPaise = paidPaise + pendingPaise
+  const rows: StudentInvoice[] = [...invoices]
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => ({
+      id: invoice.id,
+      title: findFeeHead(invoice.feeHeadId)?.name ?? 'Fee invoice',
+      receiptNo: invoice.receiptNo,
+      amountPaise: invoice.amountPaise,
+      paidPaise: invoice.paidPaise,
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }))
+
+  // Today's teaching periods for the student's class — a break is not a lesson.
+  const day = WEEKDAY_KEYS[new Date(today).getDay()]
+  const grid = student.classId ? classTimetable(student.classId) : undefined
+  const cells = grid?.days.find((entry) => entry.day === day)?.slots ?? []
+  const slots: StudentTimetableSlot[] = (grid?.periods ?? []).flatMap((row, index) =>
+    row.isBreak
+      ? []
+      : [
+          {
+            orderIndex: row.orderIndex,
+            label: row.label,
+            subjectName: cells[index]?.subjectName ?? null,
+            teacherName: cells[index]?.teacherName ?? null,
+            startTime: row.startTime,
+            endTime: row.endTime,
+          },
+        ],
+  )
+  const todaySchedule: StudentDay | null = weekdays.includes(day)
+    ? { date: today, dayLabel: weekdayLabels[day], className, slots }
+    : null
+
+  // Papers for the student's class still ahead, soonest first.
+  const upcomingExams: UpcomingExam[] = examSubjects
+    .filter((paper) => paper.examDate >= today)
+    .filter((paper) => exams.find((exam) => exam.id === paper.examId)?.classId === student.classId)
+    .sort((left, right) => left.examDate.localeCompare(right.examDate))
+    .slice(0, 4)
+    .map((paper) => {
+      const exam = exams.find((item) => item.id === paper.examId)
+
+      return {
+        id: paper.id,
+        title: `${findSubject(paper.subjectId)?.name ?? 'Subject'} — ${exam?.name ?? 'Exam'}`,
+        className,
+        date: paper.examDate,
+        daysAway: Math.round((Date.parse(paper.examDate) - Date.parse(today)) / 86_400_000),
+      }
+    })
+
+  // Published notices addressed to everyone or to students, narrowed to the student's class.
+  const studentNotices: StudentNotice[] = notices
+    .filter((notice) => notice.publishedAt !== null && notice.deletedAt === null)
+    .filter((notice) => notice.audience.includes('ALL') || notice.audience.includes('STUDENTS'))
+    .filter(
+      (notice) =>
+        notice.classIds.length === 0 || (student.classId !== null && notice.classIds.includes(student.classId)),
+    )
+    .sort((left, right) => (right.publishedAt ?? '').localeCompare(left.publishedAt ?? ''))
+    .slice(0, 4)
+    .map((notice) => ({
+      id: notice.id,
+      title: notice.title,
+      authorName: notice.authorName,
+      publishedAt: notice.publishedAt ?? '',
+      priority: notice.priority,
+    }))
+
+  const attendanceTone: IconTone = totals.rate >= 85 ? 'success' : totals.rate >= 70 ? 'warning' : 'error'
+
+  const stats: StatMetric[] = [
+    {
+      id: 'attendance',
+      label: 'Attendance',
+      value: `${totals.rate}%`,
+      delta: `${totals.present}P · ${totals.absent}A · ${totals.late}L`,
+      icon: CalendarCheck,
+      iconTone: attendanceTone,
+    },
+    {
+      id: 'fees-total',
+      label: 'Total Fees',
+      value: formatPaise(totalPaise),
+      delta: `${formatPaise(paidPaise)} paid`,
+      icon: Wallet,
+      iconTone: 'primary',
+    },
+    {
+      id: 'fees-pending',
+      label: 'Fee Pending',
+      value: formatPaise(pendingPaise),
+      delta: pendingPaise > 0 ? 'Pay soon' : 'All settled',
+      icon: ReceiptIcon,
+      iconTone: pendingPaise > 0 ? 'error' : 'success',
+    },
+    {
+      id: 'upcoming-exams',
+      label: 'Upcoming Exams',
+      value: String(upcomingExams.length),
+      delta: upcomingExams[0] ? `Next: ${formatDate(upcomingExams[0].date, 'dd MMM')}` : 'None scheduled',
+      icon: GraduationCap,
+      iconTone: 'primary',
+    },
+  ]
+
+  return {
+    stats,
+    today: todaySchedule,
+    upcomingExams,
+    notices: studentNotices,
+    fees: {
+      paidPaise,
+      pendingPaise,
+      totalPaise,
+      progress: totalPaise === 0 ? 0 : Math.round((paidPaise / totalPaise) * 100),
+      rows,
+    },
+    attendance: { ...totals, recent },
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
 // routes
 // ---------------------------------------------------------------------------------------------
 const routes: Route[] = [
@@ -2435,6 +2600,21 @@ const routes: Route[] = [
     },
   },
   { method: 'GET', path: '/dashboard/admin', handler: () => ok(dashboardSummary) },
+  {
+    method: 'GET',
+    path: '/dashboard/student',
+    handler: ({ userId }) => {
+      const user = users.find((item) => item.id === userId)
+
+      // A student's own day — an admin or teacher account has none to show.
+      if (user?.role !== 'STUDENT' || !user.profileId) {
+        return fail(403, 'DASHBOARD_FORBIDDEN', 'This dashboard belongs to a student account')
+      }
+
+      const summary = studentDashboard(user.profileId)
+      return summary ? ok<StudentDashboard>(summary) : fail(404, 'DASHBOARD_NOT_FOUND', 'Student not found')
+    },
+  },
   { method: 'GET', path: '/classes', handler: () => ok<ClassOption[]>(classChoices()) },
   {
     method: 'GET',

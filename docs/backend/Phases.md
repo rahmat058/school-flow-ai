@@ -49,7 +49,7 @@
 - [ ] Stripe + SSLCommerz order/create, verify, both webhooks, and manual payment recording — receipt sequence inside one transaction
 - [ ] Concessions with the admin approval flow
 - [ ] Exams CRUD, marks entry, publish (+ unpublish), report cards with grade computation and AI comments
-- [ ] Reports module: attendance/financial/student reports, CSV export, admin dashboard endpoint
+- [ ] Reports module: attendance/financial/student reports, CSV export, admin + student dashboard endpoints
 
 **Done when:** a payment confirms atomically via webhook and a published report card is generated.
 

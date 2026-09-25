@@ -9,12 +9,15 @@ import {
   RecentActivityCard,
   SchoolCalendarCard,
   StatGrid,
+  StudentDashboard,
   UpcomingExamsCard,
 } from '@/components/dashboard'
 import { useDashboardSummary } from '@/features/dashboard/api'
 import { ApiError } from '@/services/apiClient'
+import { useCurrentUser } from '@/store/auth'
 
-export function DashboardPage() {
+/** The school-wide overview — the admin's (and, for now, everyone but a student's) home. */
+function AdminDashboard() {
   const { data, isPending, isError, error } = useDashboardSummary()
 
   if (isError) {
@@ -77,4 +80,13 @@ export function DashboardPage() {
       </section>
     </div>
   )
+}
+
+/** The role decides which home opens: a student reads their own day, everyone else the school's. */
+export function DashboardPage() {
+  const user = useCurrentUser()
+
+  if (user?.role === 'STUDENT') return <StudentDashboard />
+
+  return <AdminDashboard />
 }
