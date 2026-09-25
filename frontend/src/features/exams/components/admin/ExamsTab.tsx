@@ -8,8 +8,8 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useDeleteExam, useExams } from '@/features/exams/api'
-import { ExamFormSheet } from '@/features/exams/components/ExamFormSheet'
-import { ExamTable } from '@/features/exams/components/ExamTable'
+import { ExamFormSheet } from '@/features/exams/components/admin/ExamFormSheet'
+import { ExamTable } from '@/features/exams/components/admin/ExamTable'
 import type { ExamListItem } from '@/types/exams'
 
 export function ExamsTab({ canManage }: { canManage: boolean }) {

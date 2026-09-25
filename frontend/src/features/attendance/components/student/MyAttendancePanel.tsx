@@ -4,7 +4,7 @@ import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ApiError } from '@/services/apiClient'
 import { useMyAttendance } from '@/features/attendance/api'
-import { AttendanceMonthView } from '@/features/attendance/components/AttendanceMonthView'
+import { AttendanceMonthView } from '@/features/attendance/components/common/AttendanceMonthView'
 
 /** A student's own register, or a guardian's child's — one month at a time. */
 export function MyAttendancePanel() {

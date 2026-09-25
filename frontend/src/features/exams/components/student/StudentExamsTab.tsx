@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { formatDate } from '@/lib/format'
 import { EXAM_TYPE_LABELS } from '@/lib/options'
-import { ExamCountdown } from '@/features/exams/components/ExamCountdown'
+import { ExamCountdown } from '@/features/exams/components/student/ExamCountdown'
 import type { StudentExamRow } from '@/types/exams'
 
 interface StudentExamsTabProps {

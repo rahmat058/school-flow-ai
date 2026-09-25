@@ -1,5 +1,5 @@
-import { ClassAttendancePanel } from '@/features/attendance/components/ClassAttendancePanel'
-import { MyAttendancePanel } from '@/features/attendance/components/MyAttendancePanel'
+import { ClassAttendancePanel } from '@/features/attendance/components/admin/ClassAttendancePanel'
+import { MyAttendancePanel } from '@/features/attendance/components/student/MyAttendancePanel'
 import { useCurrentUser } from '@/store/auth'
 
 /**

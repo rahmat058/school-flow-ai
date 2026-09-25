@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useDeleteExam, useTests } from '@/features/exams/api'
-import { TestFormSheet } from '@/features/exams/components/TestFormSheet'
+import { TestFormSheet } from '@/features/exams/components/admin/TestFormSheet'
 import { useSubjects } from '@/features/subjects/api'
 import type { TestListItem } from '@/types/exams'
 

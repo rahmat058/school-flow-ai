@@ -1,7 +1,7 @@
 import { StatusBadge } from '@/components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { formatDate } from '@/lib/format'
-import { ExamCountdown } from '@/features/exams/components/ExamCountdown'
+import { ExamCountdown } from '@/features/exams/components/student/ExamCountdown'
 import type { StudentTestRow } from '@/types/exams'
 
 interface StudentTestsTabProps {

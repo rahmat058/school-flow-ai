@@ -1,10 +1,10 @@
 import { ChartColumn, ClipboardList, GraduationCap } from 'lucide-react'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { useCurrentUser } from '@/store/auth'
-import { ExamsTab } from '@/features/exams/components/ExamsTab'
-import { ResultsTab } from '@/features/exams/components/ResultsTab'
-import { StudentExamsView } from '@/features/exams/components/StudentExamsView'
-import { TestsTab } from '@/features/exams/components/TestsTab'
+import { ExamsTab } from '@/features/exams/components/admin/ExamsTab'
+import { ResultsTab } from '@/features/exams/components/admin/ResultsTab'
+import { StudentExamsView } from '@/features/exams/components/student/StudentExamsView'
+import { TestsTab } from '@/features/exams/components/admin/TestsTab'
 
 /** Scheduling, mark entry and the marks sheet — the staff view of the same route. */
 function StaffExamsView({ canManage }: { canManage: boolean }) {

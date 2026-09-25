@@ -4,7 +4,7 @@ import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ApiError } from '@/services/apiClient'
 import { useClassAttendance } from '@/features/attendance/api'
-import { AttendanceMonthView } from '@/features/attendance/components/AttendanceMonthView'
+import { AttendanceMonthView } from '@/features/attendance/components/common/AttendanceMonthView'
 import { useClassOptions } from '@/features/classes/api'
 
 /** The register for one class, month by month — the staff view. */

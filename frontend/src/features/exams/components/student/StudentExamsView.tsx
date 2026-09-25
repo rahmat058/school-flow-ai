@@ -5,9 +5,9 @@ import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { StatGrid } from '@/components/dashboard/common/StatGrid'
 import { ApiError } from '@/services/apiClient'
 import { useStudentExams } from '@/features/exams/api'
-import { StudentExamsTab } from '@/features/exams/components/StudentExamsTab'
-import { StudentResultsTab } from '@/features/exams/components/StudentResultsTab'
-import { StudentTestsTab } from '@/features/exams/components/StudentTestsTab'
+import { StudentExamsTab } from '@/features/exams/components/student/StudentExamsTab'
+import { StudentResultsTab } from '@/features/exams/components/student/StudentResultsTab'
+import { StudentTestsTab } from '@/features/exams/components/student/StudentTestsTab'
 
 /**
  * The student's own Tests & exams screen: their class's schedule and their own marks. The staff route
