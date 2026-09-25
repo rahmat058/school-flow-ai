@@ -1,5 +1,6 @@
 import { BarChart3, BookOpen, MessageSquareQuote } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
+import { CountBadge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { StatGrid } from '@/components/dashboard/common/StatGrid'
@@ -58,7 +59,7 @@ export function ProgressView() {
             <span className="flex items-center gap-2">
               <BookOpen className="size-4" strokeWidth={1.75} />
               Subject-wise
-              <TabCount value={data.subjects.length} />
+              <CountBadge value={data.subjects.length} tone="primary" />
             </span>
           </Tab>
 
@@ -66,7 +67,7 @@ export function ProgressView() {
             <span className="flex items-center gap-2">
               <MessageSquareQuote className="size-4" strokeWidth={1.75} />
               Teacher Remarks
-              <TabCount value={data.remarks.length} />
+              <CountBadge value={data.remarks.length} tone="success" />
             </span>
           </Tab>
         </TabList>
@@ -85,9 +86,4 @@ export function ProgressView() {
       </Tabs>
     </div>
   )
-}
-
-/** The record's size beside the tab label — e.g. "Subject-wise 8". */
-function TabCount({ value }: { value: number }) {
-  return <span className="bg-canvas text-ink-muted rounded-full px-2 py-0.5 text-[11px] font-medium">{value}</span>
 }

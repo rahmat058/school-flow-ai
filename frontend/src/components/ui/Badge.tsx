@@ -104,3 +104,37 @@ export function ExamTypeBadge({ type }: ExamTypeBadgeProps) {
     </span>
   )
 }
+
+export type CountTone = 'primary' | 'success' | 'warning' | 'error'
+
+const countTones: Record<CountTone, string> = {
+  primary: 'bg-primary',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-error',
+}
+
+/**
+ * A count bubble — the unread badge on the header bell, and the record size beside a tab label.
+ * Solid fills with white text, because at 10px the `-soft` tints vanish into the surface. Both
+ * places render this one component so "like the bell's badge" stays true by construction; a caller
+ * that needs to place it over something (the bell overlays its icon) passes `className`.
+ */
+interface CountBadgeProps {
+  value: number | string
+  tone?: CountTone
+  className?: string
+}
+
+export function CountBadge({ value, tone = 'primary', className }: CountBadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex min-w-4 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums',
+        countTones[tone],
+        className,
+      )}>
+      {value}
+    </span>
+  )
+}

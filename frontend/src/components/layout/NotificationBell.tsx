@@ -1,6 +1,6 @@
 import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/cn'
+import { CountBadge, type CountTone } from '@/components/ui/Badge'
 import { paths } from '@/routes/paths'
 import { useConversations } from '@/features/chat/api'
 
@@ -24,21 +24,19 @@ export function NotificationBell() {
       <Bell className="size-4.5" strokeWidth={1.75} />
 
       {unread > 0 ? (
-        <span
-          className={cn(
-            'ring-surface absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white ring-2',
-            unreadTone(unread),
-          )}>
-          {unread > 99 ? '99+' : unread}
-        </span>
+        <CountBadge
+          value={unread > 99 ? '99+' : unread}
+          tone={unreadTone(unread)}
+          className="ring-surface absolute -top-0.5 -right-0.5 ring-2"
+        />
       ) : null}
     </button>
   )
 }
 
 /** The hotter the backlog, the hotter the badge — colour marks meaning, never decoration. */
-function unreadTone(unread: number): string {
-  if (unread >= 10) return 'bg-error'
-  if (unread >= 3) return 'bg-warning'
-  return 'bg-primary'
+function unreadTone(unread: number): CountTone {
+  if (unread >= 10) return 'error'
+  if (unread >= 3) return 'warning'
+  return 'primary'
 }
