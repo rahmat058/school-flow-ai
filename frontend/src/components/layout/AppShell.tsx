@@ -1,13 +1,21 @@
 import { Suspense, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Spinner } from '@/components/ui/Spinner'
+import { routeTitleFor, useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useCurrentUser } from '@/store/auth'
 
 export function AppShell() {
   // Small screens: an overlay drawer. Large screens: a rail that can collapse to icons only.
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(false)
+
+  const { pathname } = useLocation()
+  const user = useCurrentUser()
+
+  // The tab names the page you are on, resolved from the nav so the two always agree.
+  useDocumentTitle(routeTitleFor(pathname, user?.role))
 
   return (
     <div className="bg-canvas flex min-h-screen">

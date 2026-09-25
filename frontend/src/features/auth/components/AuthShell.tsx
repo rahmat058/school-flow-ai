@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { BRAND } from '@/lib/brand'
 import { env } from '@/lib/env'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { activeSchool } from '@/data/school'
 import { classes } from '@/data/classes'
 import { DEMO_PASSWORD } from '@/data/seed'
@@ -19,6 +20,9 @@ interface AuthShellProps {
  * interactive elements, so none of it is a decorative indigo fill.
  */
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
+  // A public screen names itself — there is no nav to resolve it from.
+  useDocumentTitle(title)
+
   return (
     <div className="bg-canvas flex min-h-screen">
       <BrandPanel />
