@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useDeleteSubject, useSubjectRows } from '@/features/subjects/api'
-import { SubjectFormSheet } from '@/features/subjects/components/SubjectFormSheet'
+import { SubjectFormSheet } from '@/features/subjects/components/admin/SubjectFormSheet'
 import type { SubjectRow } from '@/types/academic'
 
 export function SubjectsTab() {

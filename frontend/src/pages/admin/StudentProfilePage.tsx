@@ -15,12 +15,12 @@ import {
   useStudentProfile,
   useStudentResults,
 } from '@/features/students/api'
-import { StudentOverviewTab } from '@/features/students/components/StudentOverviewTab'
-import { StudentAttendanceTab } from '@/features/students/components/StudentAttendanceTab'
-import { StudentMarksTab } from '@/features/students/components/StudentMarksTab'
-import { StudentResultsTab } from '@/features/students/components/StudentResultsTab'
-import { StudentFeesTab } from '@/features/students/components/StudentFeesTab'
-import { StudentDocumentsTab } from '@/features/students/components/StudentDocumentsTab'
+import { StudentOverviewTab } from '@/features/students/components/admin/StudentOverviewTab'
+import { StudentAttendanceTab } from '@/features/students/components/admin/StudentAttendanceTab'
+import { StudentMarksTab } from '@/features/students/components/admin/StudentMarksTab'
+import { StudentResultsTab } from '@/features/students/components/admin/StudentResultsTab'
+import { StudentFeesTab } from '@/features/students/components/admin/StudentFeesTab'
+import { StudentDocumentsTab } from '@/features/students/components/admin/StudentDocumentsTab'
 import type { StudentProfile } from '@/types/people'
 
 const TABS = [

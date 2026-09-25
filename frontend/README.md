@@ -49,7 +49,7 @@ frontend/
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/               # design-system primitives (Button, Badge, Input, Modal)
 │   ├── features/             # attendance/, fees/, homework/, exams/, chat/ …
-│   │                         # each owns its components + hooks + api.ts
+│   │                         # each owns its components/<role>/ + hooks + api.ts
 │   ├── services/             # api client (fetch wrapper), socket client
 │   ├── hooks/                # useAuth, useSocket, shared hooks
 │   ├── context/              # AuthContext, SchoolContext

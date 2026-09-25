@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/ui/Badge'
 import { formatDate, formatPaise } from '@/lib/format'
 import { useCurrentSchool } from '@/features/school/api'
-import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
 import type { StudentFees, StudentProfile } from '@/types/people'
 
 interface StudentFeesTabProps {

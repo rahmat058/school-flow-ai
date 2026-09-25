@@ -9,8 +9,8 @@ import { downloadCsv } from '@/lib/csv'
 import { formatDate, formatPaise } from '@/lib/format'
 import { ApiError } from '@/services/apiClient'
 import { useFinanceReport } from '@/features/reports/api'
-import { FeeTrendChart } from '@/features/reports/components/FeeTrendChart'
-import { ReportStat } from '@/features/reports/components/ReportStat'
+import { FeeTrendChart } from '@/features/reports/components/admin/FeeTrendChart'
+import { ReportStat } from '@/features/reports/components/admin/ReportStat'
 import type { PendingFeeRecord } from '@/types/reports'
 
 export function FinanceTab() {

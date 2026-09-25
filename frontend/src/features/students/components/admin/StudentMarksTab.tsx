@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { useCurrentSchool } from '@/features/school/api'
-import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
-import { GradeBadge } from '@/features/students/components/GradeBadge'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
+import { GradeBadge } from '@/features/students/components/admin/GradeBadge'
 import type { StudentMarkRow, StudentProfile } from '@/types/people'
 
 interface StudentMarksTabProps {

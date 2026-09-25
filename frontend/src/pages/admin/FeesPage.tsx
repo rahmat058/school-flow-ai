@@ -4,11 +4,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { feeKeys } from '@/features/fees/api'
-import { CollectFeeTab } from '@/features/fees/components/CollectFeeTab'
-import { ConcessionsTab } from '@/features/fees/components/ConcessionsTab'
-import { FeeDashboardTab } from '@/features/fees/components/FeeDashboardTab'
-import { FeeReportsTab } from '@/features/fees/components/FeeReportsTab'
-import { FeeStructureTab } from '@/features/fees/components/FeeStructureTab'
+import { CollectFeeTab } from '@/features/fees/components/admin/CollectFeeTab'
+import { ConcessionsTab } from '@/features/fees/components/admin/ConcessionsTab'
+import { FeeDashboardTab } from '@/features/fees/components/admin/FeeDashboardTab'
+import { FeeReportsTab } from '@/features/fees/components/admin/FeeReportsTab'
+import { FeeStructureTab } from '@/features/fees/components/admin/FeeStructureTab'
 
 const TABS = [
   { value: 'dashboard', label: 'Dashboard' },

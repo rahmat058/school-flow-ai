@@ -11,7 +11,7 @@ import { CONCESSION_CATEGORY_LABELS } from '@/lib/options'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useConcessions, useDeleteConcession } from '@/features/fees/api'
-import { ConcessionSheet } from '@/features/fees/components/ConcessionSheet'
+import { ConcessionSheet } from '@/features/fees/components/admin/ConcessionSheet'
 import type { ConcessionRow } from '@/types/fees'
 
 export function ConcessionsTab() {

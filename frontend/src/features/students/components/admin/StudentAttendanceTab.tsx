@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { useCurrentSchool } from '@/features/school/api'
-import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
 import type { StudentAttendance, StudentProfile } from '@/types/people'
 
 interface StudentAttendanceTabProps {

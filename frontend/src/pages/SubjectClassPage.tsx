@@ -1,8 +1,8 @@
 import { BookMarked, LayoutGrid, Link2 } from 'lucide-react'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
-import { AssignSubjectsTab } from '@/features/subjects/components/AssignSubjectsTab'
-import { SubjectsTab } from '@/features/subjects/components/SubjectsTab'
-import { SummaryTab } from '@/features/subjects/components/SummaryTab'
+import { AssignSubjectsTab } from '@/features/subjects/components/admin/AssignSubjectsTab'
+import { SubjectsTab } from '@/features/subjects/components/admin/SubjectsTab'
+import { SummaryTab } from '@/features/subjects/components/admin/SummaryTab'
 
 const TABS = [
   { value: 'subjects', label: 'Subjects', icon: BookMarked },

@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/useToast'
 import { cn } from '@/lib/cn'
 import { ApiError } from '@/services/apiClient'
 import { useAssignmentSummary, useRemoveAssignedSubject } from '@/features/subjects/api'
-import { SubjectChip } from '@/features/subjects/components/SubjectChip'
+import { SubjectChip } from '@/features/subjects/components/admin/SubjectChip'
 
 export function SummaryTab() {
   const { toast } = useToast()

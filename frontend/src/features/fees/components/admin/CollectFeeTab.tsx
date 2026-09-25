@@ -12,7 +12,7 @@ import { invoiceStatusOptions } from '@/lib/options'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useCollectStudents, useCollectSummary } from '@/features/fees/api'
-import { StudentSearchInput } from '@/features/fees/components/StudentSearchInput'
+import { StudentSearchInput } from '@/features/fees/components/admin/StudentSearchInput'
 import { feeCollectPath } from '@/routes/paths'
 import type { ClassFeeStatusRow, InvoiceStatus } from '@/types/fees'
 

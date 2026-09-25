@@ -11,8 +11,8 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useCurrentUser } from '@/store/auth'
 import { useDeleteNotice, useNotices } from '@/features/notices/api'
-import { NoticeCard } from '@/features/notices/components/NoticeCard'
-import { NoticeFormSheet } from '@/features/notices/components/NoticeFormSheet'
+import { NoticeCard } from '@/features/notices/components/admin/NoticeCard'
+import { NoticeFormSheet } from '@/features/notices/components/admin/NoticeFormSheet'
 import type { Notice } from '@/types/communication'
 
 const PAGE_SIZE = 5

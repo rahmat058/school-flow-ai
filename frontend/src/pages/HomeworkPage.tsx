@@ -13,8 +13,8 @@ import { ApiError } from '@/services/apiClient'
 import { useCurrentUser } from '@/store/auth'
 import { useClassOptions } from '@/features/classes/api'
 import { useDeleteHomework, useHomework } from '@/features/homework/api'
-import { HomeworkCard } from '@/features/homework/components/HomeworkCard'
-import { HomeworkFormSheet } from '@/features/homework/components/HomeworkFormSheet'
+import { HomeworkCard } from '@/features/homework/components/admin/HomeworkCard'
+import { HomeworkFormSheet } from '@/features/homework/components/admin/HomeworkFormSheet'
 import type { HomeworkListItem, HomeworkStatus } from '@/types/homework'
 
 export function HomeworkPage() {

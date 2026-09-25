@@ -4,7 +4,7 @@ import { FileText, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentSchool } from '@/features/school/api'
-import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/DownloadSheetButton'
+import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
 import type { StudentDocument, StudentProfile } from '@/types/people'
 
 interface StudentDocumentsTabProps {

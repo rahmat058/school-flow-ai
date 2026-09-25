@@ -4,8 +4,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/cn'
 import { useConversationMessages } from '@/features/chat/api'
-import { MessageBubble } from '@/features/chat/components/MessageBubble'
-import { MessageComposer } from '@/features/chat/components/MessageComposer'
+import { MessageBubble } from '@/features/chat/components/admin/MessageBubble'
+import { MessageComposer } from '@/features/chat/components/admin/MessageComposer'
 import type { ConversationListItem } from '@/types/communication'
 
 interface ChatWindowProps {

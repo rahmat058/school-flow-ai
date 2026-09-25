@@ -1,5 +1,5 @@
 import { formatDate } from '@/lib/format'
-import { StudentDetail, StudentPanel } from '@/features/students/components/StudentPanel'
+import { StudentDetail, StudentPanel } from '@/features/students/components/admin/StudentPanel'
 import type { StudentProfile } from '@/types/people'
 
 interface StudentOverviewTabProps {

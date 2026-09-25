@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useDeleteFeeHead, useFeeStructures } from '@/features/fees/api'
-import { FeeHeadSheet } from '@/features/fees/components/FeeHeadSheet'
+import { FeeHeadSheet } from '@/features/fees/components/admin/FeeHeadSheet'
 import type { FeeHeadRow } from '@/types/fees'
 
 export function FeeStructureTab() {

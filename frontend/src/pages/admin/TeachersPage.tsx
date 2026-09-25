@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useDeleteTeacher, useTeachers } from '@/features/teachers/api'
-import { TeacherFormSheet } from '@/features/teachers/components/TeacherFormSheet'
+import { TeacherFormSheet } from '@/features/teachers/components/admin/TeacherFormSheet'
 import type { TeacherListItem } from '@/types/people'
 
 /** Teachers as cards rather than a table: each one is a small profile, not a row of data. */

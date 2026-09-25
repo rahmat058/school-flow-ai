@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
 import { useStaffPermissions } from '@/features/permissions/api'
-import { PermissionEditor } from '@/features/permissions/components/PermissionEditor'
-import { StaffList } from '@/features/permissions/components/StaffList'
+import { PermissionEditor } from '@/features/permissions/components/admin/PermissionEditor'
+import { StaffList } from '@/features/permissions/components/admin/StaffList'
 
 export function PermissionsPage() {
   const staff = useStaffPermissions()

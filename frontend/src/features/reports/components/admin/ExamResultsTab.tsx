@@ -10,8 +10,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { downloadCsv } from '@/lib/csv'
 import { ApiError } from '@/services/apiClient'
 import { useExamPaperOptions, useExamResultsReport } from '@/features/reports/api'
-import { GradeDistributionChart } from '@/features/reports/components/GradeDistributionChart'
-import { ReportStat } from '@/features/reports/components/ReportStat'
+import { GradeDistributionChart } from '@/features/reports/components/admin/GradeDistributionChart'
+import { ReportStat } from '@/features/reports/components/admin/ReportStat'
 import type { ExamResultRow } from '@/types/reports'
 
 export function ExamResultsTab() {

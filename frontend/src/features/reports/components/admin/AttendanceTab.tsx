@@ -10,7 +10,7 @@ import { monthOptions } from '@/lib/options'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useAttendanceReport } from '@/features/reports/api'
-import { AttendanceByClassChart } from '@/features/reports/components/AttendanceByClassChart'
+import { AttendanceByClassChart } from '@/features/reports/components/admin/AttendanceByClassChart'
 import type { AttendanceReportRow } from '@/types/reports'
 
 export function AttendanceTab() {

@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useDeleteStudent, useStudents } from '@/features/students/api'
 import { studentProfilePath } from '@/routes/paths'
-import { StudentFormSheet } from '@/features/students/components/StudentFormSheet'
+import { StudentFormSheet } from '@/features/students/components/admin/StudentFormSheet'
 import type { FeeStanding, StudentListItem } from '@/types/people'
 
 const PAGE_SIZE = 10

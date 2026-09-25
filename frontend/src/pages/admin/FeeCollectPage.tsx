@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { StudentCollectPanel } from '@/features/fees/components/StudentCollectPanel'
+import { StudentCollectPanel } from '@/features/fees/components/admin/StudentCollectPanel'
 import { paths } from '@/routes/paths'
 
 /** One student's collect view — reached from any Collect action, and back out to the module. */

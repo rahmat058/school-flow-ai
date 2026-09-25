@@ -15,7 +15,7 @@ import {
   useRemoveAssignedSubject,
   useSubjects,
 } from '@/features/subjects/api'
-import { SubjectChip } from '@/features/subjects/components/SubjectChip'
+import { SubjectChip } from '@/features/subjects/components/admin/SubjectChip'
 import type { Subject } from '@/types/academic'
 
 export function AssignSubjectsTab() {

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
 import { useConversations } from '@/features/chat/api'
-import { ChatWindow } from '@/features/chat/components/ChatWindow'
-import { ConversationList } from '@/features/chat/components/ConversationList'
+import { ChatWindow } from '@/features/chat/components/admin/ChatWindow'
+import { ConversationList } from '@/features/chat/components/admin/ConversationList'
 
 export function ChatPage() {
   const conversations = useConversations()

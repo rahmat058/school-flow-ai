@@ -1,9 +1,9 @@
 import { BarChart3, CalendarCheck, GraduationCap, Wallet } from 'lucide-react'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
-import { AttendanceTab } from '@/features/reports/components/AttendanceTab'
-import { ExamResultsTab } from '@/features/reports/components/ExamResultsTab'
-import { FinanceTab } from '@/features/reports/components/FinanceTab'
-import { OverviewTab } from '@/features/reports/components/OverviewTab'
+import { AttendanceTab } from '@/features/reports/components/admin/AttendanceTab'
+import { ExamResultsTab } from '@/features/reports/components/admin/ExamResultsTab'
+import { FinanceTab } from '@/features/reports/components/admin/FinanceTab'
+import { OverviewTab } from '@/features/reports/components/admin/OverviewTab'
 
 const TABS = [
   { value: 'overview', label: 'Overview', icon: BarChart3 },

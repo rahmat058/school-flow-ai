@@ -6,8 +6,8 @@ import { downloadCsv } from '@/lib/csv'
 import { formatPaise } from '@/lib/format'
 import { ApiError } from '@/services/apiClient'
 import { useReportsOverview } from '@/features/reports/api'
-import { FeeTrendChart } from '@/features/reports/components/FeeTrendChart'
-import { ReportStat } from '@/features/reports/components/ReportStat'
+import { FeeTrendChart } from '@/features/reports/components/admin/FeeTrendChart'
+import { ReportStat } from '@/features/reports/components/admin/ReportStat'
 import type { ReportClassOption } from '@/types/reports'
 
 export function OverviewTab() {
