@@ -16,6 +16,7 @@ import {
   NoticesPage,
   PermissionsPage,
   ReportsPage,
+  SettingsPage,
   StudentProfilePage,
   SubjectClassPage,
   StudentsPage,
@@ -33,11 +34,6 @@ const upcomingModules: Array<{ path: string; title: string; description: string 
     path: paths.attendance,
     title: 'Attendance',
     description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-  {
-    path: paths.settings,
-    title: 'School settings',
-    description: 'Academic year, grading scheme, fee heads and branding arrive in Phase 2.',
   },
 ]
 
@@ -68,6 +64,7 @@ export const privateRoutes: RouteObject[] = [
               { path: childPath(paths.teachers), element: <TeachersPage /> },
               { path: childPath(paths.permissions), element: <PermissionsPage /> },
               { path: childPath(paths.subjects), element: <SubjectClassPage /> },
+              { path: childPath(paths.settings), element: <SettingsPage /> },
             ],
           },
           {

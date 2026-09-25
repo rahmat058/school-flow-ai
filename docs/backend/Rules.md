@@ -6,6 +6,7 @@
 - DTO + `class-validator` for every request body/query — no untyped `req.body` access
 - Supabase client for all DB access through the global `database/` module; multi-write operations (registration, payment confirmation, result publishing) run in a database transaction (Supabase RPC)
 - Postgres enums (or CHECK constraints) for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
+- JSONB documents (e.g. `schools.settings`) are validated by their DTO against the unions in `Design.md`/`PRD.md` — Postgres constrains the column, not its keys — and a `PATCH` **merges** so a partial write never drops a key it did not send
 - `@Roles()` + `RolesGuard` for the coarse role check, then `@RequirePermission()` + `PermissionsGuard` against `user_permissions` for a fine-grained grant; tenant scope (`schoolId`) applied in every query
 - Response envelope + error envelope via global interceptor/filter — services throw `HttpException` subclasses, never shape responses manually
 - `@nestjs/throttler` on auth/OTP/AI endpoints

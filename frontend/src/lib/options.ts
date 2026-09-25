@@ -4,6 +4,7 @@ import type { HomeworkStatus } from '@/types/homework'
 import type { MaterialType } from '@/types/materials'
 import type { BloodGroup, FeeStanding, Gender } from '@/types/people'
 import type { ConcessionCategory, ConcessionType, FeeFrequency, InvoiceStatus, PaymentMethod } from '@/types/fees'
+import type { GradingScale, TermStructure } from '@/types/school'
 
 /** A select's list item. Structurally what `components/ui/Select` renders. */
 export interface FieldOption {
@@ -98,6 +99,10 @@ export const CONCESSION_CATEGORY_VALUES = [
 
 export const CONCESSION_TYPE_VALUES = ['PERCENTAGE', 'FIXED'] as const satisfies readonly ConcessionType[]
 
+export const GRADING_SCALE_VALUES = ['PERCENTAGE', 'LETTER', 'GPA'] as const satisfies readonly GradingScale[]
+
+export const TERM_STRUCTURE_VALUES = ['SEMESTER', 'TRIMESTER', 'ANNUAL'] as const satisfies readonly TermStructure[]
+
 const GENDER_LABELS: Record<Gender, string> = {
   FEMALE: 'Female',
   MALE: 'Male',
@@ -177,6 +182,18 @@ const CONCESSION_TYPE_LABELS: Record<ConcessionType, string> = {
   FIXED: 'Flat ($)',
 }
 
+const GRADING_SCALE_LABELS: Record<GradingScale, string> = {
+  PERCENTAGE: 'Percentage (0-100%)',
+  LETTER: 'Letter grade (A-F)',
+  GPA: 'GPA (4.0)',
+}
+
+const TERM_STRUCTURE_LABELS: Record<TermStructure, string> = {
+  SEMESTER: 'Semester (2 terms)',
+  TRIMESTER: 'Trimester (3 terms)',
+  ANNUAL: 'Annual (1 term)',
+}
+
 /** The empty value is the unset state the API accepts for a nullable field. */
 export const bloodGroupOptions: FieldOption[] = [
   { value: '', label: 'Choose a group' },
@@ -250,3 +267,22 @@ export const monthOptions: FieldOption[] = MONTH_LABELS_SHORT.map((label, offset
   value: String(offset + 1),
   label,
 }))
+
+export const gradingScaleOptions: FieldOption[] = GRADING_SCALE_VALUES.map((value) => ({
+  value,
+  label: GRADING_SCALE_LABELS[value],
+}))
+
+export const termStructureOptions: FieldOption[] = TERM_STRUCTURE_VALUES.map((value) => ({
+  value,
+  label: TERM_STRUCTURE_LABELS[value],
+}))
+
+/**
+ * The academic years offered around the one in force, so the picker always contains the current
+ * value and never dead-ends. Years read bare (`2026`), matching the year every record stores.
+ */
+export function academicYearOptions(current: string): FieldOption[] {
+  const base = Number(current) || new Date().getFullYear()
+  return [base - 1, base, base + 1, base + 2].map((year) => ({ value: String(year), label: String(year) }))
+}

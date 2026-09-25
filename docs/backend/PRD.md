@@ -73,7 +73,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 
 All tables live in the Supabase project (`supabase/` migrations are the source of truth). All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `updatedAt` unless noted. Key enums: `Role`, `AttendanceStatus`, `PaymentStatus`, `ExamType`, `MaterialType`.
 
-- **School** — name, address, contact, logo, subscriptionStatus, settings (JSONB), slug
+- **School** — name, address, contact, logo, subscriptionStatus, settings (JSONB: academic + notifications + security), slug
 - **User** — email (unique), passwordHash, role (enum), schoolId, isVerified
 - **Teacher / Student / Parent** — profile tables with 1:1 FK to User
 - **ParentStudent** — join table (many-to-many parent ↔ child)
@@ -118,16 +118,21 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)`
 - [ ] `POST /api/v1/schools/verify-otp` — validate OTP, activate account `(public)`
 - [ ] `POST /api/v1/schools/resend-otp` — resend within the 60s cooldown `(public)`
-- [ ] `GET /api/v1/schools/current` — the caller's own school `(admin)` — the frontend already calls this
-- [ ] `GET /api/v1/schools/:id/settings` — academic year, grading scheme, fee heads, branding `(admin)`
-- [ ] `PATCH /api/v1/schools/:id/settings` — update settings `(admin)`
+- [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(admin)` — the frontend already calls this
+- [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(admin)`
+- [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(admin)`
+- [ ] `POST /api/v1/schools/current/backup` — request a manual backup of the school's data; `201` with the job record `(admin)`
 
 **Behavior**
 
 - 6-digit OTP (bcrypt-hashed in `Otp` table), 10-minute expiry, max 5 attempts, resend cooldown 60s
 - Email verification via Resend before admin login is allowed
-- Unique school slug auto-generated
+- Unique school slug auto-generated at registration; a rename leaves it alone so stored links keep working
 - Registration runs in a database transaction (school + admin user + OTP)
+- **Settings are addressable by tab, not as one document.** The Settings screen's four tabs map onto one `schools.settings` JSONB: School Profile writes the school's own **columns** (`PATCH /schools/current`), while Academic writes `academicYear`/`gradingScale`/`termStructure`/`passPercentage`, Notifications writes the `notifications` object and Security writes the `security` object — all through `PATCH …/settings`, which **merges only the keys sent** so the tabs cannot overwrite one another
+- Settings unions are contract-level, not DB enums (they live in JSONB): `gradingScale` ∈ `PERCENTAGE | LETTER | GPA`, `termStructure` ∈ `SEMESTER | TRIMESTER | ANNUAL`, `passPercentage` an integer `0–100`, `security.sessionTimeoutMinutes` `5–240`, `security.maxLoginAttempts` `1–10` — anything else is `400 SETTINGS_INVALID` with the offending fields in `details`
+- **No settings route carries a school id** — the screen edits the caller's own school, so the tenant comes from the session, not the path. The earlier `GET`/`PATCH /schools/:id/settings` pair is superseded by the `current`-scoped routes
+- `POST …/backup` answers `201` with `{ id, createdAt, sizeBytes, status }`; the demo returns `READY` at once, while a real deployment enqueues a BullMQ job and returns `PENDING`, so the client reads `status` rather than assuming the snapshot exists
 
 ### 4.2 Authentication & RBAC (`AuthModule`)
 

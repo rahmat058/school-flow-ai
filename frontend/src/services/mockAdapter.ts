@@ -93,6 +93,7 @@ import type {
   TeacherListItem,
   Gender,
 } from '@/types/people'
+import type { BackupJob, GradingScale, NotificationSettings, SecuritySettings, TermStructure } from '@/types/school'
 import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes, findClass } from '@/data/classes'
@@ -112,7 +113,13 @@ import {
   structureForClass,
 } from '@/data/fees'
 import { formatPaise, humanizeEnum } from '@/lib/format'
-import { MATERIAL_TYPE_VALUES, MONTH_LABELS_SHORT, NOTICE_PRIORITY_VALUES } from '@/lib/options'
+import {
+  GRADING_SCALE_VALUES,
+  MATERIAL_TYPE_VALUES,
+  MONTH_LABELS_SHORT,
+  NOTICE_PRIORITY_VALUES,
+  TERM_STRUCTURE_VALUES,
+} from '@/lib/options'
 import { materialFileError } from '@/lib/validation'
 import { findStudent, students } from '@/data/students'
 import { attendance } from '@/data/attendance'
@@ -284,6 +291,12 @@ function searchTerm(params: Record<string, unknown>): string {
 function matches(needle: string, values: Array<string | null | undefined>): boolean {
   if (!needle) return true
   return values.some((value) => value?.toLowerCase().includes(needle))
+}
+
+/** A blank optional field is cleared to `null` rather than stored as an empty string. */
+function blankToNull(value: unknown): string | null {
+  const text = String(value ?? '').trim()
+  return text || null
 }
 
 /**
@@ -2143,6 +2156,98 @@ const routes: Route[] = [
     },
   },
   { method: 'GET', path: '/schools/current', handler: () => ok(activeSchool) },
+  {
+    method: 'PATCH',
+    path: '/schools/current',
+    handler: ({ body }) => {
+      // The School Profile tab writes the school's own columns. The slug is deliberately left alone —
+      // it is generated once at registration so a rename never breaks a stored link.
+      if (body.name !== undefined) {
+        const name = String(body.name).trim()
+        if (!name) return fail(400, 'SCHOOL_INVALID', 'A school name is required', ['name'])
+        activeSchool.name = name
+      }
+
+      if (body.contactEmail !== undefined) activeSchool.contactEmail = blankToNull(body.contactEmail)
+      if (body.contactPhone !== undefined) activeSchool.contactPhone = blankToNull(body.contactPhone)
+      if (body.address !== undefined) activeSchool.address = blankToNull(body.address)
+      if (body.logoUrl !== undefined) activeSchool.logoUrl = blankToNull(body.logoUrl)
+
+      return ok(activeSchool)
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/schools/current/settings',
+    handler: ({ body }) => {
+      // Merges only the keys sent, so the Academic, Notifications and Security tabs never overwrite
+      // one another — the same partial-`PATCH` rule the rest of the contract follows. The whole patch
+      // is validated before anything is written, so a rejected field leaves no half-applied document.
+      const errors: string[] = []
+      const academicYear = body.academicYear !== undefined ? String(body.academicYear).trim() : undefined
+      const gradingScale = body.gradingScale !== undefined ? String(body.gradingScale) : undefined
+      const termStructure = body.termStructure !== undefined ? String(body.termStructure) : undefined
+      const passPercentage = body.passPercentage !== undefined ? Number(body.passPercentage) : undefined
+      const security = body.security as Partial<SecuritySettings> | undefined
+
+      if (academicYear !== undefined && !academicYear) errors.push('academicYear must be chosen')
+      if (gradingScale !== undefined && !GRADING_SCALE_VALUES.includes(gradingScale as GradingScale)) {
+        errors.push('gradingScale is not supported')
+      }
+      if (termStructure !== undefined && !TERM_STRUCTURE_VALUES.includes(termStructure as TermStructure)) {
+        errors.push('termStructure is not supported')
+      }
+      if (
+        passPercentage !== undefined &&
+        (!Number.isFinite(passPercentage) || passPercentage < 0 || passPercentage > 100)
+      ) {
+        errors.push('passPercentage must be between 0 and 100')
+      }
+      if (security?.sessionTimeoutMinutes !== undefined) {
+        const minutes = Number(security.sessionTimeoutMinutes)
+        if (!Number.isFinite(minutes) || minutes < 5 || minutes > 240) {
+          errors.push('security.sessionTimeoutMinutes must be between 5 and 240')
+        }
+      }
+      if (security?.maxLoginAttempts !== undefined) {
+        const attempts = Number(security.maxLoginAttempts)
+        if (!Number.isInteger(attempts) || attempts < 1 || attempts > 10) {
+          errors.push('security.maxLoginAttempts must be between 1 and 10')
+        }
+      }
+
+      if (errors.length > 0) return fail(400, 'SETTINGS_INVALID', 'Some settings are not valid', errors)
+
+      const settings = activeSchool.settings
+
+      if (academicYear !== undefined) settings.academicYear = academicYear
+      if (gradingScale !== undefined) settings.gradingScale = gradingScale as GradingScale
+      if (termStructure !== undefined) settings.termStructure = termStructure as TermStructure
+      if (passPercentage !== undefined) settings.passPercentage = Math.round(passPercentage)
+
+      if (body.notifications !== undefined) {
+        settings.notifications = {
+          ...settings.notifications,
+          ...(body.notifications as Partial<NotificationSettings>),
+        }
+      }
+
+      if (security !== undefined) settings.security = { ...settings.security, ...security }
+
+      return ok(activeSchool)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/schools/current/backup',
+    handler: () =>
+      created<BackupJob>({
+        id: `bkp_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        sizeBytes: 24 * 1024 * 1024,
+        status: 'READY',
+      }),
+  },
   {
     method: 'GET',
     path: '/subjects',

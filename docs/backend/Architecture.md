@@ -22,7 +22,7 @@ backend/
 │   │   ├── filters/          # global exception filter
 │   │   └── interceptors/     # response envelope, logging
 │   ├── auth/                 # strategies, guards, dto + the RBAC catalogue & per-user grants
-│   ├── schools/              # registration, OTP, settings
+│   ├── schools/              # registration, OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes, the subject catalogue + class-subject assignments
 │   ├── attendance/

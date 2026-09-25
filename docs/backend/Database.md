@@ -134,9 +134,9 @@ erDiagram
 
 <!-- table: schools · module: SchoolsModule · prd: §4.1 · phase: 1 · tenant: root · soft-delete: yes -->
 
-Tenant root. One row per registered school; `settings` holds the academic year, grading scheme, fee
-heads, and branding. Created in the registration transaction together with the admin `users` row and
-the first `otps` row.
+Tenant root. One row per registered school. The profile is plain columns; `settings` is a single JSONB
+document holding everything the Settings screen edits, grouped the way its tabs are. Created in the
+registration transaction together with the admin `users` row and the first `otps` row.
 
 | Column                | Type                  | Null | Key | Notes                    |
 | --------------------- | --------------------- | ---- | --- | ------------------------ |
@@ -159,6 +159,30 @@ the first `otps` row.
 
 **Constraints** — the only table without `school_id`; every other tenant table's `school_id` points
 here with `on delete restrict`.
+
+**`settings` shape** — one document, grouped the way the Settings screen's tabs are. It is JSONB, so it
+adds no column and no enum type: the unions below are enforced in the DTO (`PRD.md` §4.1), not by Postgres.
+
+| Path                              | Type                                        | Default        | Notes                         |
+| --------------------------------- | ------------------------------------------- | -------------- | ----------------------------- |
+| `academicYear`                    | `text`                                      | `'2026'`       | the year every record stores  |
+| `gradingScale`                    | `'PERCENTAGE' \| 'LETTER' \| 'GPA'`         | `PERCENTAGE`   | how a mark is reported        |
+| `termStructure`                   | `'SEMESTER' \| 'TRIMESTER' \| 'ANNUAL'`     | `SEMESTER`     | how the year is split         |
+| `passPercentage`                  | `integer`                                   | `40`           | 0–100, the pass mark          |
+| `currency`                        | `text`                                      | `'USD'`        | display only — money is paise |
+| `timezone`                        | `text`                                      | `'Asia/Dhaka'` | IANA zone                     |
+| `gradingScheme`                   | `{ grade: text, minPercentage: integer }[]` | A+ … F bands   | read by report-card grading   |
+| `notifications.emailAlerts`       | `boolean`                                   | `true`         | Notifications tab             |
+| `notifications.smsAlerts`         | `boolean`                                   | `false`        |                               |
+| `notifications.attendanceAlerts`  | `boolean`                                   | `true`         |                               |
+| `notifications.feeReminders`      | `boolean`                                   | `true`         |                               |
+| `notifications.examNotifications` | `boolean`                                   | `true`         |                               |
+| `security.sessionTimeoutMinutes`  | `integer`                                   | `30`           | 5–240                         |
+| `security.maxLoginAttempts`       | `integer`                                   | `5`            | 1–10                          |
+| `security.twoFactorEnabled`       | `boolean`                                   | `false`        | Security tab                  |
+
+A write **merges**: an absent key is left as it was, so each tab's save touches only its own slice and
+the four tabs cannot overwrite one another.
 
 ```mermaid
 erDiagram
@@ -2156,6 +2180,11 @@ writing migrations:
     editor replaces; role defaults are applied at account creation from the matrix in `PRD.md` §2 rather than
     stored in a `role_permissions` table. That keeps the matrix the single source for defaults, but it means the
     defaults live in code — move them into a table if roles should ever be editable at runtime.
+16. **`schools.settings` is untyped JSONB** — the Settings screen now edits `academicYear`, `gradingScale`,
+    `termStructure`, `passPercentage`, `notifications` and `security` in one document, so its shape lives in the
+    DTO (`PRD.md` §4.1) rather than the schema. That lets the editor grow without a migration, but a malformed
+    document is only caught at write time — move a key to its own column if it ever needs to be queried, indexed
+    or constrained.
 
 ## 19. Full Schema ERD
 

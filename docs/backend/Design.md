@@ -5,7 +5,8 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## URL conventions
 
 - Global prefix `/api/v1`; plural, kebab-case resources: `/fees/structures`, `/report-cards`
-- Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`
+- Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`, `/schools/current/backup`
+- A resource the caller **is** addresses itself as `current` rather than carrying an id — `/schools/current` and its `settings`/`backup` sub-resources — because the tenant comes from the session, not the path
 - Filters via query params: `?classId=&from=&to=&status=`
 - Report families are one route per report rather than a `?type=`: `/fees/reports/day-book`,
   `/fees/reports/class`, `/fees/reports/defaulters`, `/fees/reports/student-ledger`

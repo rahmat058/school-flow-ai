@@ -13,6 +13,10 @@ export const activeSchool: School = {
   subscriptionStatus: 'ACTIVE',
   settings: {
     academicYear: ACADEMIC_YEAR,
+    gradingScale: 'PERCENTAGE',
+    termStructure: 'SEMESTER',
+    // Matches `lib/grades.ts`'s fixed pass mark, so the demo's report logic and this editor agree.
+    passPercentage: 40,
     currency: 'USD',
     timezone: 'Asia/Dhaka',
     gradingScheme: [
@@ -23,5 +27,17 @@ export const activeSchool: School = {
       { grade: 'D', minPercentage: 40 },
       { grade: 'F', minPercentage: 0 },
     ],
+    notifications: {
+      emailAlerts: true,
+      smsAlerts: false,
+      attendanceAlerts: true,
+      feeReminders: true,
+      examNotifications: true,
+    },
+    security: {
+      sessionTimeoutMinutes: 30,
+      maxLoginAttempts: 5,
+      twoFactorEnabled: false,
+    },
   },
 }
