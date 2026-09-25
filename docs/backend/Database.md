@@ -347,7 +347,7 @@ erDiagram
   schools ||--o{ teachers : "employs"
   users ||--|| teachers : "profile"
   teachers ||--o{ classes : "class teacher"
-  teachers ||--o{ subjects : "teaches"
+  teachers ||--o{ class_subjects : "teaches"
   teachers ||--o{ homework : "creates"
   teachers ||--o{ teacher_classes : "assigned to"
   classes ||--o{ teacher_classes : "has"
@@ -579,8 +579,9 @@ erDiagram
   schools ||--o{ classes : "owns"
   schools ||--o{ subjects : "owns"
   teachers ||--o{ classes : "leads"
-  classes ||--o{ subjects : "offers"
-  teachers ||--o{ subjects : "teaches"
+  classes ||--o{ class_subjects : "offers"
+  subjects ||--o{ class_subjects : "is offered as"
+  teachers ||--o{ class_subjects : "teaches"
   classes ||--o{ students : "rosters"
 ```
 
@@ -646,7 +647,7 @@ assignable after creation; students attach via `students.class_id`.
 ```mermaid
 erDiagram
   classes ||--o{ students : "rosters"
-  classes ||--o{ subjects : "offers"
+  classes ||--o{ class_subjects : "offers"
   teachers ||--o{ classes : "leads"
   classes {
     uuid id PK
@@ -660,41 +661,84 @@ erDiagram
 
 <!-- table: subjects · module: ClassesModule · prd: §4.4 · phase: 2 · tenant: yes · soft-delete: no -->
 
-A subject taught to one class by one teacher. Timetable periods, homework, exams, and results all hang
-off `subjects`.
+The school's **subject catalogue** — school-wide, not a per-class copy. Name and code are the school's
+own (`MATH`, `ART`), so both are data the admin edits rather than an enum. A lesson, a homework, an
+exam paper, a result and a material all point at the catalogue row; _which classes run it_ is the
+`class_subjects` join below.
 
-| Column       | Type          | Null | Key | Notes           |
-| ------------ | ------------- | ---- | --- | --------------- |
-| `id`         | `uuid`        | no   | PK  |                 |
-| `school_id`  | `uuid`        | no   | FK  | → `schools.id`  |
-| `class_id`   | `uuid`        | no   | FK  | → `classes.id`  |
-| `teacher_id` | `uuid`        | yes  | FK  | → `teachers.id` |
-| `name`       | `text`        | no   |     |                 |
-| `code`       | `text`        | no   |     | e.g. `MATH-5A`  |
-| `created_at` | `timestamptz` | no   |     |                 |
-| `updated_at` | `timestamptz` | no   |     |                 |
+| Column        | Type          | Null | Key | Notes              |
+| ------------- | ------------- | ---- | --- | ------------------ |
+| `id`          | `uuid`        | no   | PK  |                    |
+| `school_id`   | `uuid`        | no   | FK  | → `schools.id`     |
+| `name`        | `text`        | no   |     | e.g. `Mathematics` |
+| `code`        | `text`        | no   |     | e.g. `MATH`        |
+| `description` | `text`        | yes  |     |                    |
+| `created_at`  | `timestamptz` | no   |     |                    |
+| `updated_at`  | `timestamptz` | no   |     |                    |
 
-**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (restrict —
-subjects carry exams and results), `teacher_id` → `teachers.id` (set null) ·
-`unique (school_id, class_id, code)`.
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (school_id, code)`.
 
-**Indexes** — `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`.
+**Indexes** — `unique (school_id, code)`, `(school_id)`.
 
-**Constraints** — `teacher_id` is nullable until a teacher is assigned.
+**Constraints** — `code` is the school's own, 2–6 alphanumerics, unique per school (409
+`SUBJECT_CODE_TAKEN`); `name` is unique per school too (409 `SUBJECT_NAME_TAKEN`). A subject still
+referenced by a lesson, an exam paper, a homework or a material cannot be deleted — 409
+`SUBJECT_IN_USE`, the `restrict` side of the FKs in §13 — while deleting an unreferenced one cascades
+through `class_subjects`.
 
 ```mermaid
 erDiagram
-  classes ||--o{ subjects : "offers"
-  teachers ||--o{ subjects : "teaches"
+  classes ||--o{ class_subjects : "offers"
+  subjects ||--o{ class_subjects : "is offered as"
   subjects ||--o{ periods : "scheduled"
   subjects ||--o{ homework : "covers"
   subjects ||--o{ results : "is scored in"
   subjects {
     uuid id PK
     uuid school_id FK
-    uuid class_id FK
-    uuid teacher_id FK
     text code
+    text name
+  }
+```
+
+### `class_subjects`
+
+<!-- table: class_subjects · module: ClassesModule · prd: §4.4 · phase: 2 · tenant: yes · soft-delete: no -->
+
+Which subjects one class runs — the **assignment** the Subject & Class module edits. A catalogue
+subject exists once, and every class that teaches it gets a row here. The teacher lives on this row
+rather than on the subject, because the same subject is taught by different staff in each class.
+
+| Column       | Type          | Null | Key | Notes           |
+| ------------ | ------------- | ---- | --- | --------------- |
+| `id`         | `uuid`        | no   | PK  |                 |
+| `school_id`  | `uuid`        | no   | FK  | → `schools.id`  |
+| `class_id`   | `uuid`        | no   | FK  | → `classes.id`  |
+| `subject_id` | `uuid`        | no   | FK  | → `subjects.id` |
+| `teacher_id` | `uuid`        | yes  | FK  | → `teachers.id` |
+| `created_at` | `timestamptz` | no   |     |                 |
+
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict), `class_id` → `classes.id` (cascade),
+`subject_id` → `subjects.id` (cascade), `teacher_id` → `teachers.id` (set null) ·
+`unique (class_id, subject_id)`.
+
+**Indexes** — `unique (class_id, subject_id)`, `(school_id)`, `(subject_id)`, `(teacher_id)`.
+
+**Constraints** — a class appears at most once per subject; bulk assignment inserts only the missing
+pairs and reports how many were new. `teacher_id` is nullable until a teacher is assigned. The pair is
+what every other module validates against — a lesson, a homework, a material or an exam paper on a
+subject the class does not run is refused with a 400.
+
+```mermaid
+erDiagram
+  classes ||--o{ class_subjects : "offers"
+  subjects ||--o{ class_subjects : "is offered as"
+  teachers ||--o{ class_subjects : "teaches"
+  class_subjects {
+    uuid id PK
+    uuid class_id FK
+    uuid subject_id FK
+    uuid teacher_id FK
   }
 ```
 
@@ -1833,8 +1877,10 @@ history; `cascade` is only for rows that cannot exist alone.
 | `classes`                   | `school_id`        | `schools.id`        | restrict  |
 | `classes`                   | `class_teacher_id` | `teachers.id`       | set null  |
 | `subjects`                  | `school_id`        | `schools.id`        | restrict  |
-| `subjects`                  | `class_id`         | `classes.id`        | restrict  |
-| `subjects`                  | `teacher_id`       | `teachers.id`       | set null  |
+| `class_subjects`            | `school_id`        | `schools.id`        | restrict  |
+| `class_subjects`            | `class_id`         | `classes.id`        | cascade   |
+| `class_subjects`            | `subject_id`       | `subjects.id`       | cascade   |
+| `class_subjects`            | `teacher_id`       | `teachers.id`       | set null  |
 | `attendance`                | `school_id`        | `schools.id`        | restrict  |
 | `attendance`                | `class_id`         | `classes.id`        | restrict  |
 | `attendance`                | `student_id`       | `students.id`       | restrict  |
@@ -1931,7 +1977,8 @@ has one.
 | `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                                     |
 | `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                                       |
 | `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                                      |
-| `subjects`                  | `unique (school_id, class_id, code)`, `(school_id)`, `(class_id)`, `(teacher_id)`                                                                             |
+| `subjects`                  | `unique (school_id, code)`, `(school_id)`                                                                                                                     |
+| `class_subjects`            | `unique (class_id, subject_id)`, `(school_id)`, `(subject_id)`, `(teacher_id)`                                                                                |
 | `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`              |
 | `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                                         |
 | `homework_submissions`      | `unique (homework_id, student_id)`, `(school_id)`, `(student_id)`                                                                                             |
@@ -1960,7 +2007,7 @@ has one.
 
 ## 15. Table Inventory
 
-All 36 tables, with the section that documents each one.
+All 37 tables, with the section that documents each one.
 
 | #   | Table                       | Feature section | PRD   | Phase |
 | --- | --------------------------- | --------------- | ----- | ----- |
@@ -1975,31 +2022,32 @@ All 36 tables, with the section that documents each one.
 | 9   | `parent_students`           | §3 Foundation   | §4.3  | 2     |
 | 10  | `classes`                   | §4 Classes      | §4.4  | 2     |
 | 11  | `subjects`                  | §4 Classes      | §4.4  | 2     |
-| 12  | `attendance`                | §5 Attendance   | §4.5  | 3     |
-| 13  | `homework`                  | §6 Homework     | §4.7  | 3     |
-| 14  | `homework_submissions`      | §6 Homework     | §4.7  | 3     |
-| 15  | `study_materials`           | §6 Homework     | §4.13 | 3     |
-| 16  | `timetables`                | §7 Timetable    | §4.8  | —     |
-| 17  | `periods`                   | §7 Timetable    | §4.8  | —     |
-| 18  | `fee_structures`            | §8 Fees         | §4.6  | 4     |
-| 19  | `fee_heads`                 | §8 Fees         | §4.6  | 4     |
-| 20  | `fee_invoices`              | §8 Fees         | §4.6  | 4     |
-| 21  | `fee_payments`              | §8 Fees         | §4.6  | 4     |
-| 22  | `concessions`               | §8 Fees         | §4.6  | 4     |
-| 23  | `receipt_sequences`         | §8 Fees         | §4.6  | 4     |
-| 24  | `exams`                     | §9 Exams        | §4.9  | 4     |
-| 25  | `exam_subjects`             | §9 Exams        | §4.9  | 4     |
-| 26  | `results`                   | §9 Exams        | §4.9  | 4     |
-| 27  | `report_cards`              | §9 Exams        | §4.9  | 4     |
-| 28  | `conversations`             | §10 Chat        | §4.10 | 5     |
-| 29  | `conversation_participants` | §10 Chat        | §4.10 | 5     |
-| 30  | `messages`                  | §10 Chat        | §4.10 | 5     |
-| 31  | `notices`                   | §11 Notices     | §4.11 | 5     |
-| 32  | `notice_classes`            | §11 Notices     | §4.11 | 5     |
-| 33  | `events`                    | §11 Notices     | §4.11 | 5     |
-| 34  | `ai_conversations`          | §12 AI          | §4.12 | 5     |
-| 35  | `permissions`               | §3 Foundation   | §4.2  | 1     |
-| 36  | `user_permissions`          | §3 Foundation   | §4.2  | 1     |
+| 12  | `class_subjects`            | §4 Classes      | §4.4  | 2     |
+| 13  | `attendance`                | §5 Attendance   | §4.5  | 3     |
+| 14  | `homework`                  | §6 Homework     | §4.7  | 3     |
+| 15  | `homework_submissions`      | §6 Homework     | §4.7  | 3     |
+| 16  | `study_materials`           | §6 Homework     | §4.13 | 3     |
+| 17  | `timetables`                | §7 Timetable    | §4.8  | —     |
+| 18  | `periods`                   | §7 Timetable    | §4.8  | —     |
+| 19  | `fee_structures`            | §8 Fees         | §4.6  | 4     |
+| 20  | `fee_heads`                 | §8 Fees         | §4.6  | 4     |
+| 21  | `fee_invoices`              | §8 Fees         | §4.6  | 4     |
+| 22  | `fee_payments`              | §8 Fees         | §4.6  | 4     |
+| 23  | `concessions`               | §8 Fees         | §4.6  | 4     |
+| 24  | `receipt_sequences`         | §8 Fees         | §4.6  | 4     |
+| 25  | `exams`                     | §9 Exams        | §4.9  | 4     |
+| 26  | `exam_subjects`             | §9 Exams        | §4.9  | 4     |
+| 27  | `results`                   | §9 Exams        | §4.9  | 4     |
+| 28  | `report_cards`              | §9 Exams        | §4.9  | 4     |
+| 29  | `conversations`             | §10 Chat        | §4.10 | 5     |
+| 30  | `conversation_participants` | §10 Chat        | §4.10 | 5     |
+| 31  | `messages`                  | §10 Chat        | §4.10 | 5     |
+| 32  | `notices`                   | §11 Notices     | §4.11 | 5     |
+| 33  | `notice_classes`            | §11 Notices     | §4.11 | 5     |
+| 34  | `events`                    | §11 Notices     | §4.11 | 5     |
+| 35  | `ai_conversations`          | §12 AI          | §4.12 | 5     |
+| 36  | `permissions`               | §3 Foundation   | §4.2  | 1     |
+| 37  | `user_permissions`          | §3 Foundation   | §4.2  | 1     |
 
 ## 16. Cross-Cutting Concerns
 
@@ -2033,7 +2081,7 @@ Every backend feature module from `PRD.md` §4 and `Architecture.md` maps to tab
 | §4.1 Registration & OTP   | §3          | `schools`, `users`, `otps`                                                                        |
 | §4.2 Auth & RBAC          | §3          | `users`, `refresh_tokens`, `permissions`, `user_permissions`                                      |
 | §4.3 User management      | §3          | `teachers`, `teacher_classes`, `students`, `parents`, `parent_students`                           |
-| §4.4 Classes & subjects   | §4          | `classes`, `subjects` (+ `students.class_id`)                                                     |
+| §4.4 Classes & subjects   | §4          | `classes`, `subjects`, `class_subjects` (+ `students.class_id`)                                   |
 | §4.5 Attendance           | §5          | `attendance`                                                                                      |
 | §4.6 Fees                 | §8          | `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions`, `receipt_sequences` |
 | §4.7 Homework             | §6          | `homework`, `homework_submissions`                                                                |
@@ -2101,12 +2149,12 @@ writing migrations:
 
 ## 19. Full Schema ERD
 
-The whole database in one diagram — all 36 tables, all 93 foreign keys (§13) plus the 2 logical links,
+The whole database in one diagram — all 37 tables, all 95 foreign keys (§13) plus the 2 logical links,
 themed to the design tokens in [`Design.md`](./Design.md) (indigo primary, `ink` text, `line` rules).
 Identity, foreign-key, and unique-key columns only; full column lists live in the per-table sections
 above.
 
-It is dense by construction — `schools` alone fans out to 32 tables — so the per-feature ERDs in §3–§12
+It is dense by construction — `schools` alone fans out to 33 tables — so the per-feature ERDs in §3–§12
 remain the readable view. This one is the map: every table and every relationship in a single frame.
 
 ```mermaid
@@ -2169,7 +2217,7 @@ erDiagram
   users ||--o{ ai_conversations : "starts"
   users ||..o{ otps : "matched by email"
   classes ||--o{ students : "rosters"
-  classes ||--o{ subjects : "offers"
+  classes ||--o{ class_subjects : "offers"
   classes ||--o{ attendance : "registers"
   classes ||--o{ homework : "is assigned"
   classes ||--o{ study_materials : "is for"
@@ -2178,7 +2226,7 @@ erDiagram
   classes ||--o{ exams : "sits"
   classes ||--o{ notice_classes : "is targeted"
   teachers ||--o{ classes : "leads"
-  teachers ||--o{ subjects : "teaches"
+  teachers ||--o{ class_subjects : "teaches"
   teachers ||--o{ homework : "creates"
   teachers ||--o{ periods : "teaches"
   students ||--o{ parent_students : "has guardians"
@@ -2190,6 +2238,7 @@ erDiagram
   students ||--o{ results : "achieves"
   students ||--o{ report_cards : "receives"
   parents ||--o{ parent_students : "has children"
+  subjects ||--o{ class_subjects : "is offered as"
   subjects ||--o{ homework : "covers"
   subjects ||--o{ study_materials : "is for"
   subjects ||--o{ periods : "scheduled"
@@ -2267,9 +2316,14 @@ erDiagram
   subjects {
     uuid id PK
     uuid school_id FK
-    uuid class_id FK
-    uuid teacher_id FK
     text code
+    text name
+  }
+  class_subjects {
+    uuid id PK
+    uuid class_id FK
+    uuid subject_id FK
+    uuid teacher_id FK
   }
   attendance {
     uuid id PK

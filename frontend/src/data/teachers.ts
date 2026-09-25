@@ -1,6 +1,6 @@
 import type { Teacher, TeacherClass } from '@/types/people'
 import { SCHOOL_ID, dateOffset, personName } from '@/data/seed'
-import { subjectTemplates } from '@/data/subjects'
+import { CORE_SUBJECT_CODES, findSubjectByCode, subjects } from '@/data/subjects'
 import { classIds } from '@/data/classes'
 
 const QUALIFICATIONS = [
@@ -30,8 +30,8 @@ export const teachers: Teacher[] = Array.from({ length: 8 }, (_, offset) => {
     lastName,
     phone: `+88017${(11000000 + index * 137).toString().slice(0, 8)}`,
     qualification: QUALIFICATIONS[offset],
-    // Drawn from the school's catalogue, never a second list of subject names.
-    subject: subjectTemplates[offset % subjectTemplates.length].name,
+    // Drawn from the school's catalogue, rotating over the six subjects every class runs.
+    subject: findSubjectByCode(CORE_SUBJECT_CODES[offset % CORE_SUBJECT_CODES.length])?.name ?? subjects[0].name,
     experienceYears: EXPERIENCE_YEARS[offset],
     joinedAt: dateOffset(-(400 + index * 45)),
     status: index === 8 ? 'INACTIVE' : 'ACTIVE',

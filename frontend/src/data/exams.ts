@@ -2,7 +2,7 @@ import type { Exam, ExamResult, ExamSubject, ReportCard } from '@/types/exams'
 import { SCHOOL_ID, dateOffset, dateTimeOffset } from '@/data/seed'
 import { classes } from '@/data/classes'
 import { students } from '@/data/students'
-import { subjectsForClass } from '@/data/subjects'
+import { classSubjectFor, subjectForClassCode, subjectsForClass } from '@/data/subjects'
 import { gradeForPercentage } from '@/lib/grades'
 
 const MAX_MARKS = 100
@@ -15,10 +15,10 @@ const TODAY = dateOffset(0)
 
 /** Single-subject class tests — the Tests tab's rows, drawn one subject from the class's catalogue. */
 const TEST_SEEDS = [
-  { classOffset: 8, subjectIndex: 0, title: 'English Class Test 1', examDate: dateOffset(-6), maxMarks: 20 },
-  { classOffset: 8, subjectIndex: 3, title: 'Social Studies Class Test 1', examDate: dateOffset(4), maxMarks: 20 },
-  { classOffset: 3, subjectIndex: 1, title: 'Mathematics Class Test 1', examDate: dateOffset(-2), maxMarks: 25 },
-  { classOffset: 12, subjectIndex: 4, title: 'ICT Class Test 1', examDate: dateOffset(6), maxMarks: 20 },
+  { classOffset: 8, subjectCode: 'ENG', title: 'English Class Test 1', examDate: dateOffset(-6), maxMarks: 20 },
+  { classOffset: 8, subjectCode: 'SST', title: 'Social Science Class Test 1', examDate: dateOffset(4), maxMarks: 20 },
+  { classOffset: 3, subjectCode: 'MATH', title: 'Mathematics Class Test 1', examDate: dateOffset(-2), maxMarks: 25 },
+  { classOffset: 12, subjectCode: 'CS', title: 'Computer Science Class Test 1', examDate: dateOffset(6), maxMarks: 20 },
 ]
 
 /**
@@ -36,7 +36,7 @@ export const exams: Exam[] = [
     kind: 'EXAM' as const,
     type: 'MID' as const,
     startDate: dateOffset(-21),
-    endDate: dateOffset(-15),
+    endDate: dateOffset(-14),
     description: 'Board-pattern examination covering every subject taught this term.',
     isPublished: offset < 3,
     publishedAt: offset < 3 ? dateTimeOffset(-10, 14, 0) : null,
@@ -49,7 +49,8 @@ export const exams: Exam[] = [
     kind: 'EXAM' as const,
     type: 'UNIT' as const,
     startDate: dateOffset(7),
-    endDate: dateOffset(19),
+    // Wide enough for every subject a class runs — a grade-10 class sits one paper fewer.
+    endDate: dateOffset(21),
     description: null,
     isPublished: false,
     publishedAt: null as string | null,
@@ -86,19 +87,22 @@ export const examSubjects: ExamSubject[] = [
         durationMin: unit ? UNIT_DURATION_MIN : EXAM_DURATION_MIN,
       }))
     }),
-  ...TEST_SEEDS.map((seed, offset) => {
-    const subject = subjectsForClass(classes[seed.classOffset].id)[seed.subjectIndex]
+  ...TEST_SEEDS.flatMap((seed, offset) => {
+    const subject = subjectForClassCode(classes[seed.classOffset].id, seed.subjectCode)
+    if (!subject) return []
 
-    return {
-      id: `exs_test_${offset + 1}`,
-      schoolId: SCHOOL_ID,
-      examId: `test_${offset + 1}`,
-      subjectId: subject.id,
-      examDate: seed.examDate,
-      maxMarks: seed.maxMarks,
-      passMarks: Math.round(seed.maxMarks * (PASS_MARKS / MAX_MARKS)),
-      durationMin: TEST_DURATION_MIN,
-    }
+    return [
+      {
+        id: `exs_test_${offset + 1}`,
+        schoolId: SCHOOL_ID,
+        examId: `test_${offset + 1}`,
+        subjectId: subject.id,
+        examDate: seed.examDate,
+        maxMarks: seed.maxMarks,
+        passMarks: Math.round(seed.maxMarks * (PASS_MARKS / MAX_MARKS)),
+        durationMin: TEST_DURATION_MIN,
+      },
+    ]
   }),
 ]
 
@@ -121,8 +125,8 @@ function enteredByFor(examId: string, classId: string, subjectId: string): strin
   const exam = exams.find((item) => item.id === examId)
   if (!exam) return null
 
-  const subject = subjectsForClass(classId).find((item) => item.id === subjectId)
-  return subject?.teacherId ? `usr_${subject.teacherId}` : null
+  const link = classSubjectFor(classId, subjectId)
+  return link?.teacherId ? `usr_${link.teacherId}` : null
 }
 
 /** Marks only exist for papers that have been sat — a future test has no results yet. */

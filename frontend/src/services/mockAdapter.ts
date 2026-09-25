@@ -2,7 +2,15 @@ import { AxiosError } from 'axios'
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
 import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
-import type { ClassOption } from '@/types/academic'
+import type {
+  AssignmentSummary,
+  ClassAssignment,
+  ClassOption,
+  ClassRoom,
+  ClassSubject,
+  Subject,
+  SubjectRow,
+} from '@/types/academic'
 import type {
   ClassFeeStatusRow,
   ClassReportRow,
@@ -91,7 +99,7 @@ import { classLabel, classes, findClass } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, maxMarks, reportCards } from '@/data/exams'
 import { gradeForPercentage, isPass, percentageOf } from '@/lib/grades'
-import { findSubject, subjects } from '@/data/subjects'
+import { classSubjectFor, classSubjects, findSubject, subjects } from '@/data/subjects'
 import {
   concessions,
   feeHeads,
@@ -340,6 +348,113 @@ function teacherListItems(): TeacherListItem[] {
       }),
     }
   })
+}
+
+// ---------------------------------------------------------------------------------------------
+// subjects — the school-wide catalogue and its class assignments. Every roll-up the Subjects,
+// Assign Subjects and Summary tabs render is computed here, not in the view.
+// ---------------------------------------------------------------------------------------------
+
+/** Kept in step with `data/subjects.ts`, which seeds this many teachers. */
+const ASSIGNMENT_TEACHERS = 8
+
+const SUBJECT_CODE_PATTERN = /^[A-Za-z0-9]{2,6}$/
+
+/** The class list as the pickers read it — shared by `/classes` and `/subjects/summary`. */
+function classChoices(): ClassOption[] {
+  return classes.map((classRoom) => ({
+    id: classRoom.id,
+    label: classLabel(classRoom),
+    grade: classRoom.grade,
+    section: classRoom.section,
+  }))
+}
+
+/** The Subjects tab: the catalogue with how many classes offer each subject. */
+function subjectRows(): SubjectRow[] {
+  return subjects.map((subject) => ({
+    ...subject,
+    classCount: classSubjects.filter((link) => link.subjectId === subject.id).length,
+  }))
+}
+
+/** One class's assigned subjects, in assignment order. */
+function classAssignment(classRoom: ClassRoom): ClassAssignment {
+  return {
+    classId: classRoom.id,
+    className: classLabel(classRoom),
+    subjects: classSubjects
+      .filter((link) => link.classId === classRoom.id)
+      .flatMap((link) => {
+        const subject = findSubject(link.subjectId)
+        return subject ? [subject] : []
+      }),
+  }
+}
+
+/** The Summary tab: every class, every subject and the matrix between them. */
+function assignmentSummary(): AssignmentSummary {
+  const assigned: Record<string, string[]> = {}
+
+  for (const classRoom of classes) {
+    assigned[classRoom.id] = classSubjects.filter((link) => link.classId === classRoom.id).map((link) => link.subjectId)
+  }
+
+  return { classes: classChoices(), subjects, assigned }
+}
+
+/** A subject a lesson, a paper, an assignment or a material still points at cannot be deleted. */
+function subjectInUse(subjectId: string): boolean {
+  return (
+    homework.some((item) => item.subjectId === subjectId) ||
+    studyMaterials.some((item) => item.subjectId === subjectId) ||
+    examSubjects.some((item) => item.subjectId === subjectId) ||
+    periods.some((item) => item.subjectId === subjectId)
+  )
+}
+
+/** The teacher a newly assigned subject gets, spread the way the seed spreads the staff. */
+function teacherForAssignment(classId: string, subjectId: string): string {
+  const classOffset = Math.max(
+    0,
+    classes.findIndex((classRoom) => classRoom.id === classId),
+  )
+  const subjectOffset = Math.max(
+    0,
+    subjects.findIndex((subject) => subject.id === subjectId),
+  )
+
+  return `tch_${((classOffset + subjectOffset) % ASSIGNMENT_TEACHERS) + 1}`
+}
+
+/** Adds the missing links for one class and reports how many were new; existing ones are left alone. */
+function addAssignments(classId: string, subjectIds: string[]): number {
+  let added = 0
+
+  for (const subjectId of subjectIds) {
+    if (classSubjects.some((link) => link.classId === classId && link.subjectId === subjectId)) continue
+
+    const link: ClassSubject = {
+      id: `cs_${classId.replace('cls_', '')}_${subjectId.replace('subj_', '')}`,
+      schoolId: SCHOOL_ID,
+      classId,
+      subjectId,
+      teacherId: teacherForAssignment(classId, subjectId),
+    }
+
+    classSubjects.push(link)
+    added += 1
+  }
+
+  return added
+}
+
+function subjectNameTaken(name: string, exceptId?: string): boolean {
+  return subjects.some((subject) => subject.id !== exceptId && subject.name.toLowerCase() === name.toLowerCase())
+}
+
+function subjectCodeTaken(code: string, exceptId?: string): boolean {
+  return subjects.some((subject) => subject.id !== exceptId && subject.code.toLowerCase() === code.toLowerCase())
 }
 
 /**
@@ -2029,29 +2144,188 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/subjects',
-    handler: ({ params }) =>
-      ok(
-        subjects.filter(
-          (subject) =>
-            (!params.classId || subject.classId === params.classId) &&
-            (!params.teacherId || subject.teacherId === params.teacherId),
-        ),
-      ),
+    handler: ({ params }) => {
+      const classId = params.classId ? String(params.classId) : ''
+      const teacherId = params.teacherId ? String(params.teacherId) : ''
+
+      // Scoped to a class, the list is what that class actually runs; scoped to a teacher, what they
+      // teach anywhere. Unscoped it is the whole catalogue.
+      if (classId) {
+        const links = classSubjects.filter(
+          (link) => link.classId === classId && (!teacherId || link.teacherId === teacherId),
+        )
+
+        return ok<Subject[]>(
+          links.flatMap((link) => {
+            const subject = findSubject(link.subjectId)
+            return subject ? [subject] : []
+          }),
+        )
+      }
+
+      if (teacherId) {
+        const ids = new Set(classSubjects.filter((link) => link.teacherId === teacherId).map((link) => link.subjectId))
+
+        return ok<Subject[]>(subjects.filter((subject) => ids.has(subject.id)))
+      }
+
+      return ok<Subject[]>(subjects)
+    },
   },
-  { method: 'GET', path: '/dashboard/admin', handler: () => ok(dashboardSummary) },
+  { method: 'GET', path: '/subjects/overview', handler: () => ok<SubjectRow[]>(subjectRows()) },
+  { method: 'GET', path: '/subjects/summary', handler: () => ok<AssignmentSummary>(assignmentSummary()) },
   {
     method: 'GET',
-    path: '/classes',
-    handler: () =>
-      ok<ClassOption[]>(
-        classes.map((classRoom) => ({
-          id: classRoom.id,
-          label: classLabel(classRoom),
-          grade: classRoom.grade,
-          section: classRoom.section,
-        })),
-      ),
+    path: '/subjects/assignments',
+    handler: ({ params }) => {
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(400, 'SUBJECT_INVALID', 'Choose a class', ['classId'])
+
+      return ok<ClassAssignment>(classAssignment(classRoom))
+    },
   },
+  {
+    method: 'POST',
+    path: '/subjects/assignments',
+    handler: ({ body }) => {
+      const classId = String(body.classId ?? '')
+      const subjectIds = Array.isArray(body.subjectIds) ? body.subjectIds.map(String) : []
+
+      const classRoom = classes.find((item) => item.id === classId)
+      if (!classRoom) return fail(400, 'SUBJECT_INVALID', 'Choose a class', ['classId'])
+      if (subjectIds.length === 0) {
+        return fail(400, 'SUBJECT_INVALID', 'Select at least one subject', ['subjectIds'])
+      }
+      if (subjectIds.some((subjectId) => !findSubject(subjectId))) {
+        return fail(400, 'SUBJECT_INVALID', 'That subject is not in the catalogue', ['subjectIds'])
+      }
+
+      addAssignments(classId, subjectIds)
+      return ok<ClassAssignment>(classAssignment(classRoom))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/subjects/assignments/bulk',
+    handler: ({ body }) => {
+      const classIds = Array.isArray(body.classIds) ? body.classIds.map(String) : []
+      const subjectIds = Array.isArray(body.subjectIds) ? body.subjectIds.map(String) : []
+
+      if (classIds.length === 0) return fail(400, 'SUBJECT_INVALID', 'Select at least one class', ['classIds'])
+      if (subjectIds.length === 0) {
+        return fail(400, 'SUBJECT_INVALID', 'Select at least one subject', ['subjectIds'])
+      }
+      if (classIds.some((classId) => !classes.some((classRoom) => classRoom.id === classId))) {
+        return fail(400, 'SUBJECT_INVALID', 'That class does not exist', ['classIds'])
+      }
+      if (subjectIds.some((subjectId) => !findSubject(subjectId))) {
+        return fail(400, 'SUBJECT_INVALID', 'That subject is not in the catalogue', ['subjectIds'])
+      }
+
+      const added = classIds.reduce((total, classId) => total + addAssignments(classId, subjectIds), 0)
+      return ok({ added })
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/subjects/assignments/:classId/:subjectId',
+    handler: ({ params }) => {
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(404, 'SUBJECT_NOT_FOUND', 'Class not found')
+
+      const index = classSubjects.findIndex(
+        (link) => link.classId === classRoom.id && link.subjectId === params.subjectId,
+      )
+      if (index < 0) return fail(404, 'SUBJECT_NOT_FOUND', 'That subject is not assigned to this class')
+
+      classSubjects.splice(index, 1)
+      return ok<ClassAssignment>(classAssignment(classRoom))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/subjects',
+    handler: ({ body }) => {
+      const name = String(body.name ?? '').trim()
+      const code = String(body.code ?? '')
+        .trim()
+        .toUpperCase()
+
+      if (!name) return fail(400, 'SUBJECT_INVALID', 'A subject name is required', ['name'])
+      if (!SUBJECT_CODE_PATTERN.test(code)) {
+        return fail(400, 'SUBJECT_INVALID', 'Use a 2–6 character code, e.g. MATH', ['code'])
+      }
+      if (subjectNameTaken(name)) return fail(409, 'SUBJECT_NAME_TAKEN', 'That subject already exists', ['name'])
+      if (subjectCodeTaken(code)) return fail(409, 'SUBJECT_CODE_TAKEN', 'That code is already in use', ['code'])
+
+      const subject: Subject = {
+        id: `subj_${code.toLowerCase()}`,
+        schoolId: SCHOOL_ID,
+        name,
+        code,
+        description: body.description ? String(body.description).trim() || null : null,
+      }
+
+      subjects.push(subject)
+      return created(subjectRows().find((row) => row.id === subject.id))
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/subjects/:id',
+    handler: ({ params, body }) => {
+      const subject = findSubject(String(params.id))
+      if (!subject) return fail(404, 'SUBJECT_NOT_FOUND', 'Subject not found')
+
+      if (body.name !== undefined) {
+        const name = String(body.name).trim()
+        if (!name) return fail(400, 'SUBJECT_INVALID', 'A subject name is required', ['name'])
+        if (subjectNameTaken(name, subject.id)) {
+          return fail(409, 'SUBJECT_NAME_TAKEN', 'That subject already exists', ['name'])
+        }
+        subject.name = name
+      }
+
+      if (body.code !== undefined) {
+        const code = String(body.code).trim().toUpperCase()
+        if (!SUBJECT_CODE_PATTERN.test(code)) {
+          return fail(400, 'SUBJECT_INVALID', 'Use a 2–6 character code, e.g. MATH', ['code'])
+        }
+        if (subjectCodeTaken(code, subject.id)) {
+          return fail(409, 'SUBJECT_CODE_TAKEN', 'That code is already in use', ['code'])
+        }
+        subject.code = code
+      }
+
+      if (body.description !== undefined) {
+        subject.description = body.description ? String(body.description).trim() || null : null
+      }
+
+      return ok(subjectRows().find((row) => row.id === subject.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/subjects/:id',
+    handler: ({ params }) => {
+      const index = subjects.findIndex((item) => item.id === params.id)
+      if (index < 0) return fail(404, 'SUBJECT_NOT_FOUND', 'Subject not found')
+      // `on delete restrict` on every table that points at a subject (`Database.md` §13).
+      if (subjectInUse(String(params.id))) {
+        return fail(409, 'SUBJECT_IN_USE', 'This subject is still used by a lesson, exam or material')
+      }
+
+      subjects.splice(index, 1)
+      // The assignment cascade — `class_subjects.subject_id` goes with the subject.
+      for (let link = classSubjects.length - 1; link >= 0; link -= 1) {
+        if (classSubjects[link].subjectId === params.id) classSubjects.splice(link, 1)
+      }
+
+      return ok({ deleted: true })
+    },
+  },
+  { method: 'GET', path: '/dashboard/admin', handler: () => ok(dashboardSummary) },
+  { method: 'GET', path: '/classes', handler: () => ok<ClassOption[]>(classChoices()) },
   {
     method: 'GET',
     path: '/teachers',
@@ -2588,7 +2862,7 @@ const routes: Route[] = [
 
       const subject = findSubject(subjectId)
       if (!subject) return fail(400, 'HOMEWORK_INVALID', 'Choose a subject for the assignment', ['subjectId'])
-      if (subject.classId !== classId) {
+      if (!classSubjectFor(classId, subjectId)) {
         return fail(400, 'HOMEWORK_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
       }
       if (!title) return fail(400, 'HOMEWORK_INVALID', 'A title is required', ['title'])
@@ -2603,7 +2877,10 @@ const routes: Route[] = [
       // The author of record: a teacher's own profile, or the subject's teacher when an admin assigns
       // on their behalf.
       const user = users.find((item) => item.id === userId)
-      const teacherId = user?.role === 'TEACHER' && user.profileId ? user.profileId : (subject.teacherId ?? 'tch_1')
+      const teacherId =
+        user?.role === 'TEACHER' && user.profileId
+          ? user.profileId
+          : (classSubjectFor(classId, subjectId)?.teacherId ?? 'tch_1')
 
       const assignment: Homework = {
         id: `hw_${homework.length + 1}`,
@@ -2641,7 +2918,7 @@ const routes: Route[] = [
 
       const subject = findSubject(subjectId)
       if (!subject) return fail(400, 'HOMEWORK_INVALID', 'Choose a subject for the assignment', ['subjectId'])
-      if (subject.classId !== classId) {
+      if (!classSubjectFor(classId, subjectId)) {
         return fail(400, 'HOMEWORK_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
       }
 
@@ -2732,7 +3009,7 @@ const routes: Route[] = [
 
       const subject = findSubject(subjectId)
       if (!subject) return fail(400, 'MATERIAL_INVALID', 'Choose a subject for this material', ['subjectId'])
-      if (subject.classId !== classId) {
+      if (!classSubjectFor(classId, subjectId)) {
         return fail(400, 'MATERIAL_INVALID', 'That subject is not taught in the chosen class', ['subjectId'])
       }
       if (!title) return fail(400, 'MATERIAL_INVALID', 'A title is required', ['title'])
@@ -3200,7 +3477,7 @@ const routes: Route[] = [
       if (subjectId) {
         const subject = findSubject(subjectId)
         if (!subject) return fail(400, 'TIMETABLE_INVALID', 'That subject does not exist', ['subjectId'])
-        if (subject.classId !== classRoom.id) {
+        if (!classSubjectFor(classRoom.id, subjectId)) {
           return fail(400, 'TIMETABLE_INVALID', 'That subject is not taught in this class', ['subjectId'])
         }
       }
@@ -3396,7 +3673,7 @@ const routes: Route[] = [
 
       if (kind === 'TEST') {
         const subjectId = String(body.subjectId ?? '')
-        if (!subjects.some((item) => item.id === subjectId && item.classId === classId)) {
+        if (!classSubjectFor(classId, subjectId)) {
           return fail(400, 'EXAM_INVALID', 'Choose a subject taught in that class', ['subjectId'])
         }
 
@@ -3455,7 +3732,7 @@ const routes: Route[] = [
 
       // Every paper is validated before any of them is written.
       for (const row of rows) {
-        if (!subjects.some((item) => item.id === String(row.subjectId) && item.classId === classId)) {
+        if (!classSubjectFor(classId, String(row.subjectId))) {
           return fail(400, 'EXAM_INVALID', 'A chosen subject is not taught in that class', ['subjects'])
         }
         if (!String(row.examDate ?? '')) return fail(400, 'EXAM_INVALID', 'Every subject needs a date', ['subjects'])
@@ -3517,7 +3794,7 @@ const routes: Route[] = [
 
         if (body.subjectId !== undefined) {
           const subjectId = String(body.subjectId)
-          if (!subjects.some((item) => item.id === subjectId && item.classId === exam.classId)) {
+          if (!classSubjectFor(exam.classId, subjectId)) {
             return fail(400, 'EXAM_INVALID', 'Choose a subject taught in that class', ['subjectId'])
           }
           paper.subjectId = subjectId
@@ -3553,7 +3830,7 @@ const routes: Route[] = [
         if (rows.length === 0) return fail(400, 'EXAM_INVALID', 'Select at least one subject', ['subjects'])
 
         for (const row of rows) {
-          if (!subjects.some((item) => item.id === String(row.subjectId) && item.classId === exam.classId)) {
+          if (!classSubjectFor(exam.classId, String(row.subjectId))) {
             return fail(400, 'EXAM_INVALID', 'A chosen subject is not taught in that class', ['subjects'])
           }
         }

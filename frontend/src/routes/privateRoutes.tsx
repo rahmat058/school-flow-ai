@@ -17,6 +17,7 @@ import {
   PermissionsPage,
   ReportsPage,
   StudentProfilePage,
+  SubjectClassPage,
   StudentsPage,
   TeachersPage,
   TimetablePage,
@@ -66,6 +67,7 @@ export const privateRoutes: RouteObject[] = [
             children: [
               { path: childPath(paths.teachers), element: <TeachersPage /> },
               { path: childPath(paths.permissions), element: <PermissionsPage /> },
+              { path: childPath(paths.subjects), element: <SubjectClassPage /> },
             ],
           },
           {

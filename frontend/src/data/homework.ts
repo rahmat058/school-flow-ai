@@ -1,11 +1,12 @@
 import type { Homework, HomeworkSubmission } from '@/types/homework'
 import { SCHOOL_ID, dateOffset, dateTimeOffset } from '@/data/seed'
 import { students } from '@/data/students'
-import { findSubject } from '@/data/subjects'
+import { classSubjectFor, subjectForClassCode } from '@/data/subjects'
 
 interface HomeworkSpec {
   classIndex: number
-  subjectIndex: number
+  /** The subject the task belongs to, by its catalogue code. */
+  subjectCode: string
   title: string
   description: string
   dueInDays: number
@@ -16,7 +17,7 @@ interface HomeworkSpec {
 const SPECS: HomeworkSpec[] = [
   {
     classIndex: 1,
-    subjectIndex: 2,
+    subjectCode: 'MATH',
     title: 'Fractions — worksheet 4B',
     description: 'Complete exercises 1–12. Show all working.',
     dueInDays: 2,
@@ -25,7 +26,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 1,
-    subjectIndex: 1,
+    subjectCode: 'ENG',
     title: 'Essay: my neighbourhood',
     description: 'Write 200 words describing your neighbourhood.',
     dueInDays: 4,
@@ -34,7 +35,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 2,
-    subjectIndex: 3,
+    subjectCode: 'SCI',
     title: 'Plant cell diagram',
     description: 'Draw and label a plant cell, then list three differences from an animal cell.',
     dueInDays: 1,
@@ -43,7 +44,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 3,
-    subjectIndex: 2,
+    subjectCode: 'MATH',
     title: 'Algebra practice set 7',
     description: 'Solve the linear equations in set 7.',
     dueInDays: -1,
@@ -52,7 +53,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 4,
-    subjectIndex: 1,
+    subjectCode: 'ENG',
     title: 'Reading comprehension — unit 5',
     description: 'Read the passage and answer questions 1–8.',
     dueInDays: 3,
@@ -61,7 +62,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 5,
-    subjectIndex: 5,
+    subjectCode: 'CS',
     title: 'Spreadsheet basics',
     description: 'Build a marks table and add SUM and AVERAGE formulas.',
     dueInDays: 5,
@@ -70,7 +71,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 6,
-    subjectIndex: 4,
+    subjectCode: 'SST',
     title: 'Map skills exercise',
     description: 'Locate the districts on the outline map supplied in class.',
     dueInDays: 2,
@@ -79,7 +80,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 3,
-    subjectIndex: 3,
+    subjectCode: 'SCI',
     title: 'Acids and bases — lab report',
     description: 'Write up the litmus and pH tests from Thursday’s practical.',
     dueInDays: 6,
@@ -88,7 +89,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 2,
-    subjectIndex: 1,
+    subjectCode: 'ENG',
     title: 'Grammar worksheet — tenses',
     description: 'Fill in the correct tense in each sentence, then rewrite five of your own.',
     dueInDays: 7,
@@ -97,7 +98,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 1,
-    subjectIndex: 6,
+    subjectCode: 'PE',
     title: 'Fitness log — one week',
     description: 'Record your daily activity for a week and note how you felt afterwards.',
     dueInDays: -2,
@@ -106,7 +107,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 3,
-    subjectIndex: 5,
+    subjectCode: 'CS',
     title: 'Typing practice — level 3',
     description: 'Finish level 3 in the typing tutor and note your accuracy score.',
     dueInDays: 1,
@@ -115,7 +116,7 @@ const SPECS: HomeworkSpec[] = [
   },
   {
     classIndex: 4,
-    subjectIndex: 4,
+    subjectCode: 'SST',
     title: 'Neighbourhood map',
     description: 'Draw a map of the roads around your home and mark the school route.',
     dueInDays: 4,
@@ -125,14 +126,16 @@ const SPECS: HomeworkSpec[] = [
 ]
 
 export const homework: Homework[] = SPECS.map((spec, index) => {
-  const subjectId = `sub_${spec.classIndex}_${spec.subjectIndex}`
+  const classId = `cls_${spec.classIndex}`
+  const subjectId = subjectForClassCode(classId, spec.subjectCode)?.id ?? ''
 
   return {
     id: `hw_${index + 1}`,
     schoolId: SCHOOL_ID,
-    classId: `cls_${spec.classIndex}`,
+    classId,
     subjectId,
-    teacherId: findSubject(subjectId)?.teacherId ?? 'tch_1',
+    // The teacher who takes that subject in that class — the assignment row, not the subject itself.
+    teacherId: classSubjectFor(classId, subjectId)?.teacherId ?? 'tch_1',
     title: spec.title,
     description: spec.description,
     dueDate: dateOffset(spec.dueInDays),

@@ -17,7 +17,7 @@
 
 - [ ] Dashboard analytics (stat cards, charts from real API)
 - [ ] Students / Teachers / Parents management tables + forms
-- [ ] Classes & subjects management
+- [x] Classes & subjects management
 - [ ] School settings page
 
 **Done when:** admin can CRUD all core entities against the live API.

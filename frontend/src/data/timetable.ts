@@ -1,7 +1,7 @@
 import type { Period, Timetable, Weekday } from '@/types/timetable'
 import { ACADEMIC_YEAR, SCHOOL_ID } from '@/data/seed'
 import { classes } from '@/data/classes'
-import { subjectsForClass } from '@/data/subjects'
+import { classSubjectFor, subjectsForClass } from '@/data/subjects'
 
 /** Monday to Saturday — the school week. */
 const WEEKDAYS: Weekday[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -60,7 +60,8 @@ export const periods: Period[] = timetables.flatMap((timetable, timetableOffset)
       schoolId: SCHOOL_ID,
       timetableId: timetable.id,
       subjectId: subject?.id ?? null,
-      teacherId: subject?.teacherId ?? null,
+      // Who teaches that subject in *this* class — the teacher lives on the assignment.
+      teacherId: subject ? (classSubjectFor(timetable.classId, subject.id)?.teacherId ?? null) : null,
       startTime: row.startTime,
       endTime: row.endTime,
       isBreak: row.isBreak,

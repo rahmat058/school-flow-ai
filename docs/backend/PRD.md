@@ -195,7 +195,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 ### 4.4 Class & Subject Management (`ClassesModule`)
 
-**Tables:** `classes`, `subjects` (+ `students.class_id`) · Database.md §4
+**Tables:** `classes`, `subjects`, `class_subjects` (+ `students.class_id`) · Database.md §4
 
 **Endpoints**
 
@@ -206,11 +206,23 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `DELETE /api/v1/classes/:id` `(admin)`
 - [ ] `GET /api/v1/classes/:id/students` — roster `(admin, teacher)`
 - [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move `(admin)`
-- [ ] `POST /api/v1/subjects` — name, code, class, teacher `(admin)`
-- [ ] `GET /api/v1/subjects` — filter by class/teacher `(admin, teacher)`
-- [ ] `GET /api/v1/subjects/:id` `(admin, teacher)`
-- [ ] `PATCH /api/v1/subjects/:id` `(admin)`
-- [ ] `DELETE /api/v1/subjects/:id` `(admin)`
+- [ ] `POST /api/v1/subjects` — add a **catalogue** subject: `name`, `code` (2–6 alphanumerics, unique per school) and an optional `description`; 400 on a malformed code, 409 `SUBJECT_CODE_TAKEN` / `SUBJECT_NAME_TAKEN` `(admin)`
+- [ ] `GET /api/v1/subjects` — the catalogue; `?classId=` narrows it to what that class runs, `?teacherId=` to what that teacher teaches `(admin, teacher)`
+- [ ] `GET /api/v1/subjects/overview` — the catalogue with a **`classCount`** per subject (the Subjects tab) `(admin)`
+- [ ] `PATCH /api/v1/subjects/:id` — rename, recode or rewrite the description; both uniqueness checks re-run `(admin)`
+- [ ] `DELETE /api/v1/subjects/:id` — removes the subject and its assignments; 409 `SUBJECT_IN_USE` while a lesson, exam paper, homework or material still references it `(admin)`
+- [ ] `GET /api/v1/subjects/assignments?classId=` — one class's assigned subjects, with the class label (the Single Assignment panel) `(admin)`
+- [ ] `POST /api/v1/subjects/assignments` — add `subjectIds` to one class; pairs already assigned are left alone, so the call is idempotent `(admin)`
+- [ ] `POST /api/v1/subjects/assignments/bulk` — add `subjectIds` to every `classIds` entry in one request, returning how many assignments were new `(admin)`
+- [ ] `DELETE /api/v1/subjects/assignments/:classId/:subjectId` — remove one subject from one class `(admin)`
+- [ ] `GET /api/v1/subjects/summary` — every class, every subject and the assignment matrix between them (the Summary tab) `(admin)`
+
+**Behavior**
+
+- **Subjects are a school-wide catalogue, not per-class rows.** A period, a homework, an exam paper, a result and a material all point at the same `subjects` row; _which classes run it_ is `class_subjects`. That is what lets a code read `MATH` school-wide rather than `MATH-5A`, and it is why deleting a subject cascades its assignments but is refused (409 `SUBJECT_IN_USE`) while a lesson, paper, homework or material still uses it.
+- The teacher belongs to the **assignment**, not the subject — the same subject is taught by different staff in each class. A timetable period's teacher and a homework's default author are both read from `class_subjects`.
+- Every module that takes a `subjectId` alongside a `classId` validates the **pair** against `class_subjects` and refuses a subject the class does not run (400): homework, materials, timetable slots, class tests and exam papers alike.
+- An assignment write is **additive** — the grid offers the subjects the class does not yet run, and the button counts what is being added; removal is per subject. Bulk assignment inserts only the missing pairs and reports the count.
 
 ### 4.5 Attendance Management (`AttendanceModule`)
 

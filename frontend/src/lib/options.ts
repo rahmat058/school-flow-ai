@@ -1,4 +1,3 @@
-import type { SubjectName } from '@/types/academic'
 import type { NoticePriority } from '@/types/communication'
 import type { ExamKind, ExamType } from '@/types/exams'
 import type { HomeworkStatus } from '@/types/homework'
@@ -36,16 +35,6 @@ export const MONTH_LABELS_SHORT = [
   'Nov',
   'Dec',
 ] as const
-
-/** The school's subjects — `data/subjects.ts` fans these across every class. */
-export const SUBJECT_NAMES = [
-  'English',
-  'Mathematics',
-  'Science',
-  'Social Studies',
-  'ICT',
-  'Physical Education',
-] as const satisfies readonly SubjectName[]
 
 /**
  * Option lists derived from the domain types rather than retyped in each form: the `satisfies`

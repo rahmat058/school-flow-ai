@@ -1,4 +1,5 @@
 import {
+  BookMarked,
   BookOpen,
   CalendarCheck,
   CalendarDays,
@@ -38,6 +39,7 @@ export const navItems: NavItem[] = [
   { label: 'AI Assistant', href: '/ai', icon: Sparkles, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
   { label: 'Reports', href: '/reports', icon: FileSpreadsheet, roles: ['ADMIN', 'TEACHER'] },
   { label: 'Roles & permissions', href: '/permissions', icon: ShieldCheck, roles: ['ADMIN'] },
+  { label: 'Subject & Class', href: '/subjects', icon: BookMarked, roles: ['ADMIN'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['ADMIN'] },
 ]
 

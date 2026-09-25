@@ -24,7 +24,7 @@ backend/
 │   ├── auth/                 # strategies, guards, dto + the RBAC catalogue & per-user grants
 │   ├── schools/              # registration, OTP, settings
 │   ├── users/                # teachers, students, parents
-│   ├── classes/              # classes + subjects
+│   ├── classes/              # classes, the subject catalogue + class-subject assignments
 │   ├── attendance/
 │   ├── fees/                 # structures + heads, invoices, payments, receipts, reports, concessions
 │   ├── homework/

@@ -14,6 +14,7 @@ export const paths = {
   dashboard: '/',
   students: '/students',
   teachers: '/teachers',
+  subjects: '/subjects',
   /** Pattern for a student's profile; build links with `studentProfilePath()`. */
   studentDetail: '/students/:id',
   attendance: '/attendance',
