@@ -12,6 +12,7 @@
 - `@nestjs/throttler` on auth/OTP/AI endpoints
 - Emails: one React Email component per message (`.tsx` in `src/mail/templates/`), rendered to HTML with `render()` and sent through Resend — templates are code, reviewed like any module
 - Run `npm run lint` and `npm run build` before finishing any task
+- `frontend/src/services/mockAdapter.ts` is the spec for routes and payloads — where it and `PRD.md` diverge, the divergence is a documentation bug until a real backend overtakes the mock
 
 ## Avoid
 
@@ -31,5 +32,6 @@
 - Never commit unless asked
 - Do not install packages without explicit approval
 - Every schema change = a new Supabase migration in `supabase/migrations`, never direct edits to a shared database
+- A schema change touches [`Schema.md`](./Schema.md), [`Erd.md`](./Erd.md) and [`Database.md`](./Database.md) together — no table edit lands in one without the other two
 - Match existing module conventions before introducing new patterns
 - Minimize diff size — smallest correct change wins

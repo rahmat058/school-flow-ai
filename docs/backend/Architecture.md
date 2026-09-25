@@ -6,6 +6,23 @@ React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` �
 
 Layers: **Controller → Service → Supabase client → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
+## Request lifecycle
+
+```mermaid
+flowchart TB
+  client["React client"] --> api["/api/v1"]
+  api --> token{"Global token check<br/>against PUBLIC_PATHS"}
+  token -->|public path| role
+  token -->|no / invalid token| unauth["401 AUTH_UNAUTHENTICATED"]
+  token -->|valid token| role{"Per-route role +<br/>ownership check (where present)"}
+  role -->|refused| forbidden["403 — role / ownership code"]
+  role -->|allowed| service["Service (business logic)"]
+  service --> store[("Data store — Supabase, or the in-repo mock seed")]
+  store --> envelope["Envelope { success, data, meta? }"]
+```
+
+Today that chain runs against the **in-repo mock adapter** (`frontend/src/services/mockAdapter.ts`), which answers every request from the deterministic seed in `frontend/src/data/*` and returns the real envelope. Its global step is the `PUBLIC_PATHS` set, and only **ten** routes carry a per-route role or ownership check (`PRD.md` §2). A real **NestJS backend replaces the mock behind the same contract** — the same paths, guards, envelopes and error codes — and the route table, ownership rules and error catalogue it must match are in [`Access.md`](./Access.md).
+
 ## Folder structure
 
 ```
@@ -41,6 +58,36 @@ backend/
 ```
 
 **Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`; DTOs in `dto/` per module with `create-*.dto.ts` / `update-*.dto.ts`. Each feature module owns its routes under `/api/v1/<feature>`.
+
+## Domain-to-module map
+
+Each routing domain and the module that owns it, with the tables the module reads or writes — derived from [`Schema.md`](./Schema.md) §14. `(planned)` marks a table the design target adds; the mock keeps that relationship inline (`Schema.md` §15).
+
+| Domain      | Module           | Tables touched                                                                                             |
+| ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| auth        | AuthModule       | `users`, `permissions`, `user_permissions` (`refresh_tokens` planned)                                      |
+| school      | SchoolsModule    | `schools`, `users` (`otps` planned)                                                                        |
+| users       | AuthModule       | `users`, `permissions`, `user_permissions` — the `/users/:userId/permissions` routes                       |
+| teachers    | UsersModule      | `teachers`, `users`, `teacher_classes`                                                                     |
+| students    | UsersModule      | `students`, `users`, `classes`, `parent_students`                                                          |
+| parents     | UsersModule      | `parents`, `users`, `parent_students`                                                                      |
+| classes     | ClassesModule    | `classes`, `students`, `class_subjects`, `teacher_classes`                                                 |
+| subjects    | ClassesModule    | `subjects`, `class_subjects`                                                                               |
+| attendance  | AttendanceModule | `attendance`, `classes`, `students`                                                                        |
+| homework    | HomeworkModule   | `homework`, `homework_submissions`                                                                         |
+| materials   | MaterialsModule  | `study_materials`                                                                                          |
+| timetable   | TimetablesModule | `timetables`, `periods`                                                                                    |
+| exams       | ExamsModule      | `exams`, `exam_subjects`, `results`, `report_cards`                                                        |
+| fees        | FeesModule       | `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions` (`receipt_sequences` planned) |
+| notices     | NoticesModule    | `notices`, `events` (`notice_classes` planned)                                                             |
+| chat        | ChatModule       | `conversations`, `messages` (`conversation_participants` planned)                                          |
+| ai          | AiModule         | `ai_conversations`                                                                                         |
+| reports     | ReportsModule    | none — aggregates over the modules that own tables                                                         |
+| progress    | ReportsModule    | none — a projection over `exams`, `exam_subjects`, `results`, `report_cards`                               |
+| dashboard   | ReportsModule    | none — aggregates over attendance, fees, exams, classes and people                                         |
+| permissions | AuthModule       | `permissions`, `user_permissions`, `users`                                                                 |
+
+The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns, keys, indexes and constraints in [`Schema.md`](./Schema.md).
 
 ## Tech stack
 

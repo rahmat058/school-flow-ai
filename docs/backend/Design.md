@@ -6,7 +6,7 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 
 - Global prefix `/api/v1`; plural, kebab-case resources: `/fees/structures`, `/report-cards`
 - Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`, `/schools/current/backup`
-- A resource the caller **is** addresses itself as `current` (the tenant: `/schools/current` and its `settings`/`backup` sub-resources) or `me` (a person's own slice: `/timetables/me`, `/attendance/me`) rather than carrying an id, because the caller comes from the session — with an optional `?studentId=` where a guardian may pick one of their own children
+- A resource the caller **is** addresses itself as `current` (the tenant: `/schools/current` and its `settings`/`backup` sub-resources) or `me` (a person's own slice: `/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`) rather than carrying an id, because the caller comes from the session — with an optional `?studentId=` where a guardian may pick one of their own children
 - Filters via query params: `?classId=&from=&to=&status=`
 - Report families are one route per report rather than a `?type=`: `/fees/reports/day-book`,
   `/fees/reports/class`, `/fees/reports/defaulters`, `/fees/reports/student-ledger`
@@ -15,27 +15,28 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## Response envelope (success)
 
 ```json
-{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 20, "total": 42 } }
+{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
 ```
 
 - Single resource → `data` is an object; lists → `data` is an array + `meta` pagination
+- Pagination is `meta { page, limit, total }`; **`limit` defaults to 10**, `page` to 1
 - `meta` omitted when not paginated
 
 ## Error envelope
 
 ```json
-{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": [] } }
+{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] } }
 ```
 
 - `code`: `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`)
-- Validation errors → 400 with `details` array of field messages
+- `details` is a `string[]` of **field names**, present on the 400 validation codes; the full catalogue of the mock's 60 codes is in `Access.md` §4
 - Codes: 200 OK · 201 Created · 400 Validation · 401 Unauthenticated · 403 Forbidden · 404 Not Found · 409 Conflict · 429 Rate Limited · 500 Server Error
 
 ## Field naming & types
 
 - `camelCase` everywhere in JSON
 - IDs are UUID strings; dates ISO-8601 (`2026-09-21T10:30:00Z`); date-only as `YYYY-MM-DD`
-- Money as integer **paise** (e.g. `150000` = ₹1,500.00) — never floats
+- Money as an integer minor unit, with a `*Paise` field suffix (`amountPaise`, `paidPaise`) — never a float. The demo school declares `currency: 'USD'` while the fields are suffixed `*Paise` — a rupee-vs-dollar mismatch recorded as an open question in `Schema.md` §1, not resolved here
 - Enum values `SCREAMING_SNAKE` (`PRESENT`, `PENDING`, `UNIT`)
 - Sensitive fields (`passwordHash`, OTP codes) never appear in responses
 

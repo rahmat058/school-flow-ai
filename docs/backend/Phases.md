@@ -3,6 +3,10 @@
 > The endpoint-level checklist for each item lives in `docs/backend/PRD.md` §4 — build and tick one
 > endpoint at a time there, then tick the matching line here. **Phase 1 blocks everything; Phase 2
 > blocks 3–5.** Do not start a phase before its blockers are done.
+>
+> **`frontend/src/services/mockAdapter.ts` is the current implementation of record.** The mock already
+> serves most of the endpoints these phases list; each phase's `PRD §4.x` reference names the modules it
+> builds, and the mock's routes and payloads are the contract those modules build to.
 
 ## Phase 1: Foundation & Auth — PRD §4.1, §4.2, §4.15
 
@@ -62,7 +66,7 @@
 
 **Done when:** permitted role pairs chat in real time and every AI feature returns output.
 
-## Phase 6: Hardening & Deploy
+## Phase 6: Hardening & Deploy — PRD §4.16
 
 - [ ] Rate-limit tuning, security review pass, log scrubbing
 - [ ] BullMQ email queue + fee reminder cron

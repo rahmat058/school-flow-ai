@@ -38,7 +38,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 ### 1.4 Non-Functional Requirements
 
 - Response time < 300ms for standard CRUD endpoints
-- Paginated list endpoints (default `take=20`, cursor or page-based)
+- Paginated list endpoints by `page`/`limit`; `limit` defaults to 10 (see §5)
 - DTO validation on all request bodies via global `ValidationPipe` (`whitelist: true`, `transform: true`)
 - Global exception filter with consistent error shape
 - Rate limiting on auth endpoints (OTP, login) via `@nestjs/throttler`
@@ -48,66 +48,28 @@ Build the complete backend for a multi-role School Management System using **Nes
 
 ## 2. Roles & Access Matrix
 
-| Module                           | Admin | Teacher              | Student             | Parent       |
-| -------------------------------- | ----- | -------------------- | ------------------- | ------------ |
-| School registration/settings     | ✅    | ❌                   | ❌                  | ❌           |
-| User management (CRUD)           | ✅    | ❌                   | ❌                  | ❌           |
-| Class/Subject management         | ✅    | ❌                   | ❌                  | ❌           |
-| Attendance (mark)                | ✅    | ✅                   | ❌                  | ❌           |
-| Attendance (view)                | ✅    | ✅                   | own                 | child's      |
-| Homework (create)                | ✅    | ✅                   | ❌                  | ❌           |
-| Homework (submit/view)           | ✅    | ✅                   | ✅                  | child's      |
-| Fees (structure/collect/reports) | ✅    | ❌                   | pay own             | pay child's  |
-| Exams (create/publish)           | ✅    | ✅                   | view                | view child's |
-| Timetable                        | ✅    | view own             | view own            | view child's |
-| Study material (upload)          | ✅    | ✅                   | download            | view         |
-| Notices (publish)                | ✅    | ❌                   | view                | view         |
-| Chat                             | ✅    | ✅                   | ✅                  | ✅           |
-| Roles & permissions (manage)     | ✅    | ❌                   | ❌                  | ❌           |
-| AI Assistant                     | all 7 | report-comment, quiz | homework-help, quiz | ❌           |
-| Reports & exports                | ✅    | limited              | ❌                  | ❌           |
+Four roles — `ADMIN | TEACHER | STUDENT | PARENT` — each with its own sidebar (`Access.md` §2). The role decides which screens load; it is a planning scope the mock only partly enforces.
+
+| Role      | Nav seen (count)                                                                                                                                                                                                        | What the role is for                                                                                                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN`   | 16 — Dashboard · Students · Teachers · Attendance · Fees · Homework · Tests & exams · Timetable · Study Materials · Notices · Communication · AI Assistant · Reports · Roles & permissions · Subject & Class · Settings | Owns the school: settings, staff and student records, classes, subjects, timetables, exams, the permission editor and every report. |
+| `TEACHER` | 11 — Dashboard · Students · Attendance · Homework · Tests & exams · Timetable · Study Materials · Notices · Communication · AI Assistant · Reports                                                                      | Works the school's records: the roster, the register, homework, materials and marks.                                                |
+| `STUDENT` | 11 — Dashboard · Attendance · Homework · Tests & exams · My Reports · Progress · Timetable · Study Materials · Notices · Communication · AI Assistant                                                                   | Reads their own slice: their class, their own attendance, marks, progress and fees.                                                 |
+| `PARENT`  | 5 — Dashboard · Attendance · Results · Fees · Notices                                                                                                                                                                   | Reads one of their **own** children at a time.                                                                                      |
+
+**Only ten of the 109 routes are role-gated.** The mock checks the token globally and then role-gates exactly: `GET /dashboard/student`, `GET /dashboard/parent`, `GET /attendance/me`, `GET /attendance/monthly`, `GET /attendance`, `POST /attendance`, `GET /fees/me`, `POST /fees/me/payments`, `GET /exams/me`, `GET /progress/me`. **Every other route accepts any valid token** — the contract scopes many of them to a narrower role, but the mock does not enforce it. The route-by-route access tables (intended scope, enforced-or-not, and the 403 code), the 60-code error catalogue and the client guards are in [`Access.md`](./Access.md) §3–§5.
 
 ---
 
 ## 3. Data Models (PostgreSQL — Supabase)
 
-All tables live in the Supabase project (`supabase/` migrations are the source of truth). All models include `id` (UUID), `schoolId` (FK → School), `createdAt`, `updatedAt` unless noted. Key enums: `Role`, `AttendanceStatus`, `PaymentStatus`, `ExamType`, `MaterialType`.
-
-- **School** — name, address, contact, logo, subscriptionStatus, settings (JSONB: academic + notifications + security), slug
-- **User** — email (unique), passwordHash, role (enum), schoolId, isVerified
-- **Teacher / Student / Parent** — profile tables with 1:1 FK to User
-- **ParentStudent** — join table (many-to-many parent ↔ child)
-- **Class** — grade, section, classTeacherId (FK → Teacher)
-- **Subject** — name, code, classId, teacherId
-- **Attendance** — date, classId, studentId, status (`PRESENT | ABSENT | LEAVE | LATE`); unique constraint on (classId, studentId, date)
-- **FeeStructure** — classId, heads (JSONB array or FeeHead child table: name, amount, frequency)
-- **FeeInvoice** — studentId, amount, dueDate, status (`PENDING | PAID | PARTIAL | OVERDUE`), receiptNo
-- **FeePayment** — invoiceId, studentId, amount, method, provider (`STRIPE | SSLCOMMERZ`), providerOrderId, status (`PENDING | PAID | FAILED`), paidAt
-- **Concession** — studentId, type, percentage/amount, status, approvedById
-- **Homework** — classId, subjectId, teacherId, title, description, dueDate, attachments (string[])
-- **HomeworkSubmission** — homeworkId, studentId, files (string[]), submittedAt, isLate, grade, remarks
-- **Exam** — classId, name, kind (`TEST | EXAM`), type (`UNIT | MID | FINAL | ANNUAL`), startDate, endDate, description
-- **ExamSubject** — examId, subjectId, date, maxMarks, durationMin
-- **Result** — examId, studentId, subjectId, obtainedMarks, isAbsent, remarks
-- **ReportCard** — examId, studentId, totalMarks, percentage, grade, rank, aiComment
-- **Timetable** — classId, day (`MON`–`SUN`), periods → **Period** child table (startTime, endTime, subjectId, teacherId, isBreak)
-- **StudyMaterial** — classId, subjectId, title, type (`PDF | NOTES | WORKSHEET | PAPER`), fileUrl
-- **Notice** — title, body, priority (`HIGH | MEDIUM | LOW`), audience (enum[] or JSONB), authorName, publishedById, publishedAt
-- **Event** — title, date, description, audience
-- **Conversation** — participants → **ConversationParticipant** join table (per-caller read state in `lastReadAt`); lastMessageAt
-- **Message** — conversationId, senderId, body, readAt
-- **Permission** — key (`resource.action`), group, label, sortOrder — the platform-wide catalogue
-- **UserPermission** — userId, permissionId, grantedById — one account's effective grant
-- **Otp** — email, codeHash, expiresAt, attempts, purpose (`REGISTER | RESET_PASSWORD | INVITE`)
-- **AiConversation** — userId, feature, messages (JSONB)
-
-**Indexes**: `(schoolId)` on all tenant tables; composite indexes on Attendance(classId, date), FeeInvoice(studentId, status), Message(conversationId, createdAt), UserPermission(userId, permissionId). `Permission` is the one table with no tenant column — its unique `key` is the index.
+The schema is **32 tables**, of which **four are junction tables** (`parent_students`, `teacher_classes`, `class_subjects`, `user_permissions`), holding **84 enforced foreign keys** plus **two relationships the mock keeps as embedded arrays** rather than child tables (`conversations.participant_ids[]`, `notices.class_ids[]`). The per-table reference — columns, keys, indexes, constraints and enums — is [`Schema.md`](./Schema.md); the whole-schema diagram and the foreign-key map are [`Erd.md`](./Erd.md); roles and route gates are [`Access.md`](./Access.md); and [`Database.md`](./Database.md) is the short index that points at all three. Tables the real backend will need but the mock has never had (`otps`, `refresh_tokens`, `receipt_sequences`, `notice_classes`, `conversation_participants`) are listed in `Schema.md` §16.
 
 ---
 
 ## 4. Feature Modules
 
-Each module lists its endpoints as a **checklist — build one endpoint at a time**, controller route first, then service, DTO and guard. Build a module's list top to bottom: creation and reads unblock the frontend, aggregates and exports come last. `(public)` marks routes reachable without a session; every other route needs `JwtAuthGuard` + `RolesGuard` and the tenant scope in parentheses. Tick the item here, then its phase line in `Phases.md`. Tables each module touches are specified in `docs/backend/Database.md`.
+Each module lists the routes the mock actually serves as a **checklist — build one endpoint at a time**, controller route first, then service, DTO and guard. Build a module's list top to bottom: creation and reads unblock the frontend, aggregates and exports come last. The guard in parentheses is what `frontend/src/services/mockAdapter.ts` enforces today: `(public)` needs no token, `(token)` needs any valid bearer token, and a role in parentheses is one of the **ten role-gated routes** in §2. A route the mock does **not** serve is listed under **Planned, not yet in the mock** in its own section and carries no guard. The error codes are the mock's own ([`Access.md`](./Access.md) §4); each module's tables are in [`Schema.md`](./Schema.md).
 
 ### 4.1 School Registration & OTP Verification (`SchoolsModule`)
 
@@ -115,13 +77,13 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints**
 
-- [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)`
-- [ ] `POST /api/v1/schools/verify-otp` — validate OTP, activate account `(public)`
+- [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
+- [ ] `POST /api/v1/schools/verify-otp` — validate OTP, activate account `(public)` — 400 `AUTH_OTP_INVALID`
 - [ ] `POST /api/v1/schools/resend-otp` — resend within the 60s cooldown `(public)`
-- [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(admin)` — the frontend already calls this
-- [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(admin)`
-- [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(admin)`
-- [ ] `POST /api/v1/schools/current/backup` — request a manual backup of the school's data; `201` with the job record `(admin)`
+- [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
+- [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
+- [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
+- [ ] `POST /api/v1/schools/current/backup` — request a manual backup of the school's data; `201` with the job record `(token)`
 
 **Behavior**
 
@@ -140,17 +102,17 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints**
 
-- [ ] `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d) `(public)`
-- [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)`
-- [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(authenticated)`
+- [ ] `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
+- [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
+- [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
 - [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
-- [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)`
-- [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)`
-- [ ] `GET /api/v1/auth/me` — current user + school + role `(authenticated)`
-- [ ] `GET /api/v1/permissions` — the assignable catalogue, grouped and ordered for the editor `(admin)`
-- [ ] `GET /api/v1/permissions/staff` — the staff picker: every active teacher with their grant count `(admin)`
-- [ ] `GET /api/v1/users/:userId/permissions` — one account's granted keys `(admin)`
-- [ ] `PUT /api/v1/users/:userId/permissions` — replace that account's grant set (the body carries the whole set, so a role default can be turned off) `(admin)`
+- [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)` — 400 `AUTH_RESET_TOKEN_INVALID`, 400 `VALIDATION_ERROR`
+- [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)` — 404 `INVITE_NOT_FOUND`, 400 `INVITE_INVALID`
+- [ ] `GET /api/v1/auth/me` — current user + school + role `(token)` — 401 `AUTH_UNAUTHENTICATED`
+- [ ] `GET /api/v1/permissions` — the assignable catalogue, grouped and ordered for the editor `(token)`
+- [ ] `GET /api/v1/permissions/staff` — the staff picker: every active teacher with their grant count `(token)`
+- [ ] `GET /api/v1/users/:userId/permissions` — one account's granted keys `(token)` — 404 `USER_NOT_FOUND`
+- [ ] `PUT /api/v1/users/:userId/permissions` — replace that account's grant set (the body carries the whole set, so a role default can be turned off) `(token)` — 404 `USER_NOT_FOUND`, 400 `PERMISSION_INVALID`
 
 **Behavior**
 
@@ -168,28 +130,31 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Tables:** `teachers`, `students`, `parents`, `parent_students` · Database.md §3
 
-**Endpoints** — build `/teachers` end to end first, then repeat the same five routes for `/students` and `/parents`
+**Endpoints** — build `/teachers` end to end first, then repeat the same routes for `/students`; the mock has no `/parents` route (see the planned list). Every route below is `(token)`.
 
-- [ ] `POST /api/v1/teachers` — create; takes **full name**, **subject**, **email** and the **assigned classes**, plus optional phone, qualification and years of experience. The login is created **unverified** with a generated password emailed alongside a verification link — the same invite rule as an enrolment — and 409 `TEACHER_EMAIL_TAKEN` guards the login email `(admin)`
-- [ ] `GET /api/v1/teachers` — search by name/subject/email; each row carries the login email and the classes the teacher is assigned to (from `teacher_classes`) `(admin)`
-- [ ] `GET /api/v1/teachers/:id` `(admin)`
-- [ ] `PATCH /api/v1/teachers/:id` — partial update of the same fields; `classIds` **replaces** the assignment set rather than merging, and an email change is re-checked for uniqueness `(admin)`
-- [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` `(admin)`
-- [ ] `POST /api/v1/students` — create + admission number; takes the **student's own email** (which becomes their login — the address the form collects, never a generated one; 409 `STUDENT_EMAIL_TAKEN` guards it), the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. **Two logins are provisioned, both unverified**: the student's own email and the guardian's email, each emailed its invite with a verification link; the response carries the student's invite, never a password itself `(admin)`
-- [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list) `(admin)`
-- [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak `(admin, parent of child)`
-- [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist `(admin, teacher, parent of child)`
-- [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in, and an **email change is re-checked for uniqueness** (it moves that account's login) `(admin)`
-- [ ] `DELETE /api/v1/students/:id` — soft delete `(admin)`
-- [ ] `POST /api/v1/parents` — create + email credentials `(admin)`
-- [ ] `GET /api/v1/parents` — paginated, search `(admin)`
-- [ ] `GET /api/v1/parents/:id` `(admin)`
-- [ ] `PATCH /api/v1/parents/:id` `(admin)`
-- [ ] `DELETE /api/v1/parents/:id` — soft delete `(admin)`
-- [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch `(admin)`
-- [ ] `GET /api/v1/parents/:id/students` — linked children `(admin, parent own)`
-- [ ] `POST /api/v1/parents/:id/link-student` — link through `parent_students` `(admin)`
-- [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink `(admin)`
+- [ ] `POST /api/v1/teachers` — create; takes **full name**, **subject**, **email** and the **assigned classes**, plus optional phone, qualification and years of experience. The login is created **unverified** with a generated password emailed alongside a verification link — the same invite rule as an enrolment — and 409 `TEACHER_EMAIL_TAKEN` guards the login email — 400 `TEACHER_INVALID`
+- [ ] `GET /api/v1/teachers` — search by name/subject/email; each row carries the login email and the classes the teacher is assigned to (from `teacher_classes`)
+- [ ] `PATCH /api/v1/teachers/:id` — partial update of the same fields; `classIds` **replaces** the assignment set rather than merging, and an email change is re-checked for uniqueness — 404 `TEACHER_NOT_FOUND`, 400 `TEACHER_INVALID`, 409 `TEACHER_EMAIL_TAKEN`
+- [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` — 404 `TEACHER_NOT_FOUND`
+- [ ] `POST /api/v1/students` — create + admission number; takes the **student's own email** (which becomes their login — the address the form collects, never a generated one; 409 `STUDENT_EMAIL_TAKEN` guards it), the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. **Two logins are provisioned, both unverified**: the student's own email and the guardian's email, each emailed its invite with a verification link; the response carries the student's invite, never a password itself — 400 `STUDENT_INVALID`
+- [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list)
+- [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak — 404 `STUDENT_NOT_FOUND`
+- [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist — 404 `STUDENT_NOT_FOUND`
+- [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in, and an **email change is re-checked for uniqueness** (it moves that account's login) — 404 `STUDENT_NOT_FOUND`, 400 `STUDENT_INVALID`, 409 `STUDENT_ROLL_TAKEN`, 409 `STUDENT_EMAIL_TAKEN`
+- [ ] `DELETE /api/v1/students/:id` — soft delete — 404 `STUDENT_NOT_FOUND`
+
+**Planned, not yet in the mock** — the contract keeps these; no mock route serves them:
+
+- [ ] `GET /api/v1/teachers/:id` — teacher profile read
+- [ ] `POST /api/v1/parents` — create + email credentials
+- [ ] `GET /api/v1/parents` — paginated, search
+- [ ] `GET /api/v1/parents/:id`
+- [ ] `PATCH /api/v1/parents/:id`
+- [ ] `DELETE /api/v1/parents/:id` — soft delete
+- [ ] `GET /api/v1/parents/:id/students` — linked children
+- [ ] `POST /api/v1/parents/:id/link-student` — link through `parent_students`
+- [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink
+- [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch
 
 **Behavior**
 
@@ -204,23 +169,26 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints**
 
-- [ ] `POST /api/v1/classes` — grade/section `(admin)`
-- [ ] `GET /api/v1/classes` — list with student counts `(admin)`
-- [ ] `GET /api/v1/classes/:id` — class + roster `(admin, teacher)`
-- [ ] `PATCH /api/v1/classes/:id` — including class-teacher assignment `(admin)`
-- [ ] `DELETE /api/v1/classes/:id` `(admin)`
-- [ ] `GET /api/v1/classes/:id/students` — roster `(admin, teacher)`
-- [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move `(admin)`
-- [ ] `POST /api/v1/subjects` — add a **catalogue** subject: `name`, `code` (2–6 alphanumerics, each unique per school **case-insensitively**) and an optional `description`; 400 on a malformed code, 409 `SUBJECT_CODE_TAKEN` / `SUBJECT_NAME_TAKEN`. The new subject is **taught in no class** — assignment is a separate call `(admin)`
-- [ ] `GET /api/v1/subjects` — the catalogue; `?classId=` narrows it to what that class runs, `?teacherId=` to what that teacher teaches `(admin, teacher)`
-- [ ] `GET /api/v1/subjects/overview` — the catalogue with each subject's **`classCount`** and **`classIds`** (the Subjects tab's row, and the read-only class list the edit form shows) `(admin)`
-- [ ] `PATCH /api/v1/subjects/:id` — rename, recode or rewrite the description; both uniqueness checks re-run. It **never touches assignments**, so editing a subject cannot re-teach it by accident `(admin)`
-- [ ] `DELETE /api/v1/subjects/:id` — removes the subject and its assignments; 409 `SUBJECT_IN_USE` while a lesson, exam paper, **mark**, homework or material still references it `(admin)`
-- [ ] `GET /api/v1/subjects/assignments?classId=` — one class's assigned subjects, with the class label (the Single Assignment panel) `(admin)`
-- [ ] `POST /api/v1/subjects/assignments` — add `subjectIds` to one class; pairs already assigned are left alone, so the call is idempotent `(admin)`
-- [ ] `POST /api/v1/subjects/assignments/bulk` — add `subjectIds` to every `classIds` entry in one request, returning how many assignments were new `(admin)`
-- [ ] `DELETE /api/v1/subjects/assignments/:classId/:subjectId` — remove one subject from one class `(admin)`
-- [ ] `GET /api/v1/subjects/summary` — every class, every subject and the assignment matrix between them (the Summary tab) `(admin)`
+- [ ] `GET /api/v1/classes` — the class list (id, label, grade, section) that every picker reads `(token)`
+- [ ] `POST /api/v1/subjects` — add a **catalogue** subject: `name`, `code` (2–6 alphanumerics, each unique per school **case-insensitively**) and an optional `description`; the new subject is **taught in no class** — assignment is a separate call `(token)` — 400 `SUBJECT_INVALID`, 409 `SUBJECT_CODE_TAKEN`, 409 `SUBJECT_NAME_TAKEN`
+- [ ] `GET /api/v1/subjects` — the catalogue; `?classId=` narrows it to what that class runs, `?teacherId=` to what that teacher teaches `(token)`
+- [ ] `GET /api/v1/subjects/overview` — the catalogue with each subject's **`classCount`** and **`classIds`** (the Subjects tab's row, and the read-only class list the edit form shows) `(token)`
+- [ ] `PATCH /api/v1/subjects/:id` — rename, recode or rewrite the description; both uniqueness checks re-run. It **never touches assignments**, so editing a subject cannot re-teach it by accident `(token)` — 404 `SUBJECT_NOT_FOUND`, 400 `SUBJECT_INVALID`, 409 `SUBJECT_NAME_TAKEN`, 409 `SUBJECT_CODE_TAKEN`
+- [ ] `DELETE /api/v1/subjects/:id` — removes the subject and its assignments; 409 `SUBJECT_IN_USE` while a lesson, exam paper, **mark**, homework or material still references it `(token)` — 404 `SUBJECT_NOT_FOUND`
+- [ ] `GET /api/v1/subjects/assignments?classId=` — one class's assigned subjects, with the class label (the Single Assignment panel) `(token)` — 400 `SUBJECT_INVALID` on a missing class
+- [ ] `POST /api/v1/subjects/assignments` — add `subjectIds` to one class; pairs already assigned are left alone, so the call is idempotent `(token)` — 400 `SUBJECT_INVALID`
+- [ ] `POST /api/v1/subjects/assignments/bulk` — add `subjectIds` to every `classIds` entry in one request, returning how many assignments were new `(token)` — 400 `SUBJECT_INVALID`
+- [ ] `DELETE /api/v1/subjects/assignments/:classId/:subjectId` — remove one subject from one class `(token)` — 404 `SUBJECT_NOT_FOUND`
+- [ ] `GET /api/v1/subjects/summary` — every class, every subject and the assignment matrix between them (the Summary tab) `(token)`
+
+**Planned, not yet in the mock** — `GET /classes` is the only class route the mock serves; there is no class CRUD:
+
+- [ ] `POST /api/v1/classes` — grade/section
+- [ ] `GET /api/v1/classes/:id` — class + roster
+- [ ] `PATCH /api/v1/classes/:id` — including class-teacher assignment
+- [ ] `DELETE /api/v1/classes/:id`
+- [ ] `GET /api/v1/classes/:id/students` — roster
+- [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move
 
 **Behavior**
 
@@ -236,13 +204,16 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints**
 
-- [ ] `POST /api/v1/attendance` — one class's day as `{ classId, date, records: [{ studentId, status, note? }] }`, upserted on the unique key below; the batch is validated in full first, and the refreshed day comes back `(admin, teacher)`
-- [ ] `GET /api/v1/attendance?classId=&date=` — the daily register: every active student of the class with their stored status (`null` where the day is unmarked), so a register opens pre-filled; `date` defaults to the class's newest register day `(admin, teacher)`
-- [ ] `GET /api/v1/attendance/monthly?classId=&month=` — one class's month: the month's totals (present/absent/late/leave/rate), one row per register day with that day's counts, and the months on record for the picker; `month` is an ISO key (`2026-08`) and defaults to the newest on record `(admin, teacher)`
-- [ ] `GET /api/v1/attendance/me?month=&studentId=` — the caller's own month in the **same shape**, scoped to one student: each day carries **their** status, and the payload names the students the caller may switch between; `studentId` picks one of a guardian's children `(student own, parent of child)` — 403 `ATTENDANCE_FORBIDDEN` for a staff account or another family's child
-- [ ] `GET /api/v1/attendance/student/:id` — the individual history the student profile's Attendance tab reads: lifetime totals plus a row per month `(admin, teacher, student own, parent of child)`
-- [ ] `GET /api/v1/attendance/analytics?classId=` — trends and defaulters (<75%) `(admin, teacher)`
-- [ ] `attendance:marked` socket event — notify the class's parents in real time
+- [ ] `POST /api/v1/attendance` — one class's day as `{ classId, date, records: [{ studentId, status, note? }] }`, upserted on the unique key below; the batch is validated in full first, and the refreshed day comes back `(admin, teacher)` — 403 `ATTENDANCE_FORBIDDEN`, 400 `ATTENDANCE_INVALID`
+- [ ] `GET /api/v1/attendance?classId=&date=` — the daily register: every active student of the class with their stored status (`null` where the day is unmarked), so a register opens pre-filled; `date` defaults to the class's newest register day `(admin, teacher)` — 403 `ATTENDANCE_FORBIDDEN`, 400 `ATTENDANCE_INVALID`
+- [ ] `GET /api/v1/attendance/monthly?classId=&month=` — one class's month: the month's totals (present/absent/late/leave/rate), one row per register day with that day's counts, and the months on record for the picker; `month` is an ISO key (`2026-08`) and defaults to the newest on record `(admin, teacher)` — 403 `ATTENDANCE_FORBIDDEN`, 400 `ATTENDANCE_INVALID`
+- [ ] `GET /api/v1/attendance/me?month=&studentId=` — the caller's own month in the **same shape**, scoped to one student: each day carries **their** status, and the payload names the students the caller may switch between; `studentId` picks one of a guardian's children `(student, parent)` — 403 `ATTENDANCE_FORBIDDEN` for a staff account or another family's child, 404 `ATTENDANCE_NOT_FOUND`
+- [ ] `GET /api/v1/attendance/student/:id` — the individual history the student profile's Attendance tab reads: lifetime totals plus a row per month `(token)` — 404 `STUDENT_NOT_FOUND`
+- [ ] `attendance:marked` socket event — notify the class's parents in real time (no HTTP route)
+
+**Planned, not yet in the mock**
+
+- [ ] `GET /api/v1/attendance/analytics?classId=` — trends and defaulters (<75%)
 
 **Behavior**
 
@@ -258,57 +229,60 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Tables:** `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions`, `receipt_sequences` · Database.md §8
 
-**Endpoints** — every money-writing route runs in a transaction; read Behavior below before starting one
+**Endpoints** — every money-writing route runs in a transaction; read Behavior below before starting one. All are `(token)` unless marked otherwise.
 
 Structures & heads
 
-- [ ] `POST /api/v1/fees/structures` — structure with its heads `(admin)`
-- [ ] `GET /api/v1/fees/structures` — filter by class/academic year; each structure carries its heads, head count and sum of amounts, so the Fee structure tab renders the response directly `(admin)`
-- [ ] `GET /api/v1/fees/structures/:id` `(admin)`
-- [ ] `PATCH /api/v1/fees/structures/:id` `(admin)`
-- [ ] `DELETE /api/v1/fees/structures/:id` `(admin)`
-- [ ] `POST /api/v1/fees/heads` — add one head to a class's structure (title, amount, frequency, due date, academic year, description); 409 `FEE_HEAD_EXISTS` when that structure already has the title `(admin)`
-- [ ] `PATCH /api/v1/fees/heads/:id` — partial update of the same fields; a head cannot move between structures `(admin)`
-- [ ] `DELETE /api/v1/fees/heads/:id` — the head stops being chargeable; invoices already raised from it are kept `(admin)`
+- [ ] `GET /api/v1/fees/structures` — filter by class/academic year; each structure carries its heads, head count and sum of amounts, so the Fee structure tab renders the response directly
+- [ ] `POST /api/v1/fees/heads` — add one head to a class's structure (title, amount, frequency, due date, academic year, description); 409 `FEE_HEAD_EXISTS` when that structure already has the title — 400 `FEE_VALIDATION`
+- [ ] `PATCH /api/v1/fees/heads/:id` — partial update of the same fields; a head cannot move between structures — 404 `FEE_HEAD_NOT_FOUND`
+- [ ] `DELETE /api/v1/fees/heads/:id` — the head stops being chargeable; invoices already raised from it are kept — 404 `FEE_HEAD_NOT_FOUND`
 
 Collect
 
-- [ ] `POST /api/v1/fees/invoices/generate` — bulk generation per class (transactional batch insert) `(admin)`
-- [ ] `POST /api/v1/fees/invoices` — raise **one** invoice for a student from a fee head (the collect page's `+ Invoice`); 400 when the head belongs to another class, 409 `FEE_INVOICE_EXISTS` when that head is already invoiced for the student `(admin)`
-- [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status `(admin)`
-- [ ] `GET /api/v1/fees/invoices/:id` — invoice + its payments `(admin, parent of child)`
-- [ ] `GET /api/v1/fees/collect/summary?classId=&status=` — the Collect fee tab's cards (total/paid/pending students, collected/pending totals) scoped by the active filters `(admin)`
-- [ ] `GET /api/v1/fees/collect/students?classId=&status=` — paginated class-wise fee-status rows: what each student was billed, what came in, what is left and the resolved status `(admin)`
-- [ ] `GET /api/v1/fees/collect/student/:studentId` — one student's collect payload: outstanding dues, the class structure's heads with their concession and net amount, and the payment history `(admin, parent of child)`
-- [ ] `GET /api/v1/fees/me?studentId=` — the caller's **own** fee account: `paid`/`pending`/`total` with the **overdue slice** and the paid share, the account **counts** (payments, dues, records, overdue), outstanding dues, payment history, and — for the parent's screen — every invoice as a **record row** (title, due date, the paid-on date, its receipt, the amount **billed net of concession**, the balance) plus those invoices grouped by **due month**. **Self-scoped**: a student reads their own, a guardian one of their own children (`?studentId=`; anything else is `403 PARENT_FORBIDDEN`), the payload lists the students the caller may switch between, and a staff account is `403 FEE_FORBIDDEN`. The same rows the collect page reads, minus the staff-only invoice candidates `(student own, parent of child)`
-- [ ] `POST /api/v1/fees/me/payments` — the caller records a payment against one of the invoices **on their own account** — a student's own, or a guardian's child's; the amount may not exceed that invoice's outstanding balance, and an invoice belonging to anyone else is a 403. The self-service counterpart of `/fees/payments/manual` (the provider checkout path stays `create-order`/`verify`), and the transaction/UTR id is stored as the payment's provider transaction id `(student own, parent of child)`
-- [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances `(admin)`
-- [ ] `GET /api/v1/fees/history/:studentId` — payment history `(admin, parent of child)`
-- [ ] `GET /api/v1/fees/summary` — collection totals for the fees dashboard's stat cards `(admin)`
-- [ ] `GET /api/v1/fees/dashboard` — the fees dashboard's charts (twelve-month collected/pending trend, class-wise collection) plus the pending/defaulter list `(admin)`
-- [ ] `GET /api/v1/fees/payments/:id/receipt` — the receipt payload for one payment `(admin, parent of child)`
-- [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz `(admin, student own, parent of child)`
-- [ ] `POST /api/v1/fees/payments/verify` — signature/IPN verification, provider callback `(public)`
-- [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque/DD payment against one invoice; the amount may not exceed the invoice's outstanding balance `(admin)`
-- [ ] `POST /api/v1/webhooks/stripe` — Stripe events, signature verified `(public)`
-- [ ] `POST /api/v1/webhooks/sslcommerz` — SSLCommerz IPN, verified `(public)`
+- [ ] `POST /api/v1/fees/invoices` — raise **one** invoice for a student from a fee head (the collect page's `+ Invoice`); 400 when the head belongs to another class, 409 `FEE_INVOICE_EXISTS` when that head is already invoiced for the student — 404 `STUDENT_NOT_FOUND`, 404 `FEE_HEAD_NOT_FOUND`
+- [ ] `GET /api/v1/fees/invoices` — paginated, filter by student/class/status
+- [ ] `GET /api/v1/fees/collect/summary?classId=&status=` — the Collect fee tab's cards (total/paid/pending students, collected/pending totals) scoped by the active filters
+- [ ] `GET /api/v1/fees/collect/students?classId=&status=` — paginated class-wise fee-status rows: what each student was billed, what came in, what is left and the resolved status
+- [ ] `GET /api/v1/fees/collect/student/:studentId` — one student's collect payload: outstanding dues, the class structure's heads with their concession and net amount, and the payment history — 404 `STUDENT_NOT_FOUND`
+- [ ] `GET /api/v1/fees/me?studentId=` — the caller's **own** fee account: `paid`/`pending`/`total` with the **overdue slice** and the paid share, the account **counts** (payments, dues, records, overdue), outstanding dues, payment history, and — for the parent's screen — every invoice as a **record row** (title, due date, the paid-on date, its receipt, the amount **billed net of concession**, the balance) plus those invoices grouped by **due month**. **Self-scoped**: a student reads their own, a guardian one of their own children (`?studentId=`; anything else is `403 PARENT_FORBIDDEN`), the payload lists the students the caller may switch between, and a staff account is `403 FEE_FORBIDDEN`. The same rows the collect page reads, minus the staff-only invoice candidates `(student, parent)` — 404 `STUDENT_NOT_FOUND`
+- [ ] `POST /api/v1/fees/me/payments` — the caller records a payment against one of the invoices **on their own account** — a student's own, or a guardian's child's; the amount may not exceed that invoice's outstanding balance, and an invoice belonging to anyone else is a 403. The self-service counterpart of `/fees/payments/manual` (the provider checkout path stays `create-order`/`verify`), and the transaction/UTR id is stored as the payment's provider transaction id `(student, parent)` — 403 `FEE_FORBIDDEN`, 404 `FEE_INVOICE_NOT_FOUND`, 400 `FEE_VALIDATION`
+- [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances, paginated
+- [ ] `GET /api/v1/fees/history/:studentId` — payment history
+- [ ] `GET /api/v1/fees/summary` — collection totals for the fees dashboard's stat cards
+- [ ] `GET /api/v1/fees/dashboard` — the fees dashboard's charts (twelve-month collected/pending trend, class-wise collection) plus the pending/defaulter list
+- [ ] `GET /api/v1/fees/payments/:id/receipt` — the receipt payload for one payment — 404 `FEE_PAYMENT_NOT_FOUND`
+- [ ] `POST /api/v1/fees/payments/manual` — admin records a cash/cheque/DD payment against one invoice; the amount may not exceed the invoice's outstanding balance — 404 `FEE_INVOICE_NOT_FOUND`, 400 `FEE_VALIDATION`
 
 Reports
 
-- [ ] `GET /api/v1/fees/reports/day-book?date=` — the collections on one date (defaulting to the most recent collection day) with its transaction count and total `(admin)`
-- [ ] `GET /api/v1/fees/reports/class?classId=&academicYear=` — per-student invoiced / paid / balance and a resolved `CLEAR`-or-status flag for one class `(admin)`
-- [ ] `GET /api/v1/fees/reports/defaulters?classId=` — every demand with a balance left, most overdue first `(admin)`
-- [ ] `GET /api/v1/fees/reports/student-ledger?studentId=` — one student's full ledger (one row per invoice) with invoiced / paid / balance totals `(admin, parent of child)`
-- [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export `(admin)`
-- [ ] `GET /api/v1/fees/reports/export?type=&format=csv` — streaming CSV of any fee report above `(admin)`
+- [ ] `GET /api/v1/fees/reports/day-book?date=` — the collections on one date (defaulting to the most recent collection day) with its transaction count and total
+- [ ] `GET /api/v1/fees/reports/class?classId=&academicYear=` — per-student invoiced / paid / balance and a resolved `CLEAR`-or-status flag for one class
+- [ ] `GET /api/v1/fees/reports/defaulters?classId=` — every demand with a balance left, most overdue first
+- [ ] `GET /api/v1/fees/reports/student-ledger?studentId=` — one student's full ledger (one row per invoice) with invoiced / paid / balance totals
 
 Concessions
 
-- [ ] `POST /api/v1/fees/concessions` — record a concession request `(admin)`
-- [ ] `GET /api/v1/fees/concessions` — filter by status `(admin)`
-- [ ] `GET /api/v1/fees/concessions/:id` `(admin)`
-- [ ] `PATCH /api/v1/fees/concessions/:id` — the approval decision `(admin)`
-- [ ] `DELETE /api/v1/fees/concessions/:id` `(admin)`
+- [ ] `POST /api/v1/fees/concessions` — record a concession request — 400 `FEE_VALIDATION`
+- [ ] `GET /api/v1/fees/concessions` — filter by status
+- [ ] `PATCH /api/v1/fees/concessions/:id` — the approval decision — 404 `FEE_CONCESSION_NOT_FOUND`
+- [ ] `DELETE /api/v1/fees/concessions/:id` — 404 `FEE_CONCESSION_NOT_FOUND`
+
+**Planned, not yet in the mock** — no fee-structure write route, no provider checkout or webhook, no CSV streaming export, and no single-invoice or single-concession read:
+
+- [ ] `POST /api/v1/fees/structures` — structure with its heads
+- [ ] `GET /api/v1/fees/structures/:id`
+- [ ] `PATCH /api/v1/fees/structures/:id`
+- [ ] `DELETE /api/v1/fees/structures/:id`
+- [ ] `POST /api/v1/fees/invoices/generate` — bulk generation per class (transactional batch insert)
+- [ ] `GET /api/v1/fees/invoices/:id` — invoice + its payments
+- [ ] `POST /api/v1/fees/payments/create-order` — provider chosen by country/method: Stripe or SSLCommerz
+- [ ] `POST /api/v1/fees/payments/verify` — signature/IPN verification, provider callback
+- [ ] `POST /api/v1/webhooks/stripe` — Stripe events, signature verified
+- [ ] `POST /api/v1/webhooks/sslcommerz` — SSLCommerz IPN, verified
+- [ ] `GET /api/v1/fees/reports?from=&to=` — collection report + CSV export
+- [ ] `GET /api/v1/fees/reports/export?type=&format=csv` — streaming CSV of any fee report
+- [ ] `GET /api/v1/fees/concessions/:id`
 
 **Behavior**
 
@@ -324,14 +298,17 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary): `title`, `description`, `dueDate`, optional `maxMarks` `(admin, teacher)`
-- [ ] `GET /api/v1/homework?classId=&subjectId=&search=&status=` — list, scoped to the caller's role; each row carries its class / subject / author joins, the submission roll-up and a derived `status` `(admin, teacher, student, parent of child)`
-- [ ] `GET /api/v1/homework/:id` — detail + attachments `(admin, teacher, student, parent of child)`
-- [ ] `PATCH /api/v1/homework/:id` `(admin, teacher)`
-- [ ] `DELETE /api/v1/homework/:id` `(admin, teacher)`
-- [ ] `POST /api/v1/homework/:id/submit` — student uploads a submission `(student)`
-- [ ] `GET /api/v1/homework/:id/submissions` — teacher tracking, submitted/pending counts `(admin, teacher)`
-- [ ] `PATCH /api/v1/homework/submissions/:id/grade` — grade + remarks `(admin, teacher)`
+- [ ] `POST /api/v1/homework` — teacher creates with attachments (Cloudinary): `title`, `description`, `dueDate`, optional `maxMarks` `(token)` — 400 `HOMEWORK_INVALID`
+- [ ] `GET /api/v1/homework?classId=&subjectId=&search=&status=` — list, scoped to the caller's role; each row carries its class / subject / author joins, the submission roll-up and a derived `status` `(token)`
+- [ ] `PATCH /api/v1/homework/:id` `(token)` — 404 `HOMEWORK_NOT_FOUND`, 400 `HOMEWORK_INVALID`
+- [ ] `DELETE /api/v1/homework/:id` — soft delete `(token)` — 404 `HOMEWORK_NOT_FOUND`
+
+**Planned, not yet in the mock** — the mock has no homework detail, submission or grading route:
+
+- [ ] `GET /api/v1/homework/:id` — detail + attachments
+- [ ] `POST /api/v1/homework/:id/submit` — student uploads a submission
+- [ ] `GET /api/v1/homework/:id/submissions` — teacher tracking, submitted/pending counts
+- [ ] `PATCH /api/v1/homework/submissions/:id/grade` — grade + remarks
 
 **Behavior**
 
@@ -349,15 +326,18 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods) `(admin)`
-- [ ] `GET /api/v1/timetables/class/:classId` — the class's week in one payload: `periods` (the rows), `days` (each carrying one slot per row) and the `stats` roll-ups `(admin, teacher, student, parent of child)`
-- [ ] `GET /api/v1/timetables/teacher/:teacherId` `(admin, teacher own)`
-- [ ] `GET /api/v1/timetables/me` — the caller's **own** week, resolved by role, in the same grid shape as a class week: a teacher's own lessons (each cell naming the class they are in, blank where they are free), a student's class, or a guardian's child's class — a guardian may pass `?studentId=` for any of **their own** children, and the payload lists them so the view can switch `(authenticated)`
-- [ ] `PATCH /api/v1/timetables/class/:classId/slots` — set one cell's `subjectId`/`teacherId`, or clear it by sending both null `(admin)`
-- [ ] `POST /api/v1/timetables/class/:classId/periods` — append a period row to the class's week, written to every day in one transaction `(admin)`
-- [ ] `DELETE /api/v1/timetables/class/:classId/periods/:orderIndex` — remove that row from every day and close the positions up `(admin)`
-- [ ] `PUT /api/v1/timetables/:id` — **full replacement**: the body carries the whole period set, so this is the one route where `PUT` is correct `(admin)`
-- [ ] `DELETE /api/v1/timetables/:id` `(admin)`
+- [ ] `GET /api/v1/timetables/class/:classId` — the class's week in one payload: `periods` (the rows), `days` (each carrying one slot per row) and the `stats` roll-ups `(token)` — 404 `TIMETABLE_NOT_FOUND`
+- [ ] `GET /api/v1/timetables/me` — the caller's **own** week, resolved by role, in the same grid shape as a class week: a teacher's own lessons (each cell naming the class they are in, blank where they are free), a student's class, or a guardian's child's class — a guardian may pass `?studentId=` for any of **their own** children, and the payload lists them so the view can switch `(token)` — 403 `TIMETABLE_FORBIDDEN`, 404 `TIMETABLE_NOT_FOUND`
+- [ ] `PATCH /api/v1/timetables/class/:classId/slots` — set one cell's `subjectId`/`teacherId`, or clear it by sending both null `(token)` — 404 `TIMETABLE_NOT_FOUND`, 404 `TIMETABLE_PERIOD_NOT_FOUND`, 400 `TIMETABLE_INVALID`
+- [ ] `POST /api/v1/timetables/class/:classId/periods` — append a period row to the class's week, written to every day in one transaction `(token)` — 404 `TIMETABLE_NOT_FOUND`, 400 `TIMETABLE_INVALID`
+- [ ] `DELETE /api/v1/timetables/class/:classId/periods/:orderIndex` — remove that row from every day and close the positions up `(token)` — 404 `TIMETABLE_NOT_FOUND`, 404 `TIMETABLE_PERIOD_NOT_FOUND`, 400 `TIMETABLE_INVALID`
+
+**Planned, not yet in the mock**
+
+- [ ] `POST /api/v1/timetables` — weekly timetable per class (nested create with periods)
+- [ ] `GET /api/v1/timetables/teacher/:teacherId` — one teacher's own week
+- [ ] `PUT /api/v1/timetables/:id` — **full replacement**: the body carries the whole period set, so this is the one route where `PUT` is correct
+- [ ] `DELETE /api/v1/timetables/:id`
 
 **Behavior**
 
@@ -379,19 +359,22 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/exams` — schedule one class's assessment: `kind: TEST` takes a single `subjectId` with its date, total marks and duration; `kind: EXAM` takes a `subjects[]` set, each paper carrying its own date, marks and duration `(admin, teacher)`
-- [ ] `GET /api/v1/exams` — filter by `kind` (TEST/EXAM), `classId`, `subjectId`, type and status `(admin, teacher, student, parent of child)`
-- [ ] `GET /api/v1/exams/me?studentId=` — the caller's own tests, exams and marks in one payload: the class's tests, exam windows and papers still ahead (each with its countdown), the published marks with their summary, and each subject's average; the tab counts and the headline figures come off the same read. **Self-scoped**: a student reads their own record and a **guardian one of their own children** (`?studentId=`; anything else is `403 PARENT_FORBIDDEN`), the payload names whose record it is (`subjectLabel`/`subjectMeta`) and lists the students the caller may switch between `(student own, parent of child)` — 403 `EXAM_FORBIDDEN` for a staff account
-- [ ] `GET /api/v1/exams/:id` — exam with its subjects `(admin, teacher, student, parent of child)`
-- [ ] `GET /api/v1/exams/:id/results` — the marks sheet: every subject with its entry count, the class roster and every entry so far, so the grid loads all subjects at once `(admin, teacher)`
-- [ ] `PATCH /api/v1/exams/:id` — edit; the body replaces the subject set whole, and a published exam is refused with 409 `EXAM_PUBLISHED` `(admin, teacher)`
-- [ ] `DELETE /api/v1/exams/:id` — removes the exam with its papers, marks and report cards `(admin)`
-- [ ] `GET /api/v1/exams/schedule?classId=` — dated schedule `(admin, teacher, student, parent of child)`
-- [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry: the sheet's changed cells, upserted on `(exam, student, subject)`; a mark above its paper's total is a 400 and a published exam a 409 `(admin, teacher)`
-- [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(admin, teacher)`
-- [ ] `POST /api/v1/exams/:id/unpublish` — admin-only rollback `(admin)`
-- [ ] `GET /api/v1/results/student/:studentId?examId=` `(admin, teacher, student own, parent of child)`
-- [ ] `GET /api/v1/report-cards/:studentId/:examId` — grades, percentage, rank, AI comment `(admin, teacher, student own, parent of child)`
+- [ ] `POST /api/v1/exams` — schedule one class's assessment: `kind: TEST` takes a single `subjectId` with its date, total marks and duration; `kind: EXAM` takes a `subjects[]` set, each paper carrying its own date, marks and duration `(token)` — 400 `EXAM_INVALID`
+- [ ] `GET /api/v1/exams` — filter by `kind` (TEST/EXAM), `classId`, `subjectId`; `kind` defaults to `EXAM` and a `kind=TEST` read returns the single-subject rows `(token)`
+- [ ] `GET /api/v1/exams/me?studentId=` — the caller's own tests, exams and marks in one payload: the class's tests, exam windows and papers still ahead (each with its countdown), the published marks with their summary, and each subject's average; the tab counts and the headline figures come off the same read. **Self-scoped**: a student reads their own record and a **guardian one of their own children** (`?studentId=`; anything else is `403 PARENT_FORBIDDEN`), the payload names whose record it is (`subjectLabel`/`subjectMeta`) and lists the students the caller may switch between `(student, parent)` — 403 `EXAM_FORBIDDEN` for a staff account, 404 `EXAM_NOT_FOUND`
+- [ ] `GET /api/v1/exams/:id/results` — the marks sheet: every subject with its entry count, the class roster and every entry so far, so the grid loads all subjects at once `(token)` — 404 `EXAM_NOT_FOUND`
+- [ ] `PATCH /api/v1/exams/:id` — edit; the body replaces the subject set whole, and a published exam is refused with 409 `EXAM_PUBLISHED` `(token)` — 404 `EXAM_NOT_FOUND`, 400 `EXAM_INVALID`
+- [ ] `DELETE /api/v1/exams/:id` — removes the exam with its papers, marks and report cards `(token)` — 404 `EXAM_NOT_FOUND`
+- [ ] `POST /api/v1/exams/:id/marks` — bulk marks entry: the sheet's changed cells, upserted on `(exam, student, subject)`; a mark above its paper's total is a 400 and a published exam a 409 `(token)` — 404 `EXAM_NOT_FOUND`, 409 `EXAM_PUBLISHED`, 400 `EXAM_INVALID`
+- [ ] `POST /api/v1/exams/:id/publish` — publish results (transaction: results → report cards → notifications) `(token)` — 404 `EXAM_NOT_FOUND`
+- [ ] `POST /api/v1/exams/:id/unpublish` — admin-only rollback `(token)` — 404 `EXAM_NOT_FOUND`
+- [ ] `GET /api/v1/results/student/:studentId?examId=` — one student's marks `(token)` — 404 `STUDENT_NOT_FOUND`
+
+**Planned, not yet in the mock**
+
+- [ ] `GET /api/v1/exams/:id` — exam with its subjects
+- [ ] `GET /api/v1/exams/schedule?classId=` — dated schedule
+- [ ] `GET /api/v1/report-cards/:studentId/:examId` — grades, percentage, rank, AI comment
 
 **Behavior**
 
@@ -422,10 +405,13 @@ Concessions
 
 **Endpoints (history/persistence)** — the gateway carries live traffic; these hydrate the client and keep history
 
-- [ ] `POST /api/v1/chat/conversations` — allowed pairs enforced (admin↔teacher, teacher↔student, teacher↔parent) `(authenticated)`
-- [ ] `GET /api/v1/chat/conversations` — the caller's conversations, newest `lastMessageAt` first; each row is the **inbox row** below `(authenticated)`
-- [ ] `GET /api/v1/chat/:conversationId/messages` — paginated history, oldest first within a page; each row is the **history row** below, and a non-participant is refused (403) `(participant)`
-- [ ] `POST /api/v1/chat/:conversationId/read` — mark read up to a message; stamps both the message's `readAt` and the caller's `lastReadAt` `(participant)`
+- [ ] `GET /api/v1/chat/conversations` — the caller's conversations, newest `lastMessageAt` first; each row is the **inbox row** below `(token)`
+- [ ] `GET /api/v1/chat/:conversationId/messages` — paginated history, oldest first within a page; each row is the **history row** below, and a non-participant is refused (403) `(token)` — 404 `CHAT_CONVERSATION_NOT_FOUND`, 403 `CHAT_NOT_A_PARTICIPANT`
+
+**Planned, not yet in the mock**
+
+- [ ] `POST /api/v1/chat/conversations` — allowed pairs enforced (admin↔teacher, teacher↔student, teacher↔parent)
+- [ ] `POST /api/v1/chat/:conversationId/read` — mark read up to a message; stamps both the message's `readAt` and the caller's `lastReadAt`
 
 **Read models** — the two reads above are shaped here, not in the client
 
@@ -450,17 +436,20 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/notices` — publish a notice (title, body, `priority`, optional `authorName`) + audience targeting (all/teachers/class through `notice_classes`) `(admin)`
-- [ ] `GET /api/v1/notices` — role-filtered feed `(all roles)`
-- [ ] `GET /api/v1/notices/:id` `(all roles)`
-- [ ] `PATCH /api/v1/notices/:id` — edit; a draft is published by the edit `(admin)`
-- [ ] `DELETE /api/v1/notices/:id` — soft delete (`deletedAt`) `(admin)`
-- [ ] `POST /api/v1/events` — calendar entry `(admin)`
-- [ ] `GET /api/v1/events` — filter by date range/audience `(all roles)`
-- [ ] `GET /api/v1/events/:id` `(all roles)`
-- [ ] `PATCH /api/v1/events/:id` `(admin)`
-- [ ] `DELETE /api/v1/events/:id` `(admin)`
-- [ ] Publish side effects — Socket broadcast + email notification on notice publish
+- [ ] `POST /api/v1/notices` — publish a notice (title, body, `priority`, optional `authorName`) + audience targeting (all/teachers/class through the `notices.classIds[]` array) `(token)` — 400 `NOTICE_INVALID`
+- [ ] `GET /api/v1/notices` — role-filtered feed, paginated `(token)`
+- [ ] `PATCH /api/v1/notices/:id` — edit; a draft is published by the edit `(token)` — 404 `NOTICE_NOT_FOUND`, 400 `NOTICE_INVALID`
+- [ ] `DELETE /api/v1/notices/:id` — soft delete (`deletedAt`) `(token)` — 404 `NOTICE_NOT_FOUND`
+- [ ] Publish side effects — Socket broadcast + email notification on notice publish (no HTTP route)
+
+**Planned, not yet in the mock** — the mock serves **no `/events` route at all**: events are reachable only through the dashboard calendar (`GET /dashboard/admin`, `GET /dashboard/student`), not a `/events` resource. There is no single-notice read either:
+
+- [ ] `GET /api/v1/notices/:id` — one notice
+- [ ] `POST /api/v1/events` — calendar entry
+- [ ] `GET /api/v1/events` — filter by date range/audience
+- [ ] `GET /api/v1/events/:id`
+- [ ] `PATCH /api/v1/events/:id`
+- [ ] `DELETE /api/v1/events/:id`
 
 **Behavior**
 
@@ -477,17 +466,20 @@ Concessions
 
 **Tables:** `ai_conversations` · Database.md §12
 
-**Endpoints** — the seven `ai_feature` values from `Database.md`, one endpoint each: a server-side prompt template plus a throttled LLM call, history in `ai_conversations`
+**Endpoints** — the mock serves the assistant's context and history only; the seven `ai_feature` generation routes from `Database.md` are planned.
 
-- [ ] `POST /api/v1/ai/chat` — the general assistant, with a **role-scoped prompt template**: for an admin it answers **school insights** grounded in DB aggregates (via Supabase RPC), for a student it is an **academic tutor** answering with their own class and subjects in mind `(admin, student)`
-- [ ] `POST /api/v1/ai/report-comment` — report card comment generator `(admin, teacher)`
-- [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator `(admin)`
-- [ ] `POST /api/v1/ai/notice` — notice drafting: takes the notice **type** and the **details**, returns the announcement text `(admin)`
-- [ ] `POST /api/v1/ai/event-plan` — event planner: takes the event **name**, **type**, **date**, expected **participants** and **budget**, returns a full plan (objectives, hour-by-hour timeline, budget split, checklist) `(admin)`
-- [ ] `POST /api/v1/ai/homework-help` — student homework helper: takes an optional **subject** and the **question**, returns a step-by-step explanation `(student)`
-- [ ] `POST /api/v1/ai/quiz` — quiz generator: takes **subject**, **topic** and the **question count**, returns the questions with their options `(admin, student, teacher)`
-- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by `feature`, newest first. Each row is the **generation read model**: `id`, `feature`, `title`, `promptArgs` (the tool form's fields, so a past run can be reopened with its inputs), `messages` (the stored turns, oldest first — the chat tools render the thread), `output` (the last reply) and `createdAt` `(authenticated)`
-- [ ] `GET /api/v1/ai/context` — what the assistant's own forms need to know about the caller: for a **student**, their class (`classId`, `className`) and the subjects it runs, so the quiz's subject picker and the class chip need no access to the staff-only `/classes` or `/subjects` reads; for **staff** there is no class of their own, so the **whole subject catalogue** comes back instead `(authenticated)`
+- [ ] `GET /api/v1/ai/context` — what the assistant's own forms need to know about the caller: for a **student**, their class (`classId`, `className`) and the subjects it runs, so the quiz's subject picker and the class chip need no access to the staff-only `/classes` or `/subjects` reads; for **staff** there is no class of their own, so the **whole subject catalogue** comes back instead `(token)`
+- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by `feature`, newest first. Each row is the **generation read model**: `id`, `feature`, `title`, `promptArgs` (the tool form's fields, so a past run can be reopened with its inputs), `messages` (the stored turns, oldest first — the chat tools render the thread), `output` (the last reply) and `createdAt` `(token)`
+
+**Planned, not yet in the mock** — one endpoint per `ai_feature` value: a server-side prompt template plus a throttled LLM call, history in `ai_conversations`. None exist yet:
+
+- [ ] `POST /api/v1/ai/chat` — the general assistant, with a **role-scoped prompt template**: for an admin it answers **school insights** grounded in DB aggregates (via Supabase RPC), for a student it is an **academic tutor** answering with their own class and subjects in mind
+- [ ] `POST /api/v1/ai/report-comment` — report card comment generator
+- [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator
+- [ ] `POST /api/v1/ai/notice` — notice drafting: takes the notice **type** and the **details**, returns the announcement text
+- [ ] `POST /api/v1/ai/event-plan` — event planner: takes the event **name**, **type**, **date**, expected **participants** and **budget**, returns a full plan (objectives, hour-by-hour timeline, budget split, checklist)
+- [ ] `POST /api/v1/ai/homework-help` — student homework helper: takes an optional **subject** and the **question**, returns a step-by-step explanation
+- [ ] `POST /api/v1/ai/quiz` — quiz generator: takes **subject**, **topic** and the **question count**, returns the questions with their options
 
 **Behavior**
 
@@ -512,10 +504,10 @@ Concessions
 
 **Endpoints**
 
-- [ ] `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage); multipart fields `classId`, `subjectId`, `type` (PDF/notes/worksheet/previous-year paper), `title`, optional `description` and the `file` part; 400 `MATERIAL_INVALID` when the class/subject/type/title is missing, the subject is not taught in the chosen class, or the file is not a PDF/JPG/PNG/DOCX ≤ 10MB `(admin, teacher)`
-- [ ] `GET /api/v1/materials?search=&classId=&subjectId=&type=` — list, newest first `(all roles)`
-- [ ] `GET /api/v1/materials/:id` — metadata + a short-lived signed URL, which **both** the preview and the download read, so the client never stores a URL it would have to refresh `(all roles)`
-- [ ] `DELETE /api/v1/materials/:id` — soft-deletes the row and removes the stored asset `(admin, teacher)`
+- [ ] `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage); multipart fields `classId`, `subjectId`, `type` (PDF/notes/worksheet/previous-year paper), `title`, optional `description` and the `file` part `(token)` — 400 `MATERIAL_INVALID` when the class/subject/type/title is missing, the subject is not taught in the chosen class, or the file is not a PDF/JPG/PNG/DOCX ≤ 10MB
+- [ ] `GET /api/v1/materials?search=&classId=&subjectId=&type=` — list, newest first, role-scoped server-side `(token)`
+- [ ] `GET /api/v1/materials/:id` — metadata + a short-lived signed URL, which **both** the preview and the download read, so the client never stores a URL it would have to refresh `(token)` — 404 `MATERIAL_NOT_FOUND`
+- [ ] `DELETE /api/v1/materials/:id` — soft-deletes the row and removes the stored asset `(token)` — 404 `MATERIAL_NOT_FOUND`
 
 **Behavior**
 
@@ -531,17 +523,20 @@ Concessions
 
 **Endpoints**
 
-- [ ] `GET /api/v1/reports/overview` — active students and teachers, collected and pending totals, the twelve-month collected-vs-pending series and the class catalogue `(admin, teacher)`
-- [ ] `GET /api/v1/reports/attendance?month=&year=&classId=` — the register for one month: `present`, `total` and `percentage` per class plus the school totals `(admin, teacher)`
-- [ ] `GET /api/v1/reports/exam-results/papers` — the selectable papers (one exam's subject for one class), completed exams only, newest exam first `(admin, teacher)`
-- [ ] `GET /api/v1/reports/exam-results?paperId=` — one paper: every student's mark, percentage, grade and outcome, plus `totalStudents`/`passed`/`failed`/`averagePercentage` and the grade distribution; 404 `REPORT_PAPER_NOT_FOUND` for an unknown paper `(admin, teacher)`
-- [ ] `GET /api/v1/reports/finance` — collected and pending totals, the collection rate, the twelve-month series and every invoice still carrying a balance (total, paid, balance, due date, status), soonest-due first `(admin, teacher)`
-- [ ] `GET /api/v1/reports/students/:id` — academic profile report `(admin, teacher, parent of child)`
-- [ ] `GET /api/v1/reports/export?type=&format=csv` — streaming CSV of any report above `(admin)`
-- [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance rate plus its per-day trend, class performance per class, a recent-activity feed merged from payments/submissions/notices, upcoming exams (dated today or later), invoices with an outstanding balance, and dated calendar entries (events + exam days); chart series (Recharts-ready: plain labelled series, no chart config) `(admin)`
+- [ ] `GET /api/v1/reports/overview` — active students and teachers, collected and pending totals, the twelve-month collected-vs-pending series and the class catalogue `(token)`
+- [ ] `GET /api/v1/reports/attendance?month=&year=&classId=` — the register for one month: `present`, `total` and `percentage` per class plus the school totals `(token)`
+- [ ] `GET /api/v1/reports/exam-results/papers` — the selectable papers (one exam's subject for one class), completed exams only, newest exam first `(token)`
+- [ ] `GET /api/v1/reports/exam-results?paperId=` — one paper: every student's mark, percentage, grade and outcome, plus `totalStudents`/`passed`/`failed`/`averagePercentage` and the grade distribution; 404 `REPORT_PAPER_NOT_FOUND` for an unknown paper `(token)`
+- [ ] `GET /api/v1/reports/finance` — collected and pending totals, the collection rate, the twelve-month series and every invoice still carrying a balance (total, paid, balance, due date, status), soonest-due first `(token)`
+- [ ] `GET /api/v1/dashboard/admin` — counts, collection stats, attendance rate plus its per-day trend, class performance per class, a recent-activity feed merged from payments/submissions/notices, upcoming exams (dated today or later), invoices with an outstanding balance, and dated calendar entries (events + exam days); chart series (Recharts-ready: plain labelled series, no chart config) `(token)`
 - [ ] `GET /api/v1/dashboard/student` — the caller's **own** day: attendance rate with the present/absent/late split and the last few register days, paid/pending/total fees with the invoice list and the paid share, today's teaching periods for their class, the papers still ahead, and the notices they are in the audience of `(student)` — 403 `DASHBOARD_FORBIDDEN` for a non-student account
 - [ ] `GET /api/v1/progress/me` — the caller's **own** academic progress in one payload: Overall GPA, class rank, subject count and average score, the performance trend (one point per published assessment, oldest first), each subject's own average against the class's, and the teacher remarks left beside published marks `(student)` — 403 `PROGRESS_FORBIDDEN` for a non-student account
 - [ ] `GET /api/v1/dashboard/parent?studentId=` — a guardian's view of **one** child: attendance with the attended-days split, pending fees with the invoice history, the average score over the last few published results, the assignments the child has **not submitted**, the class's papers still ahead and the notices a guardian is in the audience of. The response also carries the guardian's `children[]`, and `studentId` may only name one of them `(parent)` — 403 `DASHBOARD_FORBIDDEN` for a non-guardian account, 403 `PARENT_FORBIDDEN` for a child that is not theirs
+
+**Planned, not yet in the mock**
+
+- [ ] `GET /api/v1/reports/students/:id` — academic profile report
+- [ ] `GET /api/v1/reports/export?type=&format=csv` — streaming CSV of any report above
 
 **Behavior**
 
@@ -580,7 +575,9 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Tables:** none — platform endpoint
 
-- [ ] `GET /api/v1/health` — liveness/readiness for the Render health check `(public)` (see §8)
+**Planned, not yet in the mock** — the mock exposes no health route:
+
+- [ ] `GET /api/v1/health` — liveness/readiness for the Render health check (see §8)
 
 ---
 
@@ -588,17 +585,25 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Methods** — `GET` reads; `POST` creates or triggers an action; `PATCH` for partial updates (send only the fields you change — the default for every update route); `PUT` only where the body replaces a whole sub-resource (`PUT /timetables/:id` replaces its `periods`); `DELETE` removes.
 
+**Base path** — every route sits under `/api/v1`. A tenant-addressed resource is `current` (`/schools/current` and its `settings`/`backup` sub-resources); a person-addressed resource is `me` (`/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`), optionally scoped with `?studentId=` so a guardian may pick one of their own children.
+
 **Response envelope** (via global response interceptor)
 
 ```json
-{ "success": true, "data": { ... }, "meta": { "page": 1, "total": 42 } }
+{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
 ```
+
+- Lists paginate with `meta { page, limit, total }`; **`limit` defaults to 10** and `page` to 1. `meta` is omitted on a single-resource read.
 
 **Error envelope** (via global exception filter)
 
 ```json
-{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found" } }
+{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] } }
 ```
+
+- `code` is `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`). **`details` is a `string[]` of field names**, present on the 400 validation codes and omitted otherwise; the full 60-code catalogue is [`Access.md`](./Access.md) §4.
+
+**Money** — an integer in a minor unit, with a `*Paise` field suffix (`amountPaise`, `paidPaise`) — never a float. The demo school declares `currency: 'USD'` yet the fields are suffixed `*Paise` and the seed multiplies by 100 through `dollars()`: a **rupee-vs-dollar open question** recorded in `Schema.md` §1, not resolved here.
 
 **Status codes** — 200 OK, 201 Created, 400 Validation, 401 Unauthenticated, 403 Forbidden, 404 Not Found, 409 Conflict, 429 Rate Limited, 500 Server Error.
 
