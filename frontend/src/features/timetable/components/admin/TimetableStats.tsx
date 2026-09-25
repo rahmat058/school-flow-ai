@@ -1,5 +1,7 @@
 import { BookOpen, CalendarDays, ListOrdered, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { cn } from '@/lib/cn'
+import { statCardShell, statGradientStyles, statMarkStyles } from '@/lib/statTone'
 import type { LucideIcon } from 'lucide-react'
 import type { TeacherTimetableStats, TimetableStats } from '@/types/timetable'
 
@@ -41,15 +43,15 @@ export function TimetableStats({ input }: TimetableStatsProps) {
   return (
     <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
       {tiles.map((tile) => (
-        <article key={tile.label} className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]">
+        <article key={tile.label} className={cn(statCardShell, statGradientStyles.primary)}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-ink-subtle text-[11px] font-medium tracking-[0.04em] uppercase">{tile.label}</p>
-              <p className="font-display text-ink mt-2 text-[22px] leading-none font-semibold tracking-[-0.03em]">
+              <p className="text-[11px] font-medium tracking-[0.04em] text-white/80 uppercase">{tile.label}</p>
+              <p className="font-display mt-2 text-[22px] leading-none font-semibold tracking-[-0.03em] text-white">
                 {tile.value}
               </p>
             </div>
-            <span className="bg-primary-soft text-primary flex size-9 shrink-0 items-center justify-center rounded-full">
+            <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', statMarkStyles)}>
               <tile.icon className="size-4.5" strokeWidth={1.75} />
             </span>
           </div>

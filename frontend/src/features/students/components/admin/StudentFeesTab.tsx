@@ -1,8 +1,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { StatusBadge } from '@/components/ui/Badge'
 import { formatDate, formatPaise } from '@/lib/format'
+import { statCardShell, statGradientStyles } from '@/lib/statTone'
 import { useCurrentSchool } from '@/features/school/api'
 import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
+import type { IconTone } from '@/types/dashboard'
 import type { StudentFees, StudentProfile } from '@/types/people'
 
 interface StudentFeesTabProps {
@@ -34,13 +36,13 @@ export function StudentFeesTab({ profile, fees }: StudentFeesTabProps) {
       />
 
       <section className="grid gap-5 sm:grid-cols-3">
-        <Tile label="Total paid" value={formatPaise(summary.paidPaise)} tone="text-success" />
+        <Tile label="Total paid" value={formatPaise(summary.paidPaise)} tone="success" />
         <Tile
           label="Outstanding"
           value={formatPaise(summary.duePaise)}
-          tone={summary.duePaise > 0 ? 'text-error' : 'text-ink'}
+          tone={summary.duePaise > 0 ? 'error' : 'primary'}
         />
-        <Tile label="Total billed" value={formatPaise(summary.totalPaise)} />
+        <Tile label="Total billed" value={formatPaise(summary.totalPaise)} tone="primary" />
       </section>
 
       <section className="border-line bg-surface overflow-hidden rounded-xl border shadow-[var(--shadow-card)]">
@@ -88,11 +90,11 @@ export function StudentFeesTab({ profile, fees }: StudentFeesTabProps) {
   )
 }
 
-function Tile({ label, value, tone = 'text-ink' }: { label: string; value: string; tone?: string }) {
+function Tile({ label, value, tone }: { label: string; value: string; tone: IconTone }) {
   return (
-    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]">
-      <p className="text-ink-muted text-[13px]">{label}</p>
-      <p className={`font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] ${tone}`}>{value}</p>
+    <article className={`${statCardShell} ${statGradientStyles[tone]}`}>
+      <p className="text-[13px] text-white/80">{label}</p>
+      <p className="font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] text-white">{value}</p>
     </article>
   )
 }

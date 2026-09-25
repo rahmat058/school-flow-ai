@@ -8,9 +8,11 @@ import type { DataTableColumn } from '@/components/ui/DataTable'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatDate, formatPaise } from '@/lib/format'
+import { statCardShell, statGradientStyles, statMarkStyles } from '@/lib/statTone'
 import { ApiError } from '@/services/apiClient'
 import { useFeeDashboard, useFeeSummary, usePendingInvoices } from '@/features/fees/api'
 import { feeCollectPath } from '@/routes/paths'
+import type { IconTone } from '@/types/dashboard'
 import type { FeeTrendPoint, PendingInvoiceRow } from '@/types/fees'
 
 const PAGE_SIZE = 10
@@ -89,28 +91,28 @@ export function FeeDashboardTab() {
               value={formatPaise(summary.data?.collectedPaise ?? 0)}
               detail="Current academic year"
               icon={Wallet}
-              tone="bg-primary-soft text-primary"
+              tone="primary"
             />
             <StatCard
               label="This month"
               value={formatPaise(summary.data?.thisMonthPaise ?? 0)}
               detail="Collected this month"
               icon={TrendingUp}
-              tone="bg-success-soft text-success"
+              tone="success"
             />
             <StatCard
               label="Pending dues"
               value={formatPaise(summary.data?.pendingPaise ?? 0)}
               detail="Across all students"
               icon={CalendarClock}
-              tone="bg-warning-soft text-warning"
+              tone="warning"
             />
             <StatCard
               label="Defaulters"
               value={String(summary.data?.pendingStudents ?? 0)}
               detail="Students with a due balance"
               icon={AlertTriangle}
-              tone="bg-error-soft text-error"
+              tone="error"
             />
           </>
         )}
@@ -240,21 +242,21 @@ interface StatCardProps {
   value: string
   detail: string
   icon: typeof Wallet
-  tone: string
+  tone: IconTone
 }
 
 function StatCard({ label, value, detail, icon: Icon, tone }: StatCardProps) {
   return (
-    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]">
+    <article className={`${statCardShell} ${statGradientStyles[tone]}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-ink-subtle text-[11px] font-medium tracking-[0.04em] uppercase">{label}</p>
-          <p className="font-display text-ink mt-2 text-[24px] leading-none font-semibold tracking-[-0.03em]">
+          <p className="text-[11px] font-medium tracking-[0.04em] text-white/80 uppercase">{label}</p>
+          <p className="font-display mt-2 text-[24px] leading-none font-semibold tracking-[-0.03em] text-white">
             {value}
           </p>
-          <p className="text-ink-subtle mt-1.5 text-[12px]">{detail}</p>
+          <p className="mt-1.5 text-[12px] text-white/80">{detail}</p>
         </div>
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${statMarkStyles}`}>
           <Icon className="size-4.5" strokeWidth={1.75} />
         </span>
       </div>

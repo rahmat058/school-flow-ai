@@ -1,5 +1,7 @@
 import { formatDate } from '@/lib/format'
+import { statCardShell, statGradientStyles } from '@/lib/statTone'
 import { StudentDetail, StudentPanel } from '@/features/students/components/admin/StudentPanel'
+import type { IconTone } from '@/types/dashboard'
 import type { StudentProfile } from '@/types/people'
 
 interface StudentOverviewTabProps {
@@ -11,13 +13,13 @@ export function StudentOverviewTab({ profile }: StudentOverviewTabProps) {
   return (
     <div className="space-y-5">
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Attendance rate" value={`${profile.attendancePercentage}%`} tone="text-success" />
-        <Stat label="Days present" value={String(profile.daysPresent)} />
-        <Stat label="Streak days" value={String(profile.streakDays)} tone="text-primary" />
+        <Stat label="Attendance rate" value={`${profile.attendancePercentage}%`} tone="success" />
+        <Stat label="Days present" value={String(profile.daysPresent)} tone="primary" />
+        <Stat label="Streak days" value={String(profile.streakDays)} tone="primary" />
         <Stat
           label="Days absent"
           value={String(profile.daysAbsent)}
-          tone={profile.daysAbsent > 0 ? 'text-error' : 'text-ink'}
+          tone={profile.daysAbsent > 0 ? 'error' : 'primary'}
         />
       </section>
 
@@ -54,11 +56,11 @@ export function StudentOverviewTab({ profile }: StudentOverviewTabProps) {
   )
 }
 
-function Stat({ label, value, tone = 'text-ink' }: { label: string; value: string; tone?: string }) {
+function Stat({ label, value, tone }: { label: string; value: string; tone: IconTone }) {
   return (
-    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]">
-      <p className="text-ink-muted text-[13px]">{label}</p>
-      <p className={`font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] ${tone}`}>{value}</p>
+    <article className={`${statCardShell} ${statGradientStyles[tone]}`}>
+      <p className="text-[13px] text-white/80">{label}</p>
+      <p className="font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] text-white">{value}</p>
     </article>
   )
 }

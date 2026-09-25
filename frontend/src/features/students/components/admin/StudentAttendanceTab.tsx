@@ -1,6 +1,8 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import { statCardShell, statGradientStyles } from '@/lib/statTone'
 import { useCurrentSchool } from '@/features/school/api'
 import { DownloadSheetButton, StudentTabHeader } from '@/features/students/components/admin/DownloadSheetButton'
+import type { IconTone } from '@/types/dashboard'
 import type { StudentAttendance, StudentProfile } from '@/types/people'
 
 interface StudentAttendanceTabProps {
@@ -32,10 +34,10 @@ export function StudentAttendanceTab({ profile, attendance }: StudentAttendanceT
       />
 
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile label="Total days" value={String(totals.total)} />
-        <Tile label="Present" value={String(totals.present)} tone="text-success" />
-        <Tile label="Absent" value={String(totals.absent)} tone={totals.absent > 0 ? 'text-error' : 'text-ink'} />
-        <Tile label="Late" value={String(totals.late)} tone={totals.late > 0 ? 'text-warning' : 'text-ink'} />
+        <Tile label="Total days" value={String(totals.total)} tone="primary" />
+        <Tile label="Present" value={String(totals.present)} tone="success" />
+        <Tile label="Absent" value={String(totals.absent)} tone={totals.absent > 0 ? 'error' : 'primary'} />
+        <Tile label="Late" value={String(totals.late)} tone={totals.late > 0 ? 'warning' : 'primary'} />
       </section>
 
       <section className="border-line bg-surface overflow-hidden rounded-xl border shadow-[var(--shadow-card)]">
@@ -76,11 +78,11 @@ export function StudentAttendanceTab({ profile, attendance }: StudentAttendanceT
   )
 }
 
-function Tile({ label, value, tone = 'text-ink' }: { label: string; value: string; tone?: string }) {
+function Tile({ label, value, tone }: { label: string; value: string; tone: IconTone }) {
   return (
-    <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]">
-      <p className="text-ink-muted text-[13px]">{label}</p>
-      <p className={`font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] ${tone}`}>{value}</p>
+    <article className={`${statCardShell} ${statGradientStyles[tone]}`}>
+      <p className="text-[13px] text-white/80">{label}</p>
+      <p className="font-display mt-2 text-[26px] leading-none font-semibold tracking-[-0.03em] text-white">{value}</p>
     </article>
   )
 }

@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
+import { statCardShell, statGradientStyles } from '@/lib/statTone'
 import { AttendanceCalendar } from '@/features/attendance/components/common/AttendanceCalendar'
 import { attendanceDotTone } from '@/features/attendance/lib/tones'
 import type { AttendanceDay, AttendanceMonth } from '@/types/attendance'
+import type { IconTone } from '@/types/dashboard'
 
 interface AttendanceMonthViewProps {
   data: AttendanceMonth
@@ -97,10 +99,10 @@ export function AttendanceMonthView({
       </div>
 
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Present" value={data.totals.present} tone="text-success" />
-        <StatTile label="Absent" value={data.totals.absent} tone="text-error" />
-        <StatTile label="Late" value={data.totals.late} tone="text-warning" />
-        <StatTile label="Attendance" value={`${data.totals.rate}%`} tone="text-primary" />
+        <StatTile label="Present" value={data.totals.present} tone="success" />
+        <StatTile label="Absent" value={data.totals.absent} tone="error" />
+        <StatTile label="Late" value={data.totals.late} tone="warning" />
+        <StatTile label="Attendance" value={`${data.totals.rate}%`} tone="primary" />
       </section>
 
       {/* Only a personal month carries a per-day status, so only it can be dotted. */}
@@ -134,11 +136,11 @@ export function AttendanceMonthView({
   )
 }
 
-function StatTile({ label, value, tone }: { label: string; value: number | string; tone: string }) {
+function StatTile({ label, value, tone }: { label: string; value: number | string; tone: IconTone }) {
   return (
-    <article className="border-line bg-surface rounded-xl border p-5 text-center shadow-(--shadow-card)">
-      <p className={cn('font-display text-[30px] leading-none font-semibold tracking-[-0.03em]', tone)}>{value}</p>
-      <p className="text-ink-muted mt-2 text-[13px]">{label}</p>
+    <article className={cn(statCardShell, statGradientStyles[tone], 'text-center')}>
+      <p className="font-display text-[30px] leading-none font-semibold tracking-[-0.03em] text-white">{value}</p>
+      <p className="mt-2 text-[13px] text-white/80">{label}</p>
     </article>
   )
 }
