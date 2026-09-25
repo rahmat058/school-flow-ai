@@ -237,9 +237,10 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 **Endpoints**
 
 - [ ] `POST /api/v1/attendance` — daily/bulk mark (array of records, batch upsert) `(admin, teacher)`
-- [ ] `GET /api/v1/attendance?classId=&date=` — daily register `(admin, teacher)`
-- [ ] `GET /api/v1/attendance/monthly?classId=&month=` — monthly summary `(admin, teacher)`
-- [ ] `GET /api/v1/attendance/student/:id` — individual history `(admin, teacher, student own, parent of child)`
+- [ ] `GET /api/v1/attendance?classId=&date=` — the daily register: the class roster with each student's stored status, so a register opens pre-filled `(admin, teacher)`
+- [ ] `GET /api/v1/attendance/monthly?classId=&month=` — one class's month: the month's totals (present/absent/late/leave/rate), one row per register day with that day's counts, and the months on record for the picker; `month` is an ISO key (`2026-08`) and defaults to the newest on record `(admin, teacher)`
+- [ ] `GET /api/v1/attendance/me?month=&studentId=` — the caller's own month in the **same shape**, scoped to one student: each day carries **their** status, and the payload names the students the caller may switch between; `studentId` picks one of a guardian's children `(student own, parent of child)` — 403 `ATTENDANCE_FORBIDDEN` for a staff account or another family's child
+- [ ] `GET /api/v1/attendance/student/:id` — the individual history the student profile's Attendance tab reads: lifetime totals plus a row per month `(admin, teacher, student own, parent of child)`
 - [ ] `GET /api/v1/attendance/analytics?classId=` — trends and defaulters (<75%) `(admin, teacher)`
 - [ ] `attendance:marked` socket event — notify the class's parents in real time
 
@@ -248,6 +249,9 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - Unique (classId, studentId, date) constraint prevents duplicates
 - Monthly %, streaks, and class analytics via SQL aggregations (Supabase RPC) / views
 - Socket.io event `attendance:marked` notifies parents in real time
+- **The two month reads share one shape** — `attendance/monthly` and `attendance/me` return the same totals, the same month picker and one row per register day; a `scope` field says whose month it is, and only a personal month carries a `status` per day (a class day has many students, so it carries that day's counts instead). `attendance/me` is **self-scoped** — a student reads only their own register, a guardian only their own children, and a staff account is refused because it has no personal register
+- Each month payload returns the **months on record**, so the picker never offers an empty month; a requested month with no register returns empty `days` and zeroed totals — an empty month is empty, not an error
+- **Absent includes leave** in every count here, as the roster, the profile's Attendance tab and `reports/attendance` already do, so `present + absent + late = total` holds; the personal day row still shows the student's true status (`LEAVE` included) and `rate` is `(present + late) ÷ total`
 
 ### 4.6 Fee Management (`FeesModule`)
 

@@ -39,6 +39,7 @@ export const ExamsPage = lazy(async () => ({ default: (await import('@/pages/Exa
 export const AiAssistantPage = lazy(async () => ({
   default: (await import('@/pages/AiAssistantPage')).AiAssistantPage,
 }))
+export const AttendancePage = lazy(async () => ({ default: (await import('@/pages/AttendancePage')).AttendancePage }))
 export const HomeworkPage = lazy(async () => ({ default: (await import('@/pages/HomeworkPage')).HomeworkPage }))
 export const MaterialsPage = lazy(async () => ({ default: (await import('@/pages/MaterialsPage')).MaterialsPage }))
 export const ReportsPage = lazy(async () => ({ default: (await import('@/pages/ReportsPage')).ReportsPage }))

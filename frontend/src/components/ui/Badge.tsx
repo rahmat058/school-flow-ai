@@ -1,6 +1,7 @@
 import { cn } from '@/lib/cn'
 import { humanizeEnum } from '@/lib/format'
 import type { NoticePriority } from '@/types/communication'
+import type { AttendanceStatus } from '@/types/attendance'
 import type { ExamStatus } from '@/types/exams'
 import type { RecordStatus, FeeStanding } from '@/types/people'
 import type { InvoiceStatus, PaymentStatus } from '@/types/fees'
@@ -52,6 +53,34 @@ export function StatusBadge({ status }: StatusBadgeProps) {
       className={cn(
         'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium tracking-[0.04em] uppercase',
         statusStyles[status],
+      )}>
+      {humanizeEnum(status)}
+    </span>
+  )
+}
+
+/**
+ * Attendance has its own vocabulary — present, late, leave, absent — and its `ABSENT` wants the error
+ * tint, where the shared `StatusBadge`'s `ABSENT` deliberately reads neutral for a missing mark in the
+ * reports. Kept beside `StatusBadge` so every status pill maps in one place.
+ */
+const attendanceStyles: Record<AttendanceStatus, string> = {
+  PRESENT: 'bg-success-soft text-success',
+  LATE: 'bg-orange-soft text-warning',
+  LEAVE: 'bg-primary-soft text-primary',
+  ABSENT: 'bg-error-soft text-error',
+}
+
+interface AttendanceBadgeProps {
+  status: AttendanceStatus
+}
+
+export function AttendanceBadge({ status }: AttendanceBadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium tracking-[0.04em] uppercase',
+        attendanceStyles[status],
       )}>
       {humanizeEnum(status)}
     </span>

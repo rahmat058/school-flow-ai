@@ -6,7 +6,7 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 
 - Global prefix `/api/v1`; plural, kebab-case resources: `/fees/structures`, `/report-cards`
 - Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`, `/schools/current/backup`
-- A resource the caller **is** addresses itself as `current` rather than carrying an id — `/schools/current` and its `settings`/`backup` sub-resources — because the tenant comes from the session, not the path
+- A resource the caller **is** addresses itself as `current` (the tenant: `/schools/current` and its `settings`/`backup` sub-resources) or `me` (a person's own slice: `/timetables/me`, `/attendance/me`) rather than carrying an id, because the caller comes from the session — with an optional `?studentId=` where a guardian may pick one of their own children
 - Filters via query params: `?classId=&from=&to=&status=`
 - Report families are one route per report rather than a `?type=`: `/fees/reports/day-book`,
   `/fees/reports/class`, `/fees/reports/defaulters`, `/fees/reports/student-ledger`

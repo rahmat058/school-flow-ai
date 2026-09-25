@@ -5,6 +5,15 @@ import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
 import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
 import type {
+  AttendanceDay,
+  AttendanceMonth,
+  AttendanceMonthOption,
+  AttendanceMonthTotals,
+  AttendanceRecord,
+  AttendanceSubject,
+  MyAttendanceMonth,
+} from '@/types/attendance'
+import type {
   AssignmentSummary,
   ClassAssignment,
   ClassOption,
@@ -2172,6 +2181,149 @@ function studentDashboard(studentId: string): StudentDashboard | undefined {
 }
 
 // ---------------------------------------------------------------------------------------------
+// attendance — the month register. A student's own month and a class's are the same rows rolled up,
+// so the two screens cannot disagree about a day.
+// ---------------------------------------------------------------------------------------------
+
+/** `2026-09-25` → `2026-09`. */
+function monthKeyOf(date: string): string {
+  return date.slice(0, 7)
+}
+
+/** `2026-08` → `August 2026`. */
+function monthLabelOf(key: string): string {
+  if (!key) return ''
+
+  const [year, month] = key.split('-').map(Number)
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+/** The months a set of register rows covers, newest first — the picker's options. */
+function attendanceMonthsOf(records: AttendanceRecord[]): AttendanceMonthOption[] {
+  return [...new Set(records.map((record) => monthKeyOf(record.attendanceDate)))]
+    .sort()
+    .reverse()
+    .map((value) => ({ value, label: monthLabelOf(value) }))
+}
+
+/** The month to show: what was asked for, else the newest on record. */
+function resolveMonth(records: AttendanceRecord[], requested: string): string {
+  return requested || attendanceMonthsOf(records)[0]?.value || ''
+}
+
+/**
+ * One day's counts. `absent` **includes leave** so `present + absent + late = total` holds — the rule
+ * the roster, the profile's Attendance tab and the reports already use. Leave is also returned on its
+ * own, because a personal month's day row still shows the student's true status.
+ */
+function statusCounts(records: AttendanceRecord[]): {
+  present: number
+  absent: number
+  late: number
+  leave: number
+  total: number
+} {
+  const present = records.filter((record) => record.status === 'PRESENT').length
+  const late = records.filter((record) => record.status === 'LATE').length
+  const leave = records.filter((record) => record.status === 'LEAVE').length
+
+  return { present, absent: records.length - present - late, late, leave, total: records.length }
+}
+
+function monthTotals(records: AttendanceRecord[]): AttendanceMonthTotals {
+  const counts = statusCounts(records)
+
+  return { ...counts, rate: rateOf(counts.present + counts.late, counts.total) }
+}
+
+/** The month's register days, newest first — one row per date. */
+function monthDays(records: AttendanceRecord[], withStatus: boolean): AttendanceDay[] {
+  const byDate = new Map<string, AttendanceRecord[]>()
+  for (const record of records) {
+    const day = byDate.get(record.attendanceDate) ?? []
+    day.push(record)
+    byDate.set(record.attendanceDate, day)
+  }
+
+  return [...byDate.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([date, dayRecords]) => ({
+      date,
+      // A personal month reports the student's own status; a class register has a row per student.
+      status: withStatus ? (dayRecords[0]?.status ?? null) : null,
+      ...statusCounts(dayRecords),
+    }))
+}
+
+/** A student's own month — `GET /attendance/me`. */
+function myAttendanceMonth(
+  studentId: string,
+  month: string,
+  students: AttendanceSubject[],
+): MyAttendanceMonth | undefined {
+  const student = findStudent(studentId)
+  if (!student) return undefined
+
+  const classRoom = findClass(student.classId)
+  const mine = attendance.filter((record) => record.studentId === studentId)
+  const records = mine.filter((record) => monthKeyOf(record.attendanceDate) === month)
+
+  return {
+    scope: 'STUDENT',
+    subjectLabel: `${student.firstName} ${student.lastName}`,
+    subjectMeta: classRoom ? classLabel(classRoom) : '',
+    month,
+    label: monthLabelOf(month),
+    availableMonths: attendanceMonthsOf(mine),
+    totals: monthTotals(records),
+    days: monthDays(records, true),
+    students,
+  }
+}
+
+/** One class's month — `GET /attendance/monthly`. */
+function classAttendanceMonth(classRoom: ClassRoom, month: string): AttendanceMonth {
+  const all = attendance.filter((record) => record.classId === classRoom.id)
+  const records = all.filter((record) => monthKeyOf(record.attendanceDate) === month)
+
+  return {
+    scope: 'CLASS',
+    subjectLabel: classLabel(classRoom),
+    subjectMeta: '',
+    month,
+    label: monthLabelOf(month),
+    availableMonths: attendanceMonthsOf(all),
+    totals: monthTotals(records),
+    days: monthDays(records, false),
+  }
+}
+
+/** The students a caller may read a register for: their own account, or a guardian's children. */
+function attendanceStudentsFor(user: AuthUser): AttendanceSubject[] {
+  const ids =
+    user.role === 'PARENT'
+      ? parentStudents.filter((link) => link.parentId === user.profileId).map((link) => link.studentId)
+      : user.profileId
+        ? [user.profileId]
+        : []
+
+  return ids.flatMap((id) => {
+    const student = findStudent(id)
+    if (!student) return []
+
+    const classRoom = findClass(student.classId)
+
+    return [
+      {
+        id: student.id,
+        label: `${student.firstName} ${student.lastName}`,
+        meta: classRoom ? classLabel(classRoom) : '',
+      },
+    ]
+  })
+}
+
+// ---------------------------------------------------------------------------------------------
 // routes
 // ---------------------------------------------------------------------------------------------
 const routes: Route[] = [
@@ -2971,6 +3123,49 @@ const routes: Route[] = [
       students.some((item) => item.id === params.id)
         ? ok<StudentDocument[]>([])
         : fail(404, 'STUDENT_NOT_FOUND', 'Student not found'),
+  },
+  {
+    method: 'GET',
+    path: '/attendance/me',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+
+      // Staff have no personal register — they read the class month instead.
+      if (!user || (user.role !== 'STUDENT' && user.role !== 'PARENT')) {
+        return fail(403, 'ATTENDANCE_FORBIDDEN', 'This register belongs to a student or guardian account')
+      }
+
+      const students = attendanceStudentsFor(user)
+      // A student reads only their own register; a guardian only their own children.
+      const studentId = params.studentId ? String(params.studentId) : (students[0]?.id ?? '')
+      if (!students.some((option) => option.id === studentId)) {
+        return fail(403, 'ATTENDANCE_FORBIDDEN', 'That student is not on your account')
+      }
+
+      const mine = attendance.filter((record) => record.studentId === studentId)
+      const view = myAttendanceMonth(studentId, resolveMonth(mine, params.month ? String(params.month) : ''), students)
+
+      return view ? ok<MyAttendanceMonth>(view) : fail(404, 'ATTENDANCE_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/attendance/monthly',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      if (user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
+        return fail(403, 'ATTENDANCE_FORBIDDEN', 'The class register is staff-only')
+      }
+
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(400, 'ATTENDANCE_INVALID', 'Choose a class', ['classId'])
+
+      const all = attendance.filter((record) => record.classId === classRoom.id)
+
+      return ok<AttendanceMonth>(
+        classAttendanceMonth(classRoom, resolveMonth(all, params.month ? String(params.month) : '')),
+      )
+    },
   },
   {
     method: 'GET',

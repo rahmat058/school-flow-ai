@@ -820,6 +820,15 @@ it. `class_id` is stored **in addition to** `students.class_id` on purpose: hist
 after a student changes class mid-year. Writes emit `attendance:marked` over Socket.io to linked
 parents.
 
+**Month reads.** `GET /attendance/monthly` and `GET /attendance/me` are projections over these rows, not
+new columns: the month is `attendance_date` truncated to `YYYY-MM`, the totals come from counting
+`status` per day (and per student), and the picker's "months on record" is a `distinct` on the same key.
+The existing `(class_id, attendance_date)` and `(student_id, attendance_date)` indexes serve both, so
+this table needs **no schema change** for the module. Two rules live in the read model, not the schema:
+**leave is folded into the absent count** (`present + absent + late = total`, the rule the roster and
+the reports use) while a `leave` count is still exposed, and a class month carries that day's counts
+where a personal month carries the student's own `status`.
+
 ```mermaid
 erDiagram
   classes ||--o{ attendance : "registers"
@@ -2101,7 +2110,8 @@ invoice generation, payment confirmation (payment + invoice + receipt number), e
 
 **Reporting views.** `PRD.md` §4.14 calls for aggregations and materialized views. These are read-only
 projections, not tables: `mv_attendance_monthly` (attendance % per class/month — backs
-`GET /reports/attendance`), `mv_fee_collection` (collected/pending/concessions per period — backs
+`GET /reports/attendance` and the class register `GET /attendance/monthly`), `mv_fee_collection`
+(collected/pending/concessions per period — backs
 `GET /reports/overview` and `GET /reports/finance`), plus on-demand RPCs for the defaulter list,
 `GET /reports/exam-results` (a paper's marks per student), `GET /dashboard/admin` and
 `GET /dashboard/student` (one student's own day, scoped by the session). No table is added

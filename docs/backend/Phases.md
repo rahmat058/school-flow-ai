@@ -36,7 +36,7 @@
 
 ## Phase 3: Attendance & Homework — PRD §4.5, §4.7, §4.13
 
-- [ ] Attendance mark (daily/bulk upsert), daily register, monthly summary, student history, analytics, defaulters
+- [ ] Attendance mark (daily/bulk upsert), daily register, class + personal month registers (`/attendance/monthly`, `/attendance/me`), student history, analytics, defaulters
 - [ ] `attendance:marked` socket event for parent alerts
 - [ ] Homework CRUD, submissions, grading, late flag
 - [ ] Study materials upload (Cloudinary) + listing + deletion of the stored asset

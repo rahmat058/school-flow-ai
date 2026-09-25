@@ -1,18 +1,6 @@
-import { cn } from '@/lib/cn'
-import { formatDate, humanizeEnum } from '@/lib/format'
+import { formatDate } from '@/lib/format'
+import { AttendanceBadge } from '@/components/ui/Badge'
 import type { StudentAttendanceOverview } from '@/types/dashboard'
-import type { AttendanceStatus } from '@/types/attendance'
-
-/**
- * Attendance has its own vocabulary — present, late, leave, absent — so it does not reuse the shared
- * `StatusBadge`, whose `ABSENT` reads neutral for a missing mark in the reports.
- */
-const statusStyles: Record<AttendanceStatus, string> = {
-  PRESENT: 'bg-success-soft text-success',
-  LATE: 'bg-orange-soft text-warning',
-  LEAVE: 'bg-primary-soft text-primary',
-  ABSENT: 'bg-error-soft text-error',
-}
 
 interface StudentAttendanceCardProps {
   attendance: StudentAttendanceOverview
@@ -54,13 +42,7 @@ export function StudentAttendanceCard({ attendance }: StudentAttendanceCardProps
             <li key={record.date} className="flex items-center gap-3 py-2.5">
               <span className="text-ink flex-1 text-[13px]">{formatDate(record.date, 'EEE, dd MMM')}</span>
               <span className="text-ink-muted shrink-0 truncate text-[12px]">{record.className}</span>
-              <span
-                className={cn(
-                  'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium',
-                  statusStyles[record.status],
-                )}>
-                {humanizeEnum(record.status)}
-              </span>
+              <AttendanceBadge status={record.status} />
             </li>
           ))}
         </ul>

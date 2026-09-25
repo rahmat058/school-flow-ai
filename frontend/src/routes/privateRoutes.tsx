@@ -1,10 +1,10 @@
 import type { RouteObject } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
-import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { ProtectedRoute } from '@/routes/guards/ProtectedRoute'
 import { RoleGuard } from '@/routes/guards/RoleGuard'
 import {
   AiAssistantPage,
+  AttendancePage,
   ChatPage,
   DashboardPage,
   ExamsPage,
@@ -24,23 +24,6 @@ import {
   TimetablePage,
 } from '@/routes/lazyPages'
 import { childPath, paths } from '@/routes/paths'
-
-/**
- * Modules that are planned but not built yet. Keeping them routed means the role-aware sidebar never
- * links to a dead end — each renders `PlaceholderPage` inside the shell.
- */
-const upcomingModules: Array<{ path: string; title: string; description: string }> = [
-  {
-    path: paths.attendance,
-    title: 'Attendance',
-    description: 'Daily register, bulk marking, monthly view and attendance analytics arrive in Phase 3.',
-  },
-]
-
-const upcomingRoutes: RouteObject[] = upcomingModules.map((module) => ({
-  path: childPath(module.path),
-  element: <PlaceholderPage title={module.title} description={module.description} />,
-}))
 
 /** Authenticated routes: the shell wraps every page, with role checks around restricted groups. */
 export const privateRoutes: RouteObject[] = [
@@ -79,6 +62,8 @@ export const privateRoutes: RouteObject[] = [
               { path: childPath(paths.feeCollect), element: <FeeCollectPage /> },
             ],
           },
+          // Every role has a register; the page withholds the class view from students and parents.
+          { path: childPath(paths.attendance), element: <AttendancePage /> },
           // Readable by every role; the page itself withholds the write controls from students and parents.
           { path: childPath(paths.homework), element: <HomeworkPage /> },
           // Readable by every role; the page withholds the upload controls from students and parents.
@@ -89,7 +74,6 @@ export const privateRoutes: RouteObject[] = [
           { path: childPath(paths.chat), element: <ChatPage /> },
           { path: childPath(paths.exams), element: <ExamsPage /> },
           { path: childPath(paths.ai), element: <AiAssistantPage /> },
-          ...upcomingRoutes,
           { path: '*', element: <NotFoundPage /> },
         ],
       },

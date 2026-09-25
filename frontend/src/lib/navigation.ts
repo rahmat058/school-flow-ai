@@ -22,7 +22,7 @@ const EVERYONE: Role[] = ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT']
 
 /**
  * Navigation is configuration, not server state — so it lives here rather than in `src/data/`.
- * `roles` drives the sidebar filter; module pages that are not built yet render `PlaceholderPage`.
+ * `roles` drives the sidebar filter; every item now has a real page behind it.
  */
 export const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, roles: EVERYONE },
