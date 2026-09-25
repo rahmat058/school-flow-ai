@@ -1,6 +1,6 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { iconToneStyles } from '@/components/dashboard/common/iconTone'
+import { iconToneStyles } from '@/features/dashboard/common/iconTone'
 import type { StatMetric } from '@/types/dashboard'
 
 interface StatCardProps {

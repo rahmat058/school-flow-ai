@@ -4,13 +4,16 @@ import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Spinner } from '@/components/ui/Spinner'
 import { findNavItem } from '@/lib/navigation'
+import { useCurrentUser } from '@/store/auth'
 
 export function AppShell() {
   // Small screens: an overlay drawer. Large screens: a rail that can collapse to icons only.
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const { pathname } = useLocation()
-  const current = findNavItem(pathname)
+  const user = useCurrentUser()
+  // Resolved against the caller's own sidebar, so `/exams` titles itself per role.
+  const current = findNavItem(pathname, user?.role)
 
   return (
     <div className="bg-canvas flex min-h-screen">

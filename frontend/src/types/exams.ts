@@ -253,12 +253,21 @@ export interface StudentExamsSummary {
   passRate: number
 }
 
+/** A student the caller may read — a guardian's children, or a student's own single entry. */
+export interface ExamSubjectOption {
+  id: string
+  label: string
+  /** The student's class label, e.g. `1-A`. */
+  meta: string
+}
+
 /**
- * `GET /exams/me` — the caller's own tests, exams and marks in one payload. Self-scoped: the student
- * comes from the session, and every row is drawn from their own class.
+ * `GET /exams/me` — the caller's own tests, exams and marks in one payload. Self-scoped: a student
+ * comes from the session, and a guardian may name one of their own children with `?studentId=`, so
+ * every row belongs to whoever the payload names.
  */
 export interface StudentExams {
-  /** The four headline cards, display-ready. */
+  /** The headline cards, display-ready. */
   stats: StatMetric[]
   summary: StudentExamsSummary
   /** Tab labels: every test and exam on the class's record, and the student's own result count. */
@@ -271,4 +280,10 @@ export interface StudentExams {
   results: StudentResultRow[]
   /** Average per subject, highest first. */
   subjectPerformance: StudentSubjectPerformance[]
+  /** Whose record this is — the student's name, or a guardian's chosen child. */
+  subjectLabel: string
+  /** The student's class label (`1-A`); empty when the class is unknown. */
+  subjectMeta: string
+  /** The students the caller may switch between; a student's own account holds one entry. */
+  students: ExamSubjectOption[]
 }

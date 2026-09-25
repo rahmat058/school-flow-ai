@@ -2132,8 +2132,10 @@ projections, not tables: `mv_attendance_monthly` (attendance % per class/month �
 own schedule and marks), `GET /progress/me` (a student's own trend, subject comparison and the
 teacher remarks beside their published marks) and `GET /dashboard/parent` (one guardian's child —
 the register, the invoices, the published marks, the assignments the child has not submitted, the
-papers ahead and the notices a guardian may read, all scoped to `parent_students`). No table is added
-by the module — every figure is read from the tables above.
+papers ahead and the notices a guardian may read, all scoped to `parent_students`). A guardian reads
+that same published-marks projection for their own child through `/exams/me?studentId=`, scoped by
+`parent_students`, so a guardian's Results screen and the child's own cannot disagree. No table is
+added by the module — every figure is read from the tables above.
 
 ## 17. Feature Coverage
 

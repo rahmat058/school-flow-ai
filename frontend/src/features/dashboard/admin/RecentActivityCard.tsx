@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
-import { iconToneStyles } from '@/components/dashboard/common/iconTone'
+import { iconToneStyles } from '@/features/dashboard/common/iconTone'
 import type { ActivityItem } from '@/types/dashboard'
 
 interface RecentActivityCardProps {

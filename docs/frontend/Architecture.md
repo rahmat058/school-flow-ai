@@ -25,16 +25,17 @@ frontend/
 │   │   ├── auth/             # Login, Signup, VerifyOtp, ForgotPassword, ResetPassword
 │   │   ├── admin/            # Students, StudentProfile, Teachers, Fees, FeeCollect
 │   │   └── …                 # teacher/, student/, parent/ as those phases land
-│   ├── components/           # presentational only
-│   │   ├── dashboard/        # the dashboard's role halves + the pieces they share
-│   │   │   ├── admin/        # OverviewHeader, the three charts, PendingFeesCard, RecentActivityCard, SchoolCalendarCard, AdminDashboard
-│   │   │   ├── student/      # StudentDashboard, TodayTimetableCard, StudentFeesCard, StudentAttendanceCard, StudentNoticesCard
-│   │   │   ├── parent/       # ParentDashboard, the child picker, AcademicProgressCard, RecentResultsCard, PendingHomeworkCard, FeeHistoryCard, ParentNoticesCard
-│   │   │   └── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone
+│   ├── components/           # presentational only, and shared across features
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
 │   ├── features/             # auth/, dashboard/, attendance/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, progress/, timetable/, school/
-│   │                         # each: components/<role>/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
+│   │   ├── dashboard/        # the dashboard's role halves + the pieces they share — a feature like any other
+│   │   │   ├── admin/        # OverviewHeader, the three charts, PendingFeesCard, RecentActivityCard, SchoolCalendarCard, AdminDashboard
+│   │   │   ├── student/      # StudentDashboard, TodayTimetableCard, StudentFeesCard, StudentAttendanceCard, StudentNoticesCard
+│   │   │   ├── parent/       # ParentDashboard, the child picker, AcademicProgressCard, RecentResultsCard, PendingHomeworkCard, FeeHistoryCard, ParentNoticesCard
+│   │   │   ├── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone — read by all three roles, so shared
+│   │   │   └── api.ts        # useDashboardSummary, useStudentDashboard, useParentDashboard
+│   │                         # the other features: components/<role>/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
 │   ├── services/             # apiClient.ts (axios + interceptors), mockAdapter.ts (demo API)
 │   ├── store/                # Zustand stores — auth session
 │   ├── hooks/                # useControllableState, useToast

@@ -38,7 +38,7 @@
 - [ ] Fees module — Dashboard (cards, collection charts, pending/defaulter list), Fee structure (per-class fee heads), Collect fee (class-wise status → individual collect page, invoice from structure, manual payment + printable receipt), Reports (day book, class report, defaulters, student ledger + CSV) and Concessions
 - [ ] Stripe / SSLCommerz checkout integration
 - [ ] Exam schedule, marks entry, publish, report card view
-- [x] Student tests & exams view (own Tests / Exams / My Results tabs, with the result summary and subject averages)
+- [x] Student tests & exams view (own Tests / Exams / My Results tabs, with the result summary and subject averages) — a guardian reads the same record as **Results & Report Card**
 - [x] Reports screens with CSV export
 - [x] Student progress tracking (Overall GPA, class rank, performance trend, subject-vs-class comparison and teacher remarks)
 

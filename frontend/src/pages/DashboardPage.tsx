@@ -1,6 +1,6 @@
-import { AdminDashboard } from '@/components/dashboard/admin/AdminDashboard'
-import { ParentDashboard } from '@/components/dashboard/parent/ParentDashboard'
-import { StudentDashboard } from '@/components/dashboard/student/StudentDashboard'
+import { AdminDashboard } from '@/features/dashboard/admin/AdminDashboard'
+import { ParentDashboard } from '@/features/dashboard/parent/ParentDashboard'
+import { StudentDashboard } from '@/features/dashboard/student/StudentDashboard'
 import { useCurrentUser } from '@/store/auth'
 
 /**

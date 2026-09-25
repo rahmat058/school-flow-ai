@@ -23,17 +23,22 @@ export interface ExamListQuery {
 
 export const examKeys = {
   all: ['exams'] as const,
-  me: () => [...examKeys.all, 'me'] as const,
+  me: (studentId: string) => [...examKeys.all, 'me', studentId] as const,
   tests: (query: TestListQuery) => [...examKeys.all, 'tests', query] as const,
   exams: (query: ExamListQuery) => [...examKeys.all, 'exams', query] as const,
   results: (examId: string) => [...examKeys.all, 'results', examId] as const,
 }
 
-/** The student's own tests, exams and published marks — `GET /exams/me`. */
-export function useStudentExams() {
+/**
+ * The caller's own record — `GET /exams/me`. A student reads their own; a guardian names one of their
+ * own children with `studentId`, and an empty id asks for the first child, which is what the screen
+ * shows until one is picked.
+ */
+export function useStudentExams(studentId = '') {
   return useQuery({
-    queryKey: examKeys.me(),
-    queryFn: async (): Promise<StudentExams> => (await get<StudentExams>('/exams/me')).data,
+    queryKey: examKeys.me(studentId),
+    queryFn: async (): Promise<StudentExams> =>
+      (await get<StudentExams>('/exams/me', { studentId: studentId || undefined })).data,
   })
 }
 

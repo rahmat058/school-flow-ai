@@ -3,6 +3,7 @@ import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { useCurrentUser } from '@/store/auth'
 import { ExamsTab } from '@/features/exams/components/admin/ExamsTab'
 import { ResultsTab } from '@/features/exams/components/admin/ResultsTab'
+import { ParentResultsView } from '@/features/exams/components/parent/ParentResultsView'
 import { StudentExamsView } from '@/features/exams/components/student/StudentExamsView'
 import { TestsTab } from '@/features/exams/components/admin/TestsTab'
 
@@ -58,13 +59,15 @@ function StaffExamsView({ canManage }: { canManage: boolean }) {
 }
 
 /**
- * A student reads their own tests, exams and marks; everyone else gets the schedule, with the marks
- * sheet and write controls reserved for staff — per the API contract.
+ * A student reads their own tests, exams and marks; a guardian reads one of their children's
+ * published marks; everyone else gets the schedule, with the marks sheet and write controls reserved
+ * for staff — per the API contract.
  */
 export function ExamsPage() {
   const user = useCurrentUser()
 
   if (user?.role === 'STUDENT') return <StudentExamsView />
+  if (user?.role === 'PARENT') return <ParentResultsView />
 
   return <StaffExamsView canManage={user?.role === 'ADMIN' || user?.role === 'TEACHER'} />
 }

@@ -75,6 +75,7 @@ import type {
   ExamListItem,
   ExamResult,
   ExamStatus,
+  ExamSubjectOption,
   ExamSubjectRow,
   ExamType,
   ResultSheet,
@@ -1728,12 +1729,13 @@ function resultSheet(examId: string): ResultSheet | undefined {
  * and the marks are the **published** ones only: a result a teacher has not published is not yet the
  * student's to read.
  */
-function studentExams(studentId: string): StudentExams | undefined {
+function studentExams(studentId: string, students: ExamSubjectOption[] = []): StudentExams | undefined {
   const student = findStudent(studentId)
   if (!student) return undefined
 
   const today = dateOffset(0)
   const daysAway = (date: string): number => Math.round((Date.parse(date) - Date.parse(today)) / 86_400_000)
+  const classRoom = student.classId ? findClass(student.classId) : undefined
   const classExams = exams.filter((exam) => exam.classId === student.classId)
 
   const upcomingTests: StudentTestRow[] = classExams
@@ -1904,6 +1906,42 @@ function studentExams(studentId: string): StudentExams | undefined {
     upcomingExams,
     results,
     subjectPerformance,
+    subjectLabel: `${student.firstName} ${student.lastName}`,
+    subjectMeta: classRoom ? classLabel(classRoom) : '',
+    students,
+  }
+}
+
+/**
+ * The students a caller may read a results record for: a guardian's own children, or a student's own
+ * single entry. A staff account has none — what they read is the class lists, not a personal record.
+ */
+function examSubjectOptionsFor(user: AuthUser | undefined): { options: ExamSubjectOption[]; allowed: string[] } {
+  if (user?.role === 'PARENT') {
+    const options = parentStudents
+      .filter((link) => link.parentId === user.profileId)
+      .flatMap((link) => {
+        const child = findStudent(link.studentId)
+        if (!child) return []
+
+        const classRoom = child.classId ? findClass(child.classId) : undefined
+        return [
+          { id: child.id, label: `${child.firstName} ${child.lastName}`, meta: classRoom ? classLabel(classRoom) : '' },
+        ]
+      })
+      .sort((left, right) => left.meta.localeCompare(right.meta) || left.label.localeCompare(right.label))
+
+    return { options, allowed: options.map((option) => option.id) }
+  }
+
+  const own = user?.role === 'STUDENT' && user.profileId ? findStudent(user.profileId) : undefined
+  if (!own) return { options: [], allowed: [] }
+
+  const classRoom = own.classId ? findClass(own.classId) : undefined
+
+  return {
+    options: [{ id: own.id, label: `${own.firstName} ${own.lastName}`, meta: classRoom ? classLabel(classRoom) : '' }],
+    allowed: [own.id],
   }
 }
 
@@ -4958,15 +4996,21 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/exams/me',
-    handler: ({ userId }) => {
+    handler: ({ params, userId }) => {
       const user = users.find((item) => item.id === userId)
 
-      // Tests, exams and marks are the student's own — no other role has a personal record here.
-      if (user?.role !== 'STUDENT' || !user.profileId) {
-        return fail(403, 'EXAM_FORBIDDEN', 'This record belongs to a student account')
+      // A student's own record, or a guardian's own child — a staff account reads the class lists.
+      if (user?.role !== 'STUDENT' && user?.role !== 'PARENT') {
+        return fail(403, 'EXAM_FORBIDDEN', 'This record belongs to a student or guardian account')
       }
 
-      const record = studentExams(user.profileId)
+      const { options, allowed } = examSubjectOptionsFor(user)
+      const requested = params.studentId ? String(params.studentId) : ''
+      if (requested && !allowed.includes(requested)) {
+        return fail(403, 'PARENT_FORBIDDEN', 'That student is not on your account')
+      }
+
+      const record = studentExams(requested || allowed[0] || '', options)
       return record ? ok<StudentExams>(record) : fail(404, 'EXAM_NOT_FOUND', 'Student not found')
     },
   },
