@@ -12,6 +12,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ export const navItems: NavItem[] = [
   { label: 'Homework', href: '/homework', icon: ClipboardList, roles: EVERYONE },
   { label: 'Tests & exams', href: '/exams', icon: GraduationCap, roles: EVERYONE },
   { label: 'My Reports', href: '/my-reports', icon: FileSpreadsheet, roles: ['STUDENT'] },
+  { label: 'Progress', href: '/progress', icon: TrendingUp, roles: ['STUDENT'] },
   { label: 'Timetable', href: '/timetable', icon: CalendarDays, roles: EVERYONE },
   { label: 'Study Materials', href: '/study-materials', icon: BookOpen, roles: EVERYONE },
   { label: 'Notices', href: '/notices', icon: Megaphone, roles: EVERYONE },

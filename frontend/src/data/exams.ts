@@ -144,6 +144,25 @@ function marksFor(
   return { obtained: Math.round(maxMarks * share), isAbsent: false }
 }
 
+/**
+ * A teacher's note beside a mark — deliberately the exception, not the rule, and never on a paper the
+ * student missed. The Progress screen's Teacher remarks tab reads only the published ones that carry
+ * a note, so a couple of these per class are enough to give it something real to show.
+ */
+const REMARK_TEMPLATES = [
+  'Consistent effort in class; keep it up.',
+  'Needs more practice with the tougher problems.',
+  'Excellent presentation — clear and well organised.',
+  'Participation has improved a lot this term.',
+  'Revise the earlier chapters before the next test.',
+  'Strong grasp of the fundamentals.',
+]
+
+function remarkFor(studentOffset: number, subjectOffset: number): string | null {
+  if ((studentOffset + subjectOffset) % 3 !== 0) return null
+  return REMARK_TEMPLATES[(studentOffset * 2 + subjectOffset) % REMARK_TEMPLATES.length]
+}
+
 /** The subject's teacher is the one of record for the mark. */
 function enteredByFor(examId: string, classId: string, subjectId: string): string | null {
   const exam = exams.find((item) => item.id === examId)
@@ -159,11 +178,15 @@ export const examResults: ExamResult[] = exams
   .flatMap((exam) =>
     students
       .filter((student) => student.classId === exam.classId)
-      .flatMap((student, studentOffset) =>
+      .flatMap((student) =>
         examSubjects
           .filter((paper) => paper.examId === exam.id)
           .map((paper, subjectOffset) => {
-            const { obtained, isAbsent } = marksFor(studentOffset, subjectOffset, paper.maxMarks)
+            // Spread absence by the student's **school-wide** index, not their class position: with
+            // one or two students per class, a per-class offset makes the same seat (the first)
+            // absent in every class, so the demo login misses every single-subject test.
+            const seat = students.indexOf(student) + 1
+            const { obtained, isAbsent } = marksFor(seat, subjectOffset, paper.maxMarks)
 
             return {
               id: `res_${exam.id}_${student.id}_${subjectOffset + 1}`,
@@ -173,7 +196,7 @@ export const examResults: ExamResult[] = exams
               subjectId: paper.subjectId,
               obtainedMarks: obtained,
               isAbsent,
-              remarks: null,
+              remarks: isAbsent ? null : remarkFor(seat, subjectOffset),
               enteredById: enteredByFor(exam.id, exam.classId, paper.subjectId),
             }
           }),

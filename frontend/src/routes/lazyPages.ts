@@ -46,6 +46,7 @@ export const ReportsPage = lazy(async () => ({ default: (await import('@/pages/R
 export const MyReportsPage = lazy(async () => ({
   default: (await import('@/pages/student/MyReportsPage')).MyReportsPage,
 }))
+export const ProgressPage = lazy(async () => ({ default: (await import('@/pages/student/ProgressPage')).ProgressPage }))
 export const SettingsPage = lazy(async () => ({ default: (await import('@/pages/SettingsPage')).SettingsPage }))
 export const SubjectClassPage = lazy(async () => ({
   default: (await import('@/pages/SubjectClassPage')).SubjectClassPage,

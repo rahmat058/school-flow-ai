@@ -1405,7 +1405,10 @@ and the marks are `results` **filtered to published exams** (a result whose exam
 not yet the student's to read). The existing `results` index `(student_id, exam_id)` carries the marks
 lookup and `exam_subjects`' `(exam_id, subject_id)` carries the papers, so the read adds **no schema
 change** — the tab counts, the four headline figures and each subject's average are all counted in the
-read model rather than stored.
+read model rather than stored. The progress read (`GET /progress/me`, PRD §4.14) projects those same
+published rows again — `report_cards` for the rank, `results`/`exam_subjects` for the trend and the
+subject means, `results.remarks` for the teacher remarks — so it adds no table and no column either;
+a paper the student missed is left out of every average, the rule `reports/exam-results` already uses.
 
 ```mermaid
 erDiagram
@@ -2122,8 +2125,9 @@ projections, not tables: `mv_attendance_monthly` (attendance % per class/month �
 (collected/pending/concessions per period — backs
 `GET /reports/overview` and `GET /reports/finance`), plus on-demand RPCs for the defaulter list,
 `GET /reports/exam-results` (a paper's marks per student), `GET /dashboard/admin`,
-`GET /dashboard/student` (one student's own day, scoped by the session) and `GET /exams/me` (a student's
-own schedule and marks). No table is added
+`GET /dashboard/student` (one student's own day, scoped by the session), `GET /exams/me` (a student's
+own schedule and marks) and `GET /progress/me` (a student's own trend, subject comparison and the
+teacher remarks beside their published marks). No table is added
 by the module — every figure is read from the tables above.
 
 ## 17. Feature Coverage

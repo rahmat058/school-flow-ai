@@ -32,7 +32,7 @@ frontend/
 │   │   │   └── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
-│   ├── features/             # auth/, dashboard/, attendance/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, timetable/, school/
+│   ├── features/             # auth/, dashboard/, attendance/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, progress/, timetable/, school/
 │   │                         # each: components/<role>/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
 │   ├── services/             # apiClient.ts (axios + interceptors), mockAdapter.ts (demo API)
 │   ├── store/                # Zustand stores — auth session

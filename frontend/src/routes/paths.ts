@@ -32,6 +32,8 @@ export const paths = {
   reports: '/reports',
   /** A student's own results and fees — distinct from the staff `/reports`. */
   myReports: '/my-reports',
+  /** A student's own academic progress — the trend, subject comparison and teacher remarks. */
+  progress: '/progress',
   settings: '/settings',
 
   notFound: '/404',

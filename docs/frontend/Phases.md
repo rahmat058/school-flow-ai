@@ -39,6 +39,7 @@
 - [ ] Exam schedule, marks entry, publish, report card view
 - [x] Student tests & exams view (own Tests / Exams / My Results tabs, with the result summary and subject averages)
 - [x] Reports screens with CSV export
+- [x] Student progress tracking (Overall GPA, class rank, performance trend, subject-vs-class comparison and teacher remarks)
 
 **Done when:** a parent pays a fee online and views a published report card.
 

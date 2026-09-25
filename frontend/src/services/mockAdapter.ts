@@ -1,11 +1,13 @@
 // `Receipt` is already a fees type in this file's imports, so the icon takes a suffix.
 import {
+  BookOpen,
   CalendarCheck,
   CheckCircle2,
   ClipboardList,
   GraduationCap,
   Receipt as ReceiptIcon,
   TrendingUp,
+  Trophy,
   Wallet,
 } from 'lucide-react'
 import { AxiosError } from 'axios'
@@ -71,6 +73,7 @@ import type {
   Exam,
   ExamKind,
   ExamListItem,
+  ExamResult,
   ExamStatus,
   ExamSubjectRow,
   ExamType,
@@ -132,13 +135,14 @@ import type {
   StudentTimetableSlot,
   UpcomingExam,
 } from '@/types/dashboard'
+import type { ProgressRemarkRow, ProgressSubjectRow, ProgressTrendPoint, StudentProgress } from '@/types/progress'
 import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes, findClass } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
 import { examResults, examSubjects, exams, maxMarks, reportCards } from '@/data/exams'
 import { gradeForPercentage, isPass, percentageOf } from '@/lib/grades'
-import { classSubjectFor, classSubjects, findSubject, subjects } from '@/data/subjects'
+import { classSubjectFor, classSubjects, findSubject, subjects, subjectsForClass } from '@/data/subjects'
 import {
   concessions,
   feeHeads,
@@ -1895,6 +1899,198 @@ function studentExams(studentId: string): StudentExams | undefined {
     upcomingExams,
     results,
     subjectPerformance,
+  }
+}
+
+/** `1` → `1st`, `12` → `12th` — how a class rank reads on the stat card. */
+function ordinalOf(value: number): string {
+  const withinHundred = value % 100
+  if (withinHundred >= 11 && withinHundred <= 13) return `${value}th`
+  return `${value}${['th', 'st', 'nd', 'rd'][value % 10] ?? 'th'}`
+}
+
+/**
+ * `GET /progress/me` — the student's own academic progress. Everything is derived from their
+ * **published** marks, so this screen and the marks sheet cannot disagree: the trend is one point per
+ * published assessment, the subject rows put the student's mean against the class's, and the remarks
+ * are the teacher notes the marks carry. No table backs it — the whole payload is a projection over
+ * `exams`/`exam_subjects`/`results`/`report_cards`.
+ */
+function studentProgress(studentId: string): StudentProgress | undefined {
+  const student = findStudent(studentId)
+  if (!student || !student.classId) return undefined
+
+  // Captured once: the narrowing does not survive into the callbacks below.
+  const classId = student.classId
+  const classMates = students.filter((mate) => mate.classId === classId && mate.status === 'ACTIVE')
+  const classSubjectList = subjectsForClass(classId)
+
+  const isPublished = (examId: string): boolean => exams.find((exam) => exam.id === examId)?.isPublished ?? false
+  const paperFor = (examId: string, subjectId: string) =>
+    examSubjects.find((paper) => paper.examId === examId && paper.subjectId === subjectId)
+
+  const published = examResults.filter((result) => result.studentId === studentId && isPublished(result.examId))
+  // A paper the student missed carries a stored zero; the reports exclude it from every average, so
+  // the progress figures do too — absence is a state, not a score.
+  const scored = published.filter((result) => !result.isAbsent)
+
+  /** The student's share of the papers behind a set of results, 0–100. */
+  const meanPercentage = (rows: ExamResult[]): number => {
+    const values = rows.flatMap((result) => {
+      const paper = paperFor(result.examId, result.subjectId)
+      return paper && paper.maxMarks > 0 ? [(result.obtainedMarks / paper.maxMarks) * 100] : []
+    })
+
+    return values.length === 0
+      ? 0
+      : Number((values.reduce((total, value) => total + value, 0) / values.length).toFixed(1))
+  }
+
+  // One point per published assessment the student has marks in, oldest first.
+  const byExam = new Map<string, { obtained: number; total: number }>()
+  for (const result of scored) {
+    const paper = paperFor(result.examId, result.subjectId)
+    if (!paper) continue
+
+    const entry = byExam.get(result.examId) ?? { obtained: 0, total: 0 }
+    entry.obtained += result.obtainedMarks
+    entry.total += paper.maxMarks
+    byExam.set(result.examId, entry)
+  }
+
+  const trend: ProgressTrendPoint[] = [...byExam.entries()]
+    .flatMap(([examId, entry]) => {
+      const exam = exams.find((item) => item.id === examId)
+      if (!exam || entry.total <= 0) return []
+
+      return [
+        {
+          label: exam.name,
+          examType: exam.type,
+          date: exam.startDate,
+          percentage: Number(((entry.obtained / entry.total) * 100).toFixed(1)),
+        },
+      ]
+    })
+    .sort((left, right) => left.date.localeCompare(right.date))
+
+  // Each subject: the student's mean, then the class's — every classmate weighted equally.
+  const subjects: ProgressSubjectRow[] = classSubjectList
+    .map((subject) => {
+      const own = scored.filter((result) => result.subjectId === subject.id)
+      const studentPercentage = meanPercentage(own)
+
+      const classMeans = classMates.map((mate) =>
+        meanPercentage(
+          examResults.filter(
+            (result) =>
+              result.studentId === mate.id &&
+              result.subjectId === subject.id &&
+              !result.isAbsent &&
+              isPublished(result.examId),
+          ),
+        ),
+      )
+      const classPercentage =
+        classMeans.length === 0
+          ? 0
+          : Number((classMeans.reduce((total, value) => total + value, 0) / classMeans.length).toFixed(1))
+
+      return {
+        subjectId: subject.id,
+        subjectName: subject.name,
+        subjectCode: subject.code,
+        studentPercentage,
+        classPercentage,
+        grade: gradeForPercentage(studentPercentage),
+        papers: own.length,
+      }
+    })
+    .sort((left, right) => right.studentPercentage - left.studentPercentage)
+
+  // The teacher's note beside a published mark — the Teacher remarks tab.
+  const remarks: ProgressRemarkRow[] = published
+    .flatMap((result) => {
+      if (!result.remarks) return []
+
+      const exam = exams.find((item) => item.id === result.examId)
+      const subject = findSubject(result.subjectId)
+      const paper = paperFor(result.examId, result.subjectId)
+      if (!exam || !subject || !paper) return []
+
+      const link = classSubjectFor(classId, subject.id)
+      const teacher = link?.teacherId ? findTeacher(link.teacherId) : undefined
+      const percentage = paper.maxMarks > 0 ? (result.obtainedMarks / paper.maxMarks) * 100 : 0
+
+      return [
+        {
+          id: result.id,
+          subjectName: subject.name,
+          teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Class teacher',
+          examName: exam.name,
+          date: paper.examDate,
+          remark: result.remarks,
+          marks: result.obtainedMarks,
+          total: paper.maxMarks,
+          grade: gradeForPercentage(percentage),
+        },
+      ]
+    })
+    .sort((left, right) => right.date.localeCompare(left.date))
+
+  // The rank comes off the newest published report card; a class without one has nothing to rank.
+  const latestCard = reportCards
+    .filter((card) => card.studentId === studentId)
+    .sort((left, right) => (right.publishedAt ?? '').localeCompare(left.publishedAt ?? ''))[0]
+
+  const averageScore =
+    trend.length === 0
+      ? 0
+      : Number((trend.reduce((total, point) => total + point.percentage, 0) / trend.length).toFixed(1))
+  const gpa = Number((averageScore / 10).toFixed(2))
+  const rank = latestCard?.rank ?? null
+
+  const stats: StatMetric[] = [
+    {
+      id: 'overall-gpa',
+      label: 'Overall GPA',
+      value: gpa.toFixed(2),
+      delta: trend.length === 0 ? 'No results yet' : 'From exam results',
+      icon: GraduationCap,
+      iconTone: 'primary',
+    },
+    {
+      id: 'class-rank',
+      label: 'Class Rank',
+      value: rank === null ? '—' : ordinalOf(rank),
+      delta: rank === null ? 'Awaiting results' : 'In your class',
+      icon: Trophy,
+      iconTone: 'warning',
+    },
+    {
+      id: 'subject-count',
+      label: 'Subjects',
+      value: String(classSubjectList.length),
+      delta: 'Across all subjects',
+      icon: BookOpen,
+      iconTone: 'primary',
+    },
+    {
+      id: 'average-score',
+      label: 'Avg Score',
+      value: `${averageScore}%`,
+      delta: trend.length === 0 ? 'No results yet' : averageScore >= 60 ? 'Good standing' : 'Needs improvement',
+      icon: TrendingUp,
+      iconTone: trend.length === 0 ? 'primary' : averageScore >= 60 ? 'success' : 'warning',
+    },
+  ]
+
+  return {
+    stats,
+    summary: { gpa, rank, classSize: classMates.length, subjects: classSubjectList.length, averageScore },
+    trend,
+    subjects,
+    remarks,
   }
 }
 
@@ -4551,6 +4747,21 @@ const routes: Route[] = [
 
       const record = studentExams(user.profileId)
       return record ? ok<StudentExams>(record) : fail(404, 'EXAM_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/progress/me',
+    handler: ({ userId }) => {
+      const user = users.find((item) => item.id === userId)
+
+      // Progress is the student's own — no other role has a personal record here.
+      if (user?.role !== 'STUDENT' || !user.profileId) {
+        return fail(403, 'PROGRESS_FORBIDDEN', 'This record belongs to a student account')
+      }
+
+      const record = studentProgress(user.profileId)
+      return record ? ok<StudentProgress>(record) : fail(404, 'PROGRESS_NOT_FOUND', 'Student not found')
     },
   },
   {
