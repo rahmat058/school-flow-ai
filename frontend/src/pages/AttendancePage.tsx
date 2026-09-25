@@ -1,4 +1,5 @@
 import { ClassAttendancePanel } from '@/features/attendance/components/admin/ClassAttendancePanel'
+import { ParentAttendancePanel } from '@/features/attendance/components/parent/ParentAttendancePanel'
 import { MyAttendancePanel } from '@/features/attendance/components/student/MyAttendancePanel'
 import { useCurrentUser } from '@/store/auth'
 
@@ -8,7 +9,9 @@ import { useCurrentUser } from '@/store/auth'
  */
 export function AttendancePage() {
   const user = useCurrentUser()
-  const staff = user?.role === 'ADMIN' || user?.role === 'TEACHER'
 
-  return staff ? <ClassAttendancePanel /> : <MyAttendancePanel />
+  if (user?.role === 'ADMIN' || user?.role === 'TEACHER') return <ClassAttendancePanel />
+  if (user?.role === 'PARENT') return <ParentAttendancePanel />
+
+  return <MyAttendancePanel />
 }

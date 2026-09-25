@@ -5,15 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
-import type { AttendanceDay, AttendanceMonth, AttendanceStatus } from '@/types/attendance'
-
-/** The dot beside a personal day row — the same meaning the badge's tint carries. */
-const dotTone: Record<AttendanceStatus, string> = {
-  PRESENT: 'bg-success',
-  LATE: 'bg-warning',
-  LEAVE: 'bg-primary',
-  ABSENT: 'bg-error',
-}
+import { AttendanceCalendar } from '@/features/attendance/components/common/AttendanceCalendar'
+import { attendanceDotTone } from '@/features/attendance/lib/tones'
+import type { AttendanceDay, AttendanceMonth } from '@/types/attendance'
 
 interface AttendanceMonthViewProps {
   data: AttendanceMonth
@@ -21,21 +15,24 @@ interface AttendanceMonthViewProps {
   description: string
   /** The class or student picker, beside the month navigation. */
   subjectPicker?: ReactNode
+  /** Whose record this is, top-right of the header — a guardian's child, with their class. */
+  subjectChip?: ReactNode
   /** A write action beside the month navigation — only the staff panel passes one. */
   action?: ReactNode
   onMonthChange: (month: string) => void
 }
 
 /**
- * One month of the register: the month navigator with its rate, the three counts, then the day-by-day
- * rows. A personal month carries a status per day; a class month carries that day's counts instead —
- * `scope` is what decides.
+ * One month of the register: the month navigator with its rate, the four counts, the calendar, then
+ * the day-by-day rows. A personal month carries a status per day — so it gets the calendar — while a
+ * class month carries that day's counts instead; `scope` is what decides.
  */
 export function AttendanceMonthView({
   data,
   title,
   description,
   subjectPicker,
+  subjectChip,
   action,
   onMonthChange,
 }: AttendanceMonthViewProps) {
@@ -47,14 +44,19 @@ export function AttendanceMonthView({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
-        <p className="text-ink-muted text-[14px]">{description}</p>
-        {data.subjectMeta ? (
-          <p className="text-ink-subtle text-[13px]">
-            {data.subjectLabel} · Class {data.subjectMeta}
-          </p>
-        ) : null}
+      {/* The chip already names the child and their class, so the line below stands in only without it. */}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-display text-ink text-[24px] font-semibold tracking-[-0.03em]">{title}</h1>
+          <p className="text-ink-muted text-[14px]">{description}</p>
+          {data.subjectMeta && !subjectChip ? (
+            <p className="text-ink-subtle text-[13px]">
+              {data.subjectLabel} · Class {data.subjectMeta}
+            </p>
+          ) : null}
+        </div>
+
+        {subjectChip}
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -94,11 +96,15 @@ export function AttendanceMonthView({
         </span>
       </div>
 
-      <section className="grid gap-5 sm:grid-cols-3">
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Present" value={data.totals.present} tone="text-success" />
         <StatTile label="Absent" value={data.totals.absent} tone="text-error" />
         <StatTile label="Late" value={data.totals.late} tone="text-warning" />
+        <StatTile label="Attendance" value={`${data.totals.rate}%`} tone="text-primary" />
       </section>
+
+      {/* Only a personal month carries a per-day status, so only it can be dotted. */}
+      {data.scope === 'STUDENT' ? <AttendanceCalendar month={data.month} days={data.days} /> : null}
 
       <article className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card) lg:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -128,7 +134,7 @@ export function AttendanceMonthView({
   )
 }
 
-function StatTile({ label, value, tone }: { label: string; value: number; tone: string }) {
+function StatTile({ label, value, tone }: { label: string; value: number | string; tone: string }) {
   return (
     <article className="border-line bg-surface rounded-xl border p-5 text-center shadow-(--shadow-card)">
       <p className={cn('font-display text-[30px] leading-none font-semibold tracking-[-0.03em]', tone)}>{value}</p>
@@ -160,7 +166,10 @@ function DayRow({ day, scope }: { day: AttendanceDay; scope: AttendanceMonth['sc
 
   return (
     <li className="flex items-center gap-3 py-3">
-      <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', dotTone[day.status ?? 'ABSENT'])} />
+      <span
+        aria-hidden="true"
+        className={cn('size-2 shrink-0 rounded-full', attendanceDotTone[day.status ?? 'ABSENT'])}
+      />
       <span className="text-ink flex-1 text-[13px]">{formatDate(day.date, 'EEE, dd MMM yyyy')}</span>
       {day.status ? <AttendanceBadge status={day.status} /> : null}
     </li>
