@@ -16,6 +16,7 @@ interface SelectProps {
   onValueChange: (value: string) => void
   placeholder?: string
   label?: string
+  hint?: string
   error?: string
   disabled?: boolean
   className?: string
@@ -28,6 +29,7 @@ export function Select({
   onValueChange,
   placeholder = 'Select…',
   label,
+  hint,
   error,
   disabled,
   className,
@@ -155,11 +157,12 @@ export function Select({
         aria-controls={listboxId}
         aria-activedescendant={open && activeIndex >= 0 ? `${selectId}-option-${activeIndex}` : undefined}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error || hint ? `${selectId}-message` : undefined}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openListbox())}
         onKeyDown={handleKeyDown}
         className={cn(
-          'border-line bg-surface text-ink flex h-[42px] w-full items-center justify-between gap-2 rounded-md border px-3.5 text-left text-[14px] transition-colors',
+          'border-line bg-surface text-ink flex h-10.5 w-full items-center justify-between gap-2 rounded-md border px-3.5 text-left text-[14px] transition-colors',
           'focus:border-primary focus:ring-primary/12 focus:ring-[3px] focus:outline-none',
           'disabled:bg-canvas disabled:text-ink-subtle disabled:cursor-not-allowed',
           error && 'border-error focus:border-error focus:ring-error/12',
@@ -184,7 +187,7 @@ export function Select({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="border-line bg-surface absolute z-50 mt-1 max-h-60 w-full origin-top overflow-y-auto rounded-lg border p-1 shadow-[var(--shadow-hover)]">
+            className="border-line bg-surface absolute z-50 mt-1 max-h-60 w-full origin-top overflow-y-auto rounded-lg border p-1 shadow-(--shadow-hover)">
             {options.map((option, index) => {
               const isSelected = option.value === value
 
@@ -214,7 +217,15 @@ export function Select({
         ) : null}
       </AnimatePresence>
 
-      {error ? <p className="text-error mt-1.5 text-[12px]">{error}</p> : null}
+      {error ? (
+        <p id={`${selectId}-message`} className="text-error mt-1.5 text-[12px]">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={`${selectId}-message`} className="text-ink-subtle mt-1.5 text-[12px]">
+          {hint}
+        </p>
+      ) : null}
     </div>
   )
 }

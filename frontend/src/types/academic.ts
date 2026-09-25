@@ -45,16 +45,19 @@ export interface SubjectInput {
   name: string
   code: string
   description: string | null
+  /**
+   * The form's class picker. On create it assigns the new subject; on edit it **replaces** the
+   * subject's classes with that one (empty = taught nowhere). Omit the key entirely to leave the
+   * assignments alone — which is what the form does when a subject is taught in several classes and
+   * the single picker cannot represent them.
+   */
+  classId?: string | null
 }
 
-/** The create form's payload — the row plus, optionally, the class to assign it to in the same call. */
-export interface SubjectCreateInput extends SubjectInput {
-  classId: string | null
-}
-
-/** A catalogue subject with how many classes offer it — the Subjects tab's row. */
+/** A catalogue subject with its assignment count and the classes themselves — the Subjects tab's row. */
 export interface SubjectRow extends Subject {
   classCount: number
+  classIds: string[]
 }
 
 /** One class's assigned subjects — the Single Assignment panel's payload. */

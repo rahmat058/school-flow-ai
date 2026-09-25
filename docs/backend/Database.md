@@ -676,15 +676,17 @@ exam paper, a result and a material all point at the catalogue row; _which class
 | `created_at`  | `timestamptz` | no   |     |                    |
 | `updated_at`  | `timestamptz` | no   |     |                    |
 
-**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (school_id, code)`.
+**Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (school_id, code)`,
+`unique (school_id, name)`.
 
-**Indexes** — `unique (school_id, code)`, `(school_id)`.
+**Indexes** — `unique (school_id, code)`, `unique (school_id, name)`, `(school_id)`.
 
-**Constraints** — `code` is the school's own, 2–6 alphanumerics, unique per school (409
-`SUBJECT_CODE_TAKEN`); `name` is unique per school too (409 `SUBJECT_NAME_TAKEN`). A subject still
-referenced by a lesson, an exam paper, a homework or a material cannot be deleted — 409
-`SUBJECT_IN_USE`, the `restrict` side of the FKs in §13 — while deleting an unreferenced one cascades
-through `class_subjects`.
+**Constraints** — `code` is the school's own, 2–6 alphanumerics; `name` and `code` are each unique
+per school and **compared case-insensitively** (`Math` cannot shadow `MATH`), refused with 409
+`SUBJECT_NAME_TAKEN` / `SUBJECT_CODE_TAKEN` — so the indexes are on `lower(name)` / `lower(code)`, or
+the columns are `citext`. A subject still referenced by a **lesson, an exam paper, a mark, a homework
+or a material** cannot be deleted — 409 `SUBJECT_IN_USE`, the `restrict` side of the five FKs in §13 —
+while deleting an unreferenced one cascades through `class_subjects`.
 
 ```mermaid
 erDiagram
@@ -724,10 +726,18 @@ rather than on the subject, because the same subject is taught by different staf
 
 **Indexes** — `unique (class_id, subject_id)`, `(school_id)`, `(subject_id)`, `(teacher_id)`.
 
-**Constraints** — a class appears at most once per subject; bulk assignment inserts only the missing
-pairs and reports how many were new. `teacher_id` is nullable until a teacher is assigned. The pair is
-what every other module validates against — a lesson, a homework, a material or an exam paper on a
-subject the class does not run is refused with a 400.
+**Constraints** — a class appears at most once per subject; bulk assignment (`…/assignments/bulk`)
+inserts only the missing pairs and reports how many were new. `teacher_id` is nullable until a teacher
+is assigned, and the assignment's teacher is independent of the timetable's — a lesson can name a
+different teacher for the same class-subject pair. The pair is what every other module validates
+against — a lesson, a homework, a material, a class test or an exam paper on a subject the class does
+not run is refused with a 400.
+
+**Two ways a row is written.** The **assignments** endpoints only ever _add_ (or delete one pair), so a
+bulk run is safe to repeat. The subject form's class picker is the exception: saving it sends a
+`classId` to `PATCH /subjects/:id`, which **replaces** that subject's rows with the one chosen class
+(empty clears them). Omitting `classId` leaves every row alone — which is what the form does when a
+subject already sits in several classes, because a single picker cannot speak for them all.
 
 ```mermaid
 erDiagram
@@ -1977,7 +1987,7 @@ has one.
 | `parents`                   | `unique (user_id)`, `(school_id, status)`                                                                                                                     |
 | `parent_students`           | `unique (parent_id, student_id)`, `unique (student_id) where is_primary`, `(school_id)`                                                                       |
 | `classes`                   | `unique (school_id, grade, section, academic_year)`, `(school_id)`, `(class_teacher_id)`                                                                      |
-| `subjects`                  | `unique (school_id, code)`, `(school_id)`                                                                                                                     |
+| `subjects`                  | `unique (school_id, lower(code))`, `unique (school_id, lower(name))`, `(school_id)`                                                                           |
 | `class_subjects`            | `unique (class_id, subject_id)`, `(school_id)`, `(subject_id)`, `(teacher_id)`                                                                                |
 | `attendance`                | `unique (class_id, student_id, attendance_date)`, `(school_id, attendance_date)`, `(class_id, attendance_date)`, `(student_id, attendance_date)`              |
 | `homework`                  | `(school_id, class_id, due_date)`, `(class_id, subject_id, due_date)`, `(teacher_id)`                                                                         |

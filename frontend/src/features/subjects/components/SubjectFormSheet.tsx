@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
 import { useCreateSubject, useUpdateSubject } from '@/features/subjects/api'
-import type { SubjectCreateInput, SubjectInput, SubjectRow } from '@/types/academic'
+import type { SubjectInput, SubjectRow } from '@/types/academic'
 
 interface SubjectFormSheetProps {
   open: boolean
@@ -32,9 +32,9 @@ interface FormValues {
  * Add and edit share one form. The parent keys the sheet on the target subject, so it mounts with
  * that subject's values and never carries a previous edit across.
  *
- * The class picker is a **create-only** field: a school rarely adds a subject to nobody, so the form
- * can hand it to a class in the same call. Editing a subject does not move assignments — that is the
- * Assign Subjects tab's job, where adding and removing are both explicit.
+ * The **class picker** assigns the subject on create and moves it on edit. One dropdown can only
+ * speak for one class, so when a subject is already taught in several the picker locks and the update
+ * sends no `classId` at all — the Assign Subjects tab is where a wider set is edited.
  */
 export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetProps) {
   const { toast } = useToast()
@@ -43,6 +43,9 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
   const createSubject = useCreateSubject()
   const updateSubject = useUpdateSubject()
   const editing = subject !== null
+
+  const linkedClasses = subject?.classIds ?? []
+  const pickerLocked = linkedClasses.length > 1
 
   const {
     control,
@@ -55,7 +58,7 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       name: subject?.name ?? '',
       code: subject?.code ?? '',
       description: subject?.description ?? '',
-      classId: '',
+      classId: linkedClasses[0] ?? '',
     },
     mode: 'onTouched',
   })
@@ -64,27 +67,39 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
     { value: '', label: 'Leave unassigned' },
     ...(classOptions.data ?? []).map((option) => ({ value: option.id, label: option.label })),
   ]
+  const classLabelOf = (classId: string) =>
+    classOptions.data?.find((option) => option.id === classId)?.label ?? 'that class'
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     const input: SubjectInput = {
       name: values.name.trim(),
       code: values.code.trim().toUpperCase(),
       description: values.description.trim() || null,
+      // A locked picker sends no classId, so saving the name leaves every assignment alone.
+      ...(pickerLocked ? {} : { classId: values.classId || null }),
     }
 
     try {
       if (subject) {
+        const moved = !pickerLocked && values.classId !== (linkedClasses[0] ?? '')
         await updateSubject.mutateAsync({ id: subject.id, input })
-        toast({ tone: 'success', title: `${input.name} updated` })
+        toast({
+          tone: 'success',
+          title: `${input.name} updated`,
+          description: moved
+            ? values.classId
+              ? `Now taught in ${classLabelOf(values.classId)}.`
+              : 'No longer assigned to any class.'
+            : undefined,
+        })
       } else {
-        const created: SubjectCreateInput = { ...input, classId: values.classId || null }
-        await createSubject.mutateAsync(created)
+        await createSubject.mutateAsync(input)
 
-        const className = classOptions.data?.find((option) => option.id === values.classId)?.label
+        const className = classLabelOf(values.classId)
         toast({
           tone: 'success',
           title: `${input.name} added to the catalogue`,
-          description: className
+          description: values.classId
             ? `Already assigned to ${className} — it shows there in the Assign Subjects tab.`
             : 'Assign it to a class from the Assign Subjects tab.',
         })
@@ -105,7 +120,7 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       title={editing ? 'Edit subject' : 'Add subject'}
       description={
         editing
-          ? 'Rename the subject, change its code or rewrite the description.'
+          ? 'Rename the subject, change its code or move it to another class.'
           : 'Add a subject to the school catalogue and assign it to a class.'
       }
       footer={
@@ -148,23 +163,26 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
           {...register('description')}
         />
 
-        {!editing ? (
-          <Controller
-            control={control}
-            name="classId"
-            render={({ field }) => (
-              <Select
-                label="Assign to class"
-                options={classSelectOptions}
-                placeholder="Leave unassigned"
-                value={field.value}
-                onValueChange={field.onChange}
-                disabled={classOptions.isPending}
-                error={errors.classId?.message}
-              />
-            )}
-          />
-        ) : null}
+        <Controller
+          control={control}
+          name="classId"
+          render={({ field }) => (
+            <Select
+              label="Assign to class"
+              options={classSelectOptions}
+              placeholder="Leave unassigned"
+              value={field.value}
+              onValueChange={field.onChange}
+              disabled={pickerLocked || classOptions.isPending}
+              hint={
+                pickerLocked
+                  ? `Taught in ${linkedClasses.length} classes — add or remove them in the Assign Subjects tab.`
+                  : 'Every class that should teach this subject.'
+              }
+              error={errors.classId?.message}
+            />
+          )}
+        />
       </form>
     </Sheet>
   )

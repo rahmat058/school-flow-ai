@@ -370,12 +370,13 @@ function classChoices(): ClassOption[] {
   }))
 }
 
-/** The Subjects tab: the catalogue with how many classes offer each subject. */
+/** The Subjects tab: the catalogue with the classes that offer each subject, and how many. */
 function subjectRows(): SubjectRow[] {
-  return subjects.map((subject) => ({
-    ...subject,
-    classCount: classSubjects.filter((link) => link.subjectId === subject.id).length,
-  }))
+  return subjects.map((subject) => {
+    const classIds = classSubjects.filter((link) => link.subjectId === subject.id).map((link) => link.classId)
+
+    return { ...subject, classCount: classIds.length, classIds }
+  })
 }
 
 /** One class's assigned subjects, in assignment order. */
@@ -403,12 +404,13 @@ function assignmentSummary(): AssignmentSummary {
   return { classes: classChoices(), subjects, assigned }
 }
 
-/** A subject a lesson, a paper, an assignment or a material still points at cannot be deleted. */
+/** A subject a lesson, a paper, a mark, an assignment or a material still points at cannot be deleted. */
 function subjectInUse(subjectId: string): boolean {
   return (
     homework.some((item) => item.subjectId === subjectId) ||
     studyMaterials.some((item) => item.subjectId === subjectId) ||
     examSubjects.some((item) => item.subjectId === subjectId) ||
+    examResults.some((item) => item.subjectId === subjectId) ||
     periods.some((item) => item.subjectId === subjectId)
   )
 }
@@ -2306,6 +2308,24 @@ const routes: Route[] = [
 
       if (body.description !== undefined) {
         subject.description = body.description ? String(body.description).trim() || null : null
+      }
+
+      // A `classId` key means "teach this subject in exactly that class" (empty = nowhere). Absent,
+      // the assignments are left alone — which is what the form sends when a subject sits in several
+      // classes and its single picker cannot speak for them all.
+      if (body.classId !== undefined) {
+        const classId = body.classId ? String(body.classId) : ''
+        if (classId && !classes.some((classRoom) => classRoom.id === classId)) {
+          return fail(400, 'SUBJECT_INVALID', 'Choose a class to assign it to', ['classId'])
+        }
+
+        // Drop the other classes but keep the chosen link, so an unchanged choice keeps its teacher.
+        for (let link = classSubjects.length - 1; link >= 0; link -= 1) {
+          if (classSubjects[link].subjectId === subject.id && classSubjects[link].classId !== classId) {
+            classSubjects.splice(link, 1)
+          }
+        }
+        if (classId) addAssignments(classId, [subject.id])
       }
 
       return ok(subjectRows().find((row) => row.id === subject.id))
