@@ -72,7 +72,9 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto overscroll-contain pb-4" aria-label="Primary">
+        <nav
+          className={cn('flex-1 space-y-1 overflow-y-auto overscroll-contain pb-4', collapsed && 'lg:no-scrollbar')}
+          aria-label="Primary">
           {items.map((item) => {
             const Icon = item.icon
 

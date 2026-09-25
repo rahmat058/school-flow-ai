@@ -47,6 +47,18 @@
 }
 
 /*
+ * Scroll without the bar. The element still scrolls by wheel, trackpad and keyboard, so the bar is
+ * decoration — and in a 76px icon rail it is a grey stripe down the edge of every route.
+ */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
  * The one content container every main section shares: centred, capped at the 1280px container
  * width from Design.md, with 16px inline padding rising to 32px from the `lg` breakpoint.
  * Use this instead of re-declaring `mx-auto max-w-* px-*` in a shell or page.
@@ -90,6 +102,23 @@
   width: 100%;
 }
 
+/*
+ * Caption left, chevrons right, on one line under the card's own heading — the reference's
+ * arrangement. The library's default centres the label and floats the nav over it.
+ */
+.rdp-root .rdp-month_caption {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.rdp-root .rdp-nav {
+  display: flex;
+  position: static;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
 .rdp-root .rdp-weekday {
   color: var(--color-ink-subtle);
   font-weight: 500;
@@ -116,16 +145,39 @@
   font-weight: 600;
 }
 
-/* Days carrying a school event or an exam paper. */
+/*
+ * A day with something on it carries a **dot**, not a filled cell. The fill was the problem: an
+ * exam season marks most of the month, so the grid became a wall of indigo chips and the dates
+ * stopped reading as dates. Plain numbers with a marker under the ones that matter behaves like a
+ * real calendar.
+ */
 .rdp-root .rdp-day-marked .rdp-day_button {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  position: relative;
+  background: transparent;
+  color: var(--color-ink);
   font-weight: 600;
+}
+
+.rdp-root .rdp-day-marked .rdp-day_button::after {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: var(--color-primary);
+  width: 4px;
+  height: 4px;
+  content: '';
 }
 
 .rdp-root .rdp-day-today.rdp-day-marked .rdp-day_button {
   background: var(--color-primary);
   color: #fff;
+}
+
+/* Today is already a filled circle, so its marker has to invert to stay visible. */
+.rdp-root .rdp-day-today.rdp-day-marked .rdp-day_button::after {
+  background: #fff;
 }
 
 @layer base {
