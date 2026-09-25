@@ -1,10 +1,10 @@
 import { useId } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import type { SubmitHandler } from 'react-hook-form'
+import { School } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
@@ -25,16 +25,15 @@ interface FormValues {
   name: string
   code: string
   description: string
-  classId: string
 }
 
 /**
  * Add and edit share one form. The parent keys the sheet on the target subject, so it mounts with
  * that subject's values and never carries a previous edit across.
  *
- * The **class picker** assigns the subject on create and moves it on edit. One dropdown can only
- * speak for one class, so when a subject is already taught in several the picker locks and the update
- * sends no `classId` at all — the Assign Subjects tab is where a wider set is edited.
+ * This form **never assigns classes**: which classes teach a subject is the Assign Subjects tab's
+ * job, where adding and removing are both explicit. An edit therefore shows the classes it is taught
+ * in as a read-only list and points there, rather than offering a second, partial way to change them.
  */
 export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetProps) {
   const { toast } = useToast()
@@ -44,11 +43,12 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
   const updateSubject = useUpdateSubject()
   const editing = subject !== null
 
-  const linkedClasses = subject?.classIds ?? []
-  const pickerLocked = linkedClasses.length > 1
+  const linkedClasses = (subject?.classIds ?? []).flatMap((classId) => {
+    const option = classOptions.data?.find((item) => item.id === classId)
+    return option ? [option] : []
+  })
 
   const {
-    control,
     register,
     handleSubmit,
     setError,
@@ -58,50 +58,27 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       name: subject?.name ?? '',
       code: subject?.code ?? '',
       description: subject?.description ?? '',
-      classId: linkedClasses[0] ?? '',
     },
     mode: 'onTouched',
   })
-
-  const classSelectOptions = [
-    { value: '', label: 'Leave unassigned' },
-    ...(classOptions.data ?? []).map((option) => ({ value: option.id, label: option.label })),
-  ]
-  const classLabelOf = (classId: string) =>
-    classOptions.data?.find((option) => option.id === classId)?.label ?? 'that class'
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     const input: SubjectInput = {
       name: values.name.trim(),
       code: values.code.trim().toUpperCase(),
       description: values.description.trim() || null,
-      // A locked picker sends no classId, so saving the name leaves every assignment alone.
-      ...(pickerLocked ? {} : { classId: values.classId || null }),
     }
 
     try {
       if (subject) {
-        const moved = !pickerLocked && values.classId !== (linkedClasses[0] ?? '')
         await updateSubject.mutateAsync({ id: subject.id, input })
-        toast({
-          tone: 'success',
-          title: `${input.name} updated`,
-          description: moved
-            ? values.classId
-              ? `Now taught in ${classLabelOf(values.classId)}.`
-              : 'No longer assigned to any class.'
-            : undefined,
-        })
+        toast({ tone: 'success', title: `${input.name} updated` })
       } else {
         await createSubject.mutateAsync(input)
-
-        const className = classLabelOf(values.classId)
         toast({
           tone: 'success',
           title: `${input.name} added to the catalogue`,
-          description: values.classId
-            ? `Already assigned to ${className} — it shows there in the Assign Subjects tab.`
-            : 'Assign it to a class from the Assign Subjects tab.',
+          description: 'Assign it to classes from the Assign Subjects tab.',
         })
       }
 
@@ -120,8 +97,8 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       title={editing ? 'Edit subject' : 'Add subject'}
       description={
         editing
-          ? 'Rename the subject, change its code or move it to another class.'
-          : 'Add a subject to the school catalogue and assign it to a class.'
+          ? 'Rename the subject, change its code or rewrite the description.'
+          : 'Add a subject to the school catalogue, then assign it to classes.'
       }
       footer={
         <>
@@ -163,26 +140,30 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
           {...register('description')}
         />
 
-        <Controller
-          control={control}
-          name="classId"
-          render={({ field }) => (
-            <Select
-              label="Assign to class"
-              options={classSelectOptions}
-              placeholder="Leave unassigned"
-              value={field.value}
-              onValueChange={field.onChange}
-              disabled={pickerLocked || classOptions.isPending}
-              hint={
-                pickerLocked
-                  ? `Taught in ${linkedClasses.length} classes — add or remove them in the Assign Subjects tab.`
-                  : 'Every class that should teach this subject.'
-              }
-              error={errors.classId?.message}
-            />
-          )}
-        />
+        {editing ? (
+          <div className="border-line bg-canvas rounded-lg border p-3.5">
+            <p className="text-ink text-[13px] font-medium">Assigned classes</p>
+
+            {linkedClasses.length === 0 ? (
+              <p className="text-ink-muted mt-1.5 text-[13px]">Not taught in any class yet.</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {linkedClasses.map((classRoom) => (
+                  <span
+                    key={classRoom.id}
+                    className="border-line bg-surface text-ink-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px] font-medium">
+                    <School className="text-ink-subtle size-3.5 shrink-0" strokeWidth={1.75} />
+                    {classRoom.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="text-ink-subtle mt-2 text-[12px]">
+              Managed in the Assign Subjects tab — add or remove them there.
+            </p>
+          </div>
+        ) : null}
       </form>
     </Sheet>
   )

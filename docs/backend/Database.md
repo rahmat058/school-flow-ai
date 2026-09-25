@@ -733,11 +733,11 @@ different teacher for the same class-subject pair. The pair is what every other 
 against — a lesson, a homework, a material, a class test or an exam paper on a subject the class does
 not run is refused with a 400.
 
-**Two ways a row is written.** The **assignments** endpoints only ever _add_ (or delete one pair), so a
-bulk run is safe to repeat. The subject form's class picker is the exception: saving it sends a
-`classId` to `PATCH /subjects/:id`, which **replaces** that subject's rows with the one chosen class
-(empty clears them). Omitting `classId` leaves every row alone — which is what the form does when a
-subject already sits in several classes, because a single picker cannot speak for them all.
+**One writer.** Rows are written only by the assignment endpoints: `POST …/assignments` and
+`…/assignments/bulk` **add** the missing pairs (so a repeated run is a no-op) and the per-pair delete
+removes one. `POST`/`PATCH /subjects` write the catalogue row alone and deliberately leave this table
+untouched — the subject form shows a subject's classes **read-only** — so there is exactly one path by
+which a class starts or stops teaching a subject.
 
 ```mermaid
 erDiagram

@@ -16,7 +16,6 @@ interface SelectProps {
   onValueChange: (value: string) => void
   placeholder?: string
   label?: string
-  hint?: string
   error?: string
   disabled?: boolean
   className?: string
@@ -29,7 +28,6 @@ export function Select({
   onValueChange,
   placeholder = 'Select…',
   label,
-  hint,
   error,
   disabled,
   className,
@@ -157,7 +155,6 @@ export function Select({
         aria-controls={listboxId}
         aria-activedescendant={open && activeIndex >= 0 ? `${selectId}-option-${activeIndex}` : undefined}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error || hint ? `${selectId}-message` : undefined}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openListbox())}
         onKeyDown={handleKeyDown}
@@ -217,15 +214,7 @@ export function Select({
         ) : null}
       </AnimatePresence>
 
-      {error ? (
-        <p id={`${selectId}-message`} className="text-error mt-1.5 text-[12px]">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={`${selectId}-message`} className="text-ink-subtle mt-1.5 text-[12px]">
-          {hint}
-        </p>
-      ) : null}
+      {error ? <p className="text-error mt-1.5 text-[12px]">{error}</p> : null}
     </div>
   )
 }

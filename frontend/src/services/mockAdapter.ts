@@ -2252,8 +2252,6 @@ const routes: Route[] = [
       const code = String(body.code ?? '')
         .trim()
         .toUpperCase()
-      // The create form can hand the new subject to a class in the same call.
-      const classId = body.classId ? String(body.classId) : ''
 
       if (!name) return fail(400, 'SUBJECT_INVALID', 'A subject name is required', ['name'])
       if (!SUBJECT_CODE_PATTERN.test(code)) {
@@ -2261,9 +2259,6 @@ const routes: Route[] = [
       }
       if (subjectNameTaken(name)) return fail(409, 'SUBJECT_NAME_TAKEN', 'That subject already exists', ['name'])
       if (subjectCodeTaken(code)) return fail(409, 'SUBJECT_CODE_TAKEN', 'That code is already in use', ['code'])
-      if (classId && !classes.some((classRoom) => classRoom.id === classId)) {
-        return fail(400, 'SUBJECT_INVALID', 'Choose a class to assign it to', ['classId'])
-      }
 
       const subject: Subject = {
         id: `subj_${code.toLowerCase()}`,
@@ -2273,9 +2268,8 @@ const routes: Route[] = [
         description: body.description ? String(body.description).trim() || null : null,
       }
 
+      // A new subject starts in no class: assignment is the assignment endpoints' job alone.
       subjects.push(subject)
-      if (classId) addAssignments(classId, [subject.id])
-
       return created(subjectRows().find((row) => row.id === subject.id))
     },
   },
@@ -2310,24 +2304,8 @@ const routes: Route[] = [
         subject.description = body.description ? String(body.description).trim() || null : null
       }
 
-      // A `classId` key means "teach this subject in exactly that class" (empty = nowhere). Absent,
-      // the assignments are left alone — which is what the form sends when a subject sits in several
-      // classes and its single picker cannot speak for them all.
-      if (body.classId !== undefined) {
-        const classId = body.classId ? String(body.classId) : ''
-        if (classId && !classes.some((classRoom) => classRoom.id === classId)) {
-          return fail(400, 'SUBJECT_INVALID', 'Choose a class to assign it to', ['classId'])
-        }
-
-        // Drop the other classes but keep the chosen link, so an unchanged choice keeps its teacher.
-        for (let link = classSubjects.length - 1; link >= 0; link -= 1) {
-          if (classSubjects[link].subjectId === subject.id && classSubjects[link].classId !== classId) {
-            classSubjects.splice(link, 1)
-          }
-        }
-        if (classId) addAssignments(classId, [subject.id])
-      }
-
+      // No assignment here: which classes teach a subject is the assignment endpoints' job, so an
+      // edit to the name, code or description leaves every `class_subjects` row untouched.
       return ok(subjectRows().find((row) => row.id === subject.id))
     },
   },

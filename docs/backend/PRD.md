@@ -206,10 +206,10 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - [ ] `DELETE /api/v1/classes/:id` `(admin)`
 - [ ] `GET /api/v1/classes/:id/students` — roster `(admin, teacher)`
 - [ ] `POST /api/v1/classes/:id/assign-students` — bulk roster move `(admin)`
-- [ ] `POST /api/v1/subjects` — add a **catalogue** subject: `name`, `code` (2–6 alphanumerics, each unique per school **case-insensitively**), an optional `description` and an optional **`classId`** that assigns it to that class in the same call — the Add Subject form's class picker, so a new subject can land already taught; 400 on a malformed code or an unknown class, 409 `SUBJECT_CODE_TAKEN` / `SUBJECT_NAME_TAKEN` `(admin)`
+- [ ] `POST /api/v1/subjects` — add a **catalogue** subject: `name`, `code` (2–6 alphanumerics, each unique per school **case-insensitively**) and an optional `description`; 400 on a malformed code, 409 `SUBJECT_CODE_TAKEN` / `SUBJECT_NAME_TAKEN`. The new subject is **taught in no class** — assignment is a separate call `(admin)`
 - [ ] `GET /api/v1/subjects` — the catalogue; `?classId=` narrows it to what that class runs, `?teacherId=` to what that teacher teaches `(admin, teacher)`
-- [ ] `GET /api/v1/subjects/overview` — the catalogue with each subject's **`classCount`** and **`classIds`** (the Subjects tab; the ids pre-fill the edit form's class picker) `(admin)`
-- [ ] `PATCH /api/v1/subjects/:id` — rename, recode, rewrite the description or **move the subject to another class**; both uniqueness checks re-run. A **`classId`** key replaces the subject's classes with that one (empty clears them) and an **absent** key leaves every assignment alone, which is what the form sends when the subject already sits in several classes `(admin)`
+- [ ] `GET /api/v1/subjects/overview` — the catalogue with each subject's **`classCount`** and **`classIds`** (the Subjects tab's row, and the read-only class list the edit form shows) `(admin)`
+- [ ] `PATCH /api/v1/subjects/:id` — rename, recode or rewrite the description; both uniqueness checks re-run. It **never touches assignments**, so editing a subject cannot re-teach it by accident `(admin)`
 - [ ] `DELETE /api/v1/subjects/:id` — removes the subject and its assignments; 409 `SUBJECT_IN_USE` while a lesson, exam paper, **mark**, homework or material still references it `(admin)`
 - [ ] `GET /api/v1/subjects/assignments?classId=` — one class's assigned subjects, with the class label (the Single Assignment panel) `(admin)`
 - [ ] `POST /api/v1/subjects/assignments` — add `subjectIds` to one class; pairs already assigned are left alone, so the call is idempotent `(admin)`
@@ -223,7 +223,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 - The teacher belongs to the **assignment**, not the subject — the same subject is taught by different staff in each class. A timetable period's teacher and a homework's default author are both read from `class_subjects`.
 - Every module that takes a `subjectId` alongside a `classId` validates the **pair** against `class_subjects` and refuses a subject the class does not run (400): homework, materials, timetable slots, class tests and exam papers alike.
 - The **assignment endpoints are additive** — the grid offers the subjects the class does not yet run, and the button counts what is being added; removal is per subject. Bulk assignment inserts only the missing pairs and reports the count, so a repeated run is a no-op.
-- The **subject form is the one place a set is replaced.** `POST /subjects` takes an optional `classId` so a subject can be created _for_ a class, and `PATCH /subjects/:id` takes one to move it; both write through the same assign path the assignment endpoints use. A subject that already sits in several classes cannot be expressed in one dropdown, so the form locks that picker and sends **no** `classId` — editing the name then leaves every class it teaches alone.
+- **The subject form never assigns.** `POST /subjects` and `PATCH /subjects/:id` write the catalogue row only, and the edit form renders the subject's classes as a **read-only** list pointing at the Assign Subjects tab. Adding and removing therefore have exactly one home — the assignment endpoints — and there is no second, partial path by which a class starts or stops teaching a subject.
 
 ### 4.5 Attendance Management (`AttendanceModule`)
 
