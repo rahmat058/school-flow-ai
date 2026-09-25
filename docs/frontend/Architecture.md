@@ -25,9 +25,12 @@ frontend/
 │   │   ├── auth/             # Login, Signup, VerifyOtp, ForgotPassword, ResetPassword
 │   │   ├── admin/            # Students, StudentProfile, Teachers, Fees, FeeCollect
 │   │   └── …                 # teacher/, student/, parent/ as those phases land
-│   ├── components/
+│   ├── components/           # presentational only
+│   │   ├── dashboard/        # the dashboard's role halves + the pieces they share
+│   │   │   ├── admin/        # OverviewHeader, the three charts, PendingFeesCard, RecentActivityCard, SchoolCalendarCard, AdminDashboard
+│   │   │   ├── student/      # StudentDashboard, TodayTimetableCard, StudentFeesCard, StudentAttendanceCard, StudentNoticesCard
+│   │   │   └── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone
 │   │   ├── layout/           # AppShell, Header, Sidebar
-│   │   ├── dashboard/        # role halves: admin/ (OverviewHeader, charts, PendingFeesCard, AdminDashboard) and student/ (StudentDashboard + its cards); StatCard, StatGrid, UpcomingExamsCard and iconTone stay shared at the root
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
 │   ├── features/             # auth/, dashboard/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, timetable/, school/
 │   │                         # each: components/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts
@@ -43,7 +46,7 @@ frontend/
 └── vite.config.ts
 ```
 
-**Naming:** components in `PascalCase.tsx`, hooks `useThing.ts`, API modules `feature.api.ts`. New features live under `src/features/<name>/` with their page wrapper in `src/pages/<role>/`. Route strings come from `src/routes/paths.ts`, nav items from `src/lib/navigation.ts`, and environment values from `src/lib/env.ts` — never inline path or `import.meta.env` strings.
+**Naming:** components in `PascalCase.tsx`, hooks `useThing.ts`, API modules `feature.api.ts`. New features live under `src/features/<name>/` with their page wrapper in `src/pages/<role>/`. `src/components/` holds presentational code only, grouped by the screen it serves: `dashboard/` keeps its `admin/` and `student/` halves with the pieces they share in `dashboard/common/`, the shell lives in `components/layout/`, and the design-system primitives in `components/ui/` — all imported by explicit file path, with no barrel. Route strings come from `src/routes/paths.ts`, nav items from `src/lib/navigation.ts`, and environment values from `src/lib/env.ts` — never inline path or `import.meta.env` strings.
 
 ## Tech stack
 

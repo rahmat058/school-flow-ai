@@ -1,4 +1,4 @@
-import { StatCard } from '@/components/dashboard/StatCard'
+import { StatCard } from '@/components/dashboard/common/StatCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import type { StatMetric } from '@/types/dashboard'
 

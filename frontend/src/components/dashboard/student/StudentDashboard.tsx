@@ -1,11 +1,11 @@
 import { Alert } from '@/components/ui/Alert'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { StatGrid } from '@/components/dashboard/StatGrid'
+import { StatGrid } from '@/components/dashboard/common/StatGrid'
 import { StudentAttendanceCard } from '@/components/dashboard/student/StudentAttendanceCard'
 import { StudentFeesCard } from '@/components/dashboard/student/StudentFeesCard'
 import { StudentNoticesCard } from '@/components/dashboard/student/StudentNoticesCard'
 import { TodayTimetableCard } from '@/components/dashboard/student/TodayTimetableCard'
-import { UpcomingExamsCard } from '@/components/dashboard/UpcomingExamsCard'
+import { UpcomingExamsCard } from '@/components/dashboard/common/UpcomingExamsCard'
 import { useStudentDashboard } from '@/features/dashboard/api'
 import { ApiError } from '@/services/apiClient'
 

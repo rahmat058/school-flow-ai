@@ -1,5 +1,5 @@
 import { cn } from '@/lib/cn'
-import { iconToneStyles } from '@/components/dashboard/iconTone'
+import { iconToneStyles } from '@/components/dashboard/common/iconTone'
 import type { LucideIcon } from 'lucide-react'
 import type { IconTone } from '@/types/dashboard'
 

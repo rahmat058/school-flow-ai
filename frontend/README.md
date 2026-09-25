@@ -41,9 +41,12 @@ frontend/
 │   │   ├── teacher/
 │   │   ├── student/
 │   │   └── parent/
-│   ├── components/
+│   ├── components/           # presentational, grouped by the screen it serves
+│   │   ├── dashboard/        # the dashboard's role halves + the pieces they share
+│   │   │   ├── admin/        # OverviewHeader, charts, AdminDashboard
+│   │   │   ├── student/      # StudentDashboard + its cards
+│   │   │   └── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone
 │   │   ├── layout/           # AppShell, Header, Sidebar
-│   │   ├── dashboard/        # StatCard, StatGrid, charts, tables
 │   │   └── ui/               # design-system primitives (Button, Badge, Input, Modal)
 │   ├── features/             # attendance/, fees/, homework/, exams/, chat/ …
 │   │                         # each owns its components + hooks + api.ts
@@ -62,15 +65,17 @@ frontend/
 
 ### Where new code goes
 
-| You are adding…              | Put it in…                                       |
-| ---------------------------- | ------------------------------------------------ |
-| A route screen               | `src/pages/<role>/`                              |
-| A reusable UI primitive      | `src/components/ui/`                             |
-| Shell/layout chrome          | `src/components/layout/`                         |
-| A feature (attendance, fees) | `src/features/<name>/` + page in `pages/<role>/` |
-| Data fetching for a feature  | `src/features/<name>/api.ts` via `services/`     |
-| Shared hook / auth state     | `src/hooks/` / `src/context/`                    |
-| A shared type                | `src/types/`                                     |
+| You are adding…                   | Put it in…                                       |
+| --------------------------------- | ------------------------------------------------ |
+| A route screen                    | `src/pages/<role>/`                              |
+| A reusable UI primitive           | `src/components/ui/`                             |
+| Shell/layout chrome               | `src/components/layout/`                         |
+| A dashboard piece one role uses   | `src/components/dashboard/<role>/`               |
+| A dashboard piece shared by roles | `src/components/dashboard/common/`               |
+| A feature (attendance, fees)      | `src/features/<name>/` + page in `pages/<role>/` |
+| Data fetching for a feature       | `src/features/<name>/api.ts` via `services/`     |
+| Shared hook / auth state          | `src/hooks/` / `src/context/`                    |
+| A shared type                     | `src/types/`                                     |
 
 **Naming:** components in `PascalCase.tsx`, hooks `useThing.ts`, API modules
 `feature.api.ts`. Prefer the `@/` alias over deep relative paths.
