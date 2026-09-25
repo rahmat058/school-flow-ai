@@ -514,7 +514,7 @@ Concessions
 
 - [ ] `POST /api/v1/materials` — upload (`FileInterceptor` → Cloudinary/Supabase Storage); multipart fields `classId`, `subjectId`, `type` (PDF/notes/worksheet/previous-year paper), `title`, optional `description` and the `file` part; 400 `MATERIAL_INVALID` when the class/subject/type/title is missing, the subject is not taught in the chosen class, or the file is not a PDF/JPG/PNG/DOCX ≤ 10MB `(admin, teacher)`
 - [ ] `GET /api/v1/materials?search=&classId=&subjectId=&type=` — list, newest first `(all roles)`
-- [ ] `GET /api/v1/materials/:id` — metadata + a short-lived signed URL `(all roles)`
+- [ ] `GET /api/v1/materials/:id` — metadata + a short-lived signed URL, which **both** the preview and the download read, so the client never stores a URL it would have to refresh `(all roles)`
 - [ ] `DELETE /api/v1/materials/:id` — soft-deletes the row and removes the stored asset `(admin, teacher)`
 
 **Behavior**
@@ -523,6 +523,7 @@ Concessions
 - The list is **role-scoped** server-side — staff see the school, a student their own class, a parent their children's classes — and `search` matches the title, subject, class, uploader and description
 - The file rules (PDF/JPG/PNG/DOCX, ≤ 10MB per `Design.md`) are validated **server-side**; the client's picker reads the same list, so it cannot accept a file the API would refuse
 - `DELETE` is a **soft delete** of the row (`deleted_at`, per `Database.md` §6) alongside removal of the stored asset, so a removed material leaves the library without orphaning its storage key
+- The file is **previewed in place or downloaded from the same signed URL** — no second endpoint. Previewing is a **client concern**: the browser frames a PDF, scales a JPG/PNG, and falls back to the download action for a DOCX, which has no in-browser viewer. The short-lived URL is why the client re-reads `GET /materials/:id` per action instead of caching it
 
 ### 4.14 Reports & Analytics (`ReportsModule`)
 

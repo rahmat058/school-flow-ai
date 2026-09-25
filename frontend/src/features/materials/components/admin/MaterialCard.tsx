@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ClipboardList,
   Download,
+  Eye,
   FileText,
   MoreHorizontal,
   ScrollText,
@@ -27,12 +28,13 @@ interface MaterialCardProps {
   material: MaterialListItem
   /** Staff remove an upload; a student or parent reads the same card without the control. */
   canManage: boolean
+  onPreview: (material: MaterialListItem) => void
   onDownload: (material: MaterialListItem) => void
   onDelete: (material: MaterialListItem) => void
   downloading: boolean
 }
 
-export function MaterialCard({ material, canManage, onDownload, onDelete, downloading }: MaterialCardProps) {
+export function MaterialCard({ material, canManage, onPreview, onDownload, onDelete, downloading }: MaterialCardProps) {
   const Icon = TYPE_ICONS[material.type]
 
   return (
@@ -81,8 +83,13 @@ export function MaterialCard({ material, canManage, onDownload, onDelete, downlo
         />
       </dl>
 
-      <div className="border-line mt-4 border-t pt-4">
-        <Button variant="secondary" className="w-full" onClick={() => onDownload(material)} disabled={downloading}>
+      <div className="border-line mt-4 flex gap-2 border-t pt-4">
+        <Button variant="secondary" className="flex-1" onClick={() => onPreview(material)}>
+          <Eye className="size-4" strokeWidth={1.75} />
+          Preview
+        </Button>
+
+        <Button className="flex-1" onClick={() => onDownload(material)} disabled={downloading}>
           <Download className="size-4" strokeWidth={1.75} />
           {downloading ? 'Preparing…' : 'Download'}
         </Button>

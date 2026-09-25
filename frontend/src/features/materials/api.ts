@@ -12,6 +12,7 @@ export interface MaterialListQuery {
 export const materialKeys = {
   all: ['materials'] as const,
   list: (query: MaterialListQuery) => [...materialKeys.all, 'list', query] as const,
+  detail: (id: string) => [...materialKeys.all, 'detail', id] as const,
 }
 
 /**
@@ -64,7 +65,19 @@ export function useDeleteMaterial() {
   return useMaterialMutation(async (id: string) => (await remove<{ deleted: boolean }>(`/materials/${id}`)).data)
 }
 
-/** `GET /materials/:id` hands back the short-lived URL the file is fetched from. */
-export async function fetchMaterialDownload(id: string): Promise<MaterialDetail> {
+/**
+ * `GET /materials/:id` hands back the short-lived URL the file is fetched from — the same URL serves
+ * the preview and the download, so the two actions share one read.
+ */
+export async function fetchMaterialDetail(id: string): Promise<MaterialDetail> {
   return (await get<MaterialDetail>(`/materials/${id}`)).data
+}
+
+/** The detail behind the preview modal, fetched only while it is open. */
+export function useMaterialDetail(id: string | null) {
+  return useQuery({
+    queryKey: materialKeys.detail(id ?? ''),
+    queryFn: async (): Promise<MaterialDetail> => fetchMaterialDetail(id as string),
+    enabled: id !== null,
+  })
 }

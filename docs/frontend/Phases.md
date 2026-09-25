@@ -28,7 +28,7 @@
 - [x] Teacher daily/bulk attendance register (mark + bulk upsert)
 - [x] Attendance month view — a student's own or a guardian's child's, and a class's for staff (month picker, month totals, day-by-day register)
 - [ ] Homework create/submit/track/grade flows
-- [x] Study material listing & upload UI
+- [x] Study material listing & upload UI — with in-place PDF/image preview and download
 
 **Done when:** a teacher marks attendance and assigns homework; student submits; parent sees both.
 

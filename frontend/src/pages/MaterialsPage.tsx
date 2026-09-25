@@ -12,9 +12,10 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useCurrentUser } from '@/store/auth'
 import { useClassOptions } from '@/features/classes/api'
-import { fetchMaterialDownload, useDeleteMaterial, useMaterials } from '@/features/materials/api'
+import { fetchMaterialDetail, useDeleteMaterial, useMaterials } from '@/features/materials/api'
 import { MaterialCard } from '@/features/materials/components/admin/MaterialCard'
 import { MaterialFormSheet } from '@/features/materials/components/admin/MaterialFormSheet'
+import { MaterialPreviewModal } from '@/features/materials/components/admin/MaterialPreviewModal'
 import { useSubjects } from '@/features/subjects/api'
 import type { MaterialListItem, MaterialType } from '@/types/materials'
 
@@ -32,6 +33,7 @@ export function MaterialsPage() {
   const [type, setType] = useState<MaterialType | ''>('')
   const [formOpen, setFormOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<MaterialListItem | null>(null)
+  const [previewTarget, setPreviewTarget] = useState<MaterialListItem | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   // Debounced so typing does not fire a request per keystroke.
@@ -64,7 +66,7 @@ export function MaterialsPage() {
     setDownloadingId(material.id)
 
     try {
-      const detail = await fetchMaterialDownload(material.id)
+      const detail = await fetchMaterialDetail(material.id)
 
       if (tab) {
         tab.opener = null
@@ -205,6 +207,7 @@ export function MaterialsPage() {
               material={material}
               canManage={canManage}
               downloading={downloadingId === material.id}
+              onPreview={(row) => setPreviewTarget(row)}
               onDownload={handleDownload}
               onDelete={setPendingDelete}
             />
@@ -228,6 +231,12 @@ export function MaterialsPage() {
         confirmLabel="Delete material"
         tone="danger"
         loading={deleteMaterial.isPending}
+      />
+
+      <MaterialPreviewModal
+        material={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+        onDownload={handleDownload}
       />
     </div>
   )
