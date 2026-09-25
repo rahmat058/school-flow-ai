@@ -236,8 +236,8 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 
 **Endpoints**
 
-- [ ] `POST /api/v1/attendance` — daily/bulk mark (array of records, batch upsert) `(admin, teacher)`
-- [ ] `GET /api/v1/attendance?classId=&date=` — the daily register: the class roster with each student's stored status, so a register opens pre-filled `(admin, teacher)`
+- [ ] `POST /api/v1/attendance` — one class's day as `{ classId, date, records: [{ studentId, status, note? }] }`, upserted on the unique key below; the batch is validated in full first, and the refreshed day comes back `(admin, teacher)`
+- [ ] `GET /api/v1/attendance?classId=&date=` — the daily register: every active student of the class with their stored status (`null` where the day is unmarked), so a register opens pre-filled; `date` defaults to the class's newest register day `(admin, teacher)`
 - [ ] `GET /api/v1/attendance/monthly?classId=&month=` — one class's month: the month's totals (present/absent/late/leave/rate), one row per register day with that day's counts, and the months on record for the picker; `month` is an ISO key (`2026-08`) and defaults to the newest on record `(admin, teacher)`
 - [ ] `GET /api/v1/attendance/me?month=&studentId=` — the caller's own month in the **same shape**, scoped to one student: each day carries **their** status, and the payload names the students the caller may switch between; `studentId` picks one of a guardian's children `(student own, parent of child)` — 403 `ATTENDANCE_FORBIDDEN` for a staff account or another family's child
 - [ ] `GET /api/v1/attendance/student/:id` — the individual history the student profile's Attendance tab reads: lifetime totals plus a row per month `(admin, teacher, student own, parent of child)`
@@ -247,6 +247,7 @@ Each module lists its endpoints as a **checklist — build one endpoint at a tim
 **Behavior**
 
 - Unique (classId, studentId, date) constraint prevents duplicates
+- **The daily register is the class, not the register's rows** — it lists every active student, so a day that was never marked still opens complete (each row's `status` is `null` until it is marked). A write upserts the whole day on `(class, student, date)`: a resubmitted day replaces its rows instead of duplicating them, and the batch is validated in full **before** any row is written — an unknown student, a student from another class, an unknown status, an empty batch or a malformed date refuses the whole request — so a register is never left half-marked
 - Monthly %, streaks, and class analytics via SQL aggregations (Supabase RPC) / views
 - Socket.io event `attendance:marked` notifies parents in real time
 - **The two month reads share one shape** — `attendance/monthly` and `attendance/me` return the same totals, the same month picker and one row per register day; a `scope` field says whose month it is, and only a personal month carries a `status` per day (a class day has many students, so it carries that day's counts instead). `attendance/me` is **self-scoped** — a student reads only their own register, a guardian only their own children, and a staff account is refused because it has no personal register
@@ -279,6 +280,8 @@ Collect
 - [ ] `GET /api/v1/fees/collect/summary?classId=&status=` — the Collect fee tab's cards (total/paid/pending students, collected/pending totals) scoped by the active filters `(admin)`
 - [ ] `GET /api/v1/fees/collect/students?classId=&status=` — paginated class-wise fee-status rows: what each student was billed, what came in, what is left and the resolved status `(admin)`
 - [ ] `GET /api/v1/fees/collect/student/:studentId` — one student's collect payload: outstanding dues, the class structure's heads with their concession and net amount, and the payment history `(admin, parent of child)`
+- [ ] `GET /api/v1/fees/me` — a student's **own** fee overview: `paid`/`pending`/`total` plus their outstanding dues and payment history. Self-scoped by the session (no id in the path); 403 for a non-student. The same rows the collect page reads, minus the staff-only invoice candidates `(student own)`
+- [ ] `POST /api/v1/fees/me/payments` — a student records a payment against one of **their own** invoices; the amount may not exceed that invoice's outstanding balance, and another student's invoice is a 403. The self-service counterpart of `/fees/payments/manual` (the provider checkout path stays `create-order`/`verify`), and the transaction/UTR id is stored as the payment's provider transaction id `(student own)`
 - [ ] `GET /api/v1/fees/pending?classId=` — outstanding balances `(admin)`
 - [ ] `GET /api/v1/fees/history/:studentId` — payment history `(admin, parent of child)`
 - [ ] `GET /api/v1/fees/summary` — collection totals for the fees dashboard's stat cards `(admin)`

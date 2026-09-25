@@ -1,3 +1,4 @@
+import type { AttendanceStatus } from '@/types/attendance'
 import type { NoticePriority } from '@/types/communication'
 import type { ExamKind, ExamType } from '@/types/exams'
 import type { HomeworkStatus } from '@/types/homework'
@@ -81,6 +82,14 @@ export const MANUAL_PAYMENT_METHODS = [
 
 export const HOMEWORK_STATUS_VALUES = ['ACTIVE', 'OVERDUE'] as const satisfies readonly HomeworkStatus[]
 
+/** Ordered the way a register is marked: present first, then the exceptions. */
+export const ATTENDANCE_STATUS_VALUES = [
+  'PRESENT',
+  'LATE',
+  'ABSENT',
+  'LEAVE',
+] as const satisfies readonly AttendanceStatus[]
+
 export const MATERIAL_TYPE_VALUES = ['PDF', 'NOTES', 'WORKSHEET', 'PAPER'] as const satisfies readonly MaterialType[]
 
 export const NOTICE_PRIORITY_VALUES = ['HIGH', 'MEDIUM', 'LOW'] as const satisfies readonly NoticePriority[]
@@ -142,6 +151,13 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 const HOMEWORK_STATUS_LABELS: Record<HomeworkStatus, string> = {
   ACTIVE: 'Active',
   OVERDUE: 'Overdue',
+}
+
+const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  PRESENT: 'Present',
+  LATE: 'Late',
+  ABSENT: 'Absent',
+  LEAVE: 'Leave',
 }
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
@@ -254,6 +270,11 @@ export const homeworkStatusOptions: FieldOption[] = [
   { value: '', label: 'All status' },
   ...HOMEWORK_STATUS_VALUES.map((value) => ({ value, label: HOMEWORK_STATUS_LABELS[value] })),
 ]
+
+export const attendanceStatusOptions: FieldOption[] = ATTENDANCE_STATUS_VALUES.map((value) => ({
+  value,
+  label: ATTENDANCE_STATUS_LABELS[value],
+}))
 
 export const materialTypeOptions: FieldOption[] = MATERIAL_TYPE_VALUES.map((value) => ({
   value,

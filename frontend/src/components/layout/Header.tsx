@@ -5,9 +5,10 @@ import { useCurrentUser } from '@/store/auth'
 import { useLogout } from '@/features/auth/api'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dropdown } from '@/components/ui/Dropdown'
+import { NotificationBell } from '@/components/layout/NotificationBell'
 import { AnimatePresence, motion } from 'motion/react'
 import type { DropdownItemConfig } from '@/components/ui/Dropdown'
-import { Bell, CircleHelp, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
+import { CircleHelp, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 
 interface HeaderProps {
   title: string
@@ -94,13 +95,7 @@ export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-        <button
-          type="button"
-          className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-9 items-center justify-center rounded-md"
-          aria-label="Notifications"
-          title="Notifications">
-          <Bell className="size-4.5" strokeWidth={1.75} />
-        </button>
+        <NotificationBell />
         <button
           type="button"
           className="text-ink-muted hover:bg-primary-soft hover:text-primary inline-flex size-9 items-center justify-center rounded-md"

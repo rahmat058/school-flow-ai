@@ -12,7 +12,7 @@ import { useCurrentSchool } from '@/features/school/api'
 import { useReceipt, useStudentCollect } from '@/features/fees/api'
 import { CollectPaymentSheet } from '@/features/fees/components/admin/CollectPaymentSheet'
 import { InvoiceSheet } from '@/features/fees/components/admin/InvoiceSheet'
-import { ReceiptModal } from '@/features/fees/components/admin/ReceiptModal'
+import { ReceiptModal } from '@/features/fees/components/common/ReceiptModal'
 import type { InvoiceCandidateRow, PaymentHistoryRow, Receipt, StudentDueRow } from '@/types/fees'
 
 const SECTION_CARD = 'border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)]'

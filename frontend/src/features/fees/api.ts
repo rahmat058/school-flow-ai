@@ -20,7 +20,9 @@ import type {
   PaymentInput,
   Receipt,
   StudentCollectSummary,
+  StudentFeesOverview,
   StudentLedger,
+  StudentPaymentInput,
 } from '@/types/fees'
 import type { StudentListItem } from '@/types/people'
 
@@ -54,6 +56,8 @@ export const feeKeys = {
   collectSummary: (query: FeeCollectQuery) => [...feeKeys.all, 'collect-summary', query] as const,
   collectStudents: (query: FeeCollectStudentsQuery) => [...feeKeys.all, 'collect-students', query] as const,
   studentCollect: (studentId: string) => [...feeKeys.all, 'collect-student', studentId] as const,
+  /** The caller's own fees, resolved from the session — no id in the key. */
+  me: () => [...feeKeys.all, 'me'] as const,
   receipt: (paymentId: string) => [...feeKeys.all, 'receipt', paymentId] as const,
   dayBook: (date: string) => [...feeKeys.all, 'day-book', date] as const,
   classReport: (classId: string) => [...feeKeys.all, 'class-report', classId] as const,
@@ -149,6 +153,14 @@ export function useStudentCollect(studentId: string) {
   })
 }
 
+/** The caller's own fees — `GET /fees/me`, self-scoped by the session. */
+export function useMyFees() {
+  return useQuery({
+    queryKey: feeKeys.me(),
+    queryFn: async () => (await get<StudentFeesOverview>('/fees/me')).data,
+  })
+}
+
 export function useReceipt(paymentId: string) {
   return useQuery({
     queryKey: feeKeys.receipt(paymentId),
@@ -165,6 +177,11 @@ export function useCreateInvoice() {
 
 export function useRecordPayment() {
   return useFeeMutation(async (input: PaymentInput) => (await post<Receipt>('/fees/payments/manual', input)).data)
+}
+
+/** Pays one of the caller's own invoices — `POST /fees/me/payments`. */
+export function usePayMyInvoice() {
+  return useFeeMutation(async (input: StudentPaymentInput) => (await post<Receipt>('/fees/me/payments', input)).data)
 }
 
 export function useCreateFeeHead() {

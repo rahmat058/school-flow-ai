@@ -30,6 +30,8 @@ export const paths = {
   ai: '/ai',
   permissions: '/permissions',
   reports: '/reports',
+  /** A student's own results and fees — distinct from the staff `/reports`. */
+  myReports: '/my-reports',
   settings: '/settings',
 
   notFound: '/404',

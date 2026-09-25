@@ -20,6 +20,13 @@ export const conversations: Conversation[] = [
     participantIds: ['usr_tch_2', 'usr_std_7'],
     lastMessageAt: dateTimeOffset(-2, 16, 5),
   },
+  {
+    // The demo student's only thread — gives the header bell an unread count to show.
+    id: 'cnv_4',
+    schoolId: SCHOOL_ID,
+    participantIds: ['usr_tch_1', 'usr_std_1'],
+    lastMessageAt: dateTimeOffset(0, 10, 25),
+  },
 ]
 
 export const messages: ChatMessage[] = [
@@ -78,5 +85,13 @@ export const messages: ChatMessage[] = [
     body: 'No problem — join Thursday\u2019s session and we will sign off your record book.',
     readAt: null,
     createdAt: dateTimeOffset(-2, 16, 5),
+  },
+  {
+    id: 'msg_8',
+    conversationId: 'cnv_4',
+    senderId: 'usr_tch_1',
+    body: 'Please bring your project file tomorrow for review.',
+    readAt: null,
+    createdAt: dateTimeOffset(0, 10, 25),
   },
 ]

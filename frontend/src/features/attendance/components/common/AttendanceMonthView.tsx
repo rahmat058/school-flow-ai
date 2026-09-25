@@ -21,6 +21,8 @@ interface AttendanceMonthViewProps {
   description: string
   /** The class or student picker, beside the month navigation. */
   subjectPicker?: ReactNode
+  /** A write action beside the month navigation — only the staff panel passes one. */
+  action?: ReactNode
   onMonthChange: (month: string) => void
 }
 
@@ -34,6 +36,7 @@ export function AttendanceMonthView({
   title,
   description,
   subjectPicker,
+  action,
   onMonthChange,
 }: AttendanceMonthViewProps) {
   const months = data.availableMonths
@@ -78,6 +81,8 @@ export function AttendanceMonthView({
             <ChevronRight className="size-4" strokeWidth={1.75} />
           </Button>
         </div>
+
+        {action}
 
         <span
           className={cn(

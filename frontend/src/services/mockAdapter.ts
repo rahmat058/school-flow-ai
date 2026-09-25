@@ -18,7 +18,9 @@ import type {
   AttendanceMonthOption,
   AttendanceMonthTotals,
   AttendanceRecord,
+  AttendanceStatus,
   AttendanceSubject,
+  DailyRegister,
   MyAttendanceMonth,
 } from '@/types/attendance'
 import type {
@@ -58,6 +60,7 @@ import type {
   Receipt,
   StudentCollectSummary,
   StudentDueRow,
+  StudentFeesOverview,
   StudentLedger,
   StudentLedgerRow,
 } from '@/types/fees'
@@ -1245,6 +1248,26 @@ function studentCollectSummary(studentId: string): StudentCollectSummary | undef
   }
 }
 
+/** The student's own fee view — the collect summary minus the staff-only invoice candidates. */
+function studentFeesOverview(studentId: string): StudentFeesOverview | undefined {
+  const summary = studentCollectSummary(studentId)
+  if (!summary) return undefined
+
+  return {
+    studentName: summary.studentName,
+    className: summary.className,
+    admissionNo: summary.admissionNo,
+    rollNo: summary.rollNo,
+    summary: {
+      paidPaise: summary.totalPaidPaise,
+      pendingPaise: summary.balancePaise,
+      totalPaise: summary.totalPaidPaise + summary.balancePaise,
+    },
+    dues: summary.dues,
+    payments: summary.payments,
+  }
+}
+
 function receiptFor(paymentId: string): Receipt | undefined {
   const payment = feePayments.find((item) => item.id === paymentId)
   if (!payment) return undefined
@@ -1265,7 +1288,8 @@ function receiptFor(paymentId: string): Receipt | undefined {
     items: [{ title: head?.name ?? 'Fee payment', amountPaise: payment.amountPaise }],
     amountPaidPaise: payment.amountPaise,
     method: payment.method,
-    reference: payment.remarks,
+    // A self-service payment carries its UTR on `providerTxnId`; manual collections use the remark.
+    reference: payment.providerTxnId ?? payment.remarks,
   }
 }
 
@@ -2495,6 +2519,50 @@ function classAttendanceMonth(classRoom: ClassRoom, month: string): AttendanceMo
   }
 }
 
+/** The statuses a register may hold — the `attendance_status` enum the column stores. */
+const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = ['PRESENT', 'ABSENT', 'LEAVE', 'LATE']
+
+/** The day a class's register opens on: the newest one on record, else today. */
+function newestRegisterDay(classId: string): string {
+  const dates = attendance
+    .filter((record) => record.classId === classId)
+    .map((record) => record.attendanceDate)
+    .sort()
+
+  return dates[dates.length - 1] ?? dateOffset(0)
+}
+
+/**
+ * One day's register for a class — `GET /attendance?classId=&date=`. The roster is the class's active
+ * students, not the register's rows, so a day that was never marked still lists everyone with a `null`
+ * status and the sheet opens ready to fill.
+ */
+function dailyRegisterFor(classRoom: ClassRoom, date: string): DailyRegister {
+  const rows = students
+    .filter((student) => student.classId === classRoom.id && student.status === 'ACTIVE')
+    .sort((left, right) => left.rollNo - right.rollNo)
+    .map((student) => {
+      const record = attendance.find((item) => item.studentId === student.id && item.attendanceDate === date)
+
+      return {
+        studentId: student.id,
+        name: `${student.firstName} ${student.lastName}`,
+        admissionNo: student.admissionNo,
+        rollNo: student.rollNo,
+        status: record?.status ?? null,
+        note: record?.note ?? null,
+      }
+    })
+
+  return {
+    classId: classRoom.id,
+    classLabel: classLabel(classRoom),
+    date,
+    rows,
+    isMarked: rows.some((row) => row.status !== null),
+  }
+}
+
 /** The students a caller may read a register for: their own account, or a guardian's children. */
 function attendanceStudentsFor(user: AuthUser): AttendanceSubject[] {
   const ids =
@@ -3366,6 +3434,85 @@ const routes: Route[] = [
   },
   {
     method: 'GET',
+    path: '/attendance',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      if (user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
+        return fail(403, 'ATTENDANCE_FORBIDDEN', 'The class register is staff-only')
+      }
+
+      const classRoom = classes.find((item) => item.id === params.classId)
+      if (!classRoom) return fail(400, 'ATTENDANCE_INVALID', 'Choose a class', ['classId'])
+
+      // No date asks for the newest register day, so the sheet opens on a day with rows.
+      const date = params.date ? String(params.date) : newestRegisterDay(classRoom.id)
+
+      return ok<DailyRegister>(dailyRegisterFor(classRoom, date))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/attendance',
+    handler: ({ body, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      if (user?.role !== 'ADMIN' && user?.role !== 'TEACHER') {
+        return fail(403, 'ATTENDANCE_FORBIDDEN', 'Only staff mark the register')
+      }
+
+      const classRoom = classes.find((item) => item.id === body.classId)
+      if (!classRoom) return fail(400, 'ATTENDANCE_INVALID', 'Choose a class', ['classId'])
+
+      const date = String(body.date ?? '')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return fail(400, 'ATTENDANCE_INVALID', 'Choose a date', ['date'])
+      }
+
+      const records = Array.isArray(body.records) ? (body.records as Array<Record<string, unknown>>) : []
+      if (records.length === 0) {
+        return fail(400, 'ATTENDANCE_INVALID', 'Mark at least one student', ['records'])
+      }
+
+      // Validated in full first, so a bad record cannot leave the day half-written.
+      for (const record of records) {
+        const student = students.find((item) => item.id === String(record.studentId ?? ''))
+        if (!student || student.classId !== classRoom.id) {
+          return fail(400, 'ATTENDANCE_INVALID', 'That student is not in this class', ['studentId'])
+        }
+        if (!ATTENDANCE_STATUSES.includes(String(record.status) as AttendanceStatus)) {
+          return fail(400, 'ATTENDANCE_INVALID', 'Choose a valid status', ['status'])
+        }
+      }
+
+      for (const record of records) {
+        const studentId = String(record.studentId)
+        const status = String(record.status) as AttendanceStatus
+        const note = record.note ? String(record.note) : null
+        // Upsert on `(student, date)` — the unique constraint the contract states.
+        const existing = attendance.find((item) => item.studentId === studentId && item.attendanceDate === date)
+
+        if (existing) {
+          existing.status = status
+          existing.note = note
+          existing.markedById = userId ?? existing.markedById
+        } else {
+          attendance.push({
+            id: `att_${studentId}_${date}`,
+            schoolId: SCHOOL_ID,
+            classId: classRoom.id,
+            studentId,
+            markedById: userId ?? '',
+            attendanceDate: date,
+            status,
+            note,
+          })
+        }
+      }
+
+      return ok<DailyRegister>(dailyRegisterFor(classRoom, date))
+    },
+  },
+  {
+    method: 'GET',
     path: '/attendance/student/:studentId',
     handler: ({ params }) => {
       if (!students.some((item) => item.id === params.studentId)) {
@@ -4001,6 +4148,76 @@ const routes: Route[] = [
         method: (body.method ? String(body.method) : 'CASH') as PaymentMethod,
         providerOrderId: null,
         providerTxnId: null,
+        status: 'PAID',
+        paidAt: new Date().toISOString(),
+        remarks: body.remarks ? String(body.remarks) : null,
+      }
+
+      feePayments.push(payment)
+      invoice.paidPaise += amountPaise
+      invoice.status = outstanding(invoice) === 0 ? 'PAID' : 'PARTIAL'
+
+      return created(receiptFor(payment.id))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/fees/me',
+    handler: ({ userId }) => {
+      const user = users.find((item) => item.id === userId)
+      if (user?.role !== 'STUDENT' || !user.profileId) {
+        return fail(403, 'FEE_FORBIDDEN', 'Only a student can read their own fees')
+      }
+
+      const overview = studentFeesOverview(user.profileId)
+      return overview ? ok<StudentFeesOverview>(overview) : fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    // Self-service payment: a student may only settle an invoice raised against their own account.
+    method: 'POST',
+    path: '/fees/me/payments',
+    handler: ({ body, userId }) => {
+      const user = users.find((item) => item.id === userId)
+      if (user?.role !== 'STUDENT' || !user.profileId) {
+        return fail(403, 'FEE_FORBIDDEN', 'Only a student can pay their own fees')
+      }
+
+      const invoice = findFeeInvoice(String(body.invoiceId ?? ''))
+      if (!invoice) return fail(404, 'FEE_INVOICE_NOT_FOUND', 'Invoice not found')
+      if (invoice.studentId !== user.profileId) {
+        return fail(403, 'FEE_FORBIDDEN', 'That invoice belongs to another student')
+      }
+
+      const amountPaise = Number(body.amountPaise ?? 0)
+      const balance = outstanding(invoice)
+
+      if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+        return fail(400, 'FEE_VALIDATION', 'Enter an amount greater than zero', ['amountPaise'])
+      }
+      if (amountPaise > balance) {
+        return fail(400, 'FEE_VALIDATION', 'The amount is more than the balance on this invoice', ['amountPaise'])
+      }
+
+      const student = findStudent(invoice.studentId)
+      const classSeq = classes.findIndex((classRoom) => classRoom.id === student?.classId) + 1
+
+      if (invoice.receiptNo === null) {
+        manualReceiptSeq += 1
+        invoice.receiptNo = `RCP-SCH-${ACADEMIC_YEAR}-${String(classSeq).padStart(4, '0')}-${String(manualReceiptSeq).padStart(5, '0')}`
+      }
+
+      const payment: FeePayment = {
+        id: `pay_${invoice.id}_${feePayments.length + 1}`,
+        schoolId: SCHOOL_ID,
+        invoiceId: invoice.id,
+        studentId: invoice.studentId,
+        recordedById: userId,
+        amountPaise,
+        provider: 'MANUAL',
+        method: (body.method ? String(body.method) : 'ONLINE') as PaymentMethod,
+        providerOrderId: null,
+        providerTxnId: body.reference ? String(body.reference) : null,
         status: 'PAID',
         paidAt: new Date().toISOString(),
         remarks: body.remarks ? String(body.remarks) : null,

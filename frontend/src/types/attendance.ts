@@ -89,3 +89,46 @@ export interface MyAttendanceMonth extends AttendanceMonth {
   /** A student's own account holds one; a guardian's holds their children. */
   students: AttendanceSubject[]
 }
+
+/** One student's line on a day's register — the marking sheet's row. */
+export interface DailyRegisterRow {
+  studentId: string
+  name: string
+  admissionNo: string
+  rollNo: number
+  /** The stored status for the day, or `null` when this student has not been marked yet. */
+  status: AttendanceStatus | null
+  note: string | null
+}
+
+/**
+ * One day's register for a class — `GET /attendance?classId=&date=`. The roster comes from the class
+ * rather than the register, so a day that was never marked still opens with every student and a
+ * `null` status, ready to fill.
+ */
+export interface DailyRegister {
+  classId: string
+  classLabel: string
+  /** ISO date (`YYYY-MM-DD`) — the day the API resolved, which is what a write must echo back. */
+  date: string
+  rows: DailyRegisterRow[]
+  /** True once any student on the day carries a stored status. */
+  isMarked: boolean
+}
+
+/** One record in the `POST /attendance` batch. */
+export interface AttendanceMarkEntry {
+  studentId: string
+  status: AttendanceStatus
+  note?: string | null
+}
+
+/**
+ * The body of `POST /attendance` — a whole day at once, upserted on `(class, student, date)` so a
+ * resubmitted register replaces what is stored instead of duplicating it.
+ */
+export interface AttendanceMarkInput {
+  classId: string
+  date: string
+  records: AttendanceMarkEntry[]
+}

@@ -12,6 +12,7 @@ import {
   FeesPage,
   HomeworkPage,
   MaterialsPage,
+  MyReportsPage,
   NotFoundPage,
   NoticesPage,
   PermissionsPage,
@@ -40,6 +41,11 @@ export const privateRoutes: RouteObject[] = [
               { path: childPath(paths.students), element: <StudentsPage /> },
               { path: childPath(paths.reports), element: <ReportsPage /> },
             ],
+          },
+          {
+            // A student's own results and fees; the staff `/reports` and `/fees` are separate.
+            element: <RoleGuard allow={['STUDENT']} />,
+            children: [{ path: childPath(paths.myReports), element: <MyReportsPage /> }],
           },
           {
             element: <RoleGuard allow={['ADMIN']} />,

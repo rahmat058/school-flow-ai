@@ -214,6 +214,42 @@ export interface StudentCollectSummary {
   payments: PaymentHistoryRow[]
 }
 
+/** A student's own totals — `paid + pending = total`, so the three tiles can never disagree. */
+export interface StudentFeesSummary {
+  paidPaise: number
+  pendingPaise: number
+  totalPaise: number
+}
+
+/**
+ * `GET /fees/me` — the caller's own fees, resolved from the session. Deliberately narrower than
+ * `StudentCollectSummary`: raising invoices is a staff action, so there are no candidates here.
+ */
+export interface StudentFeesOverview {
+  studentName: string
+  className: string
+  admissionNo: string
+  rollNo: number | null
+  summary: StudentFeesSummary
+  /** Outstanding and partially paid demands, soonest due first. */
+  dues: StudentDueRow[]
+  /** Settled payments, newest first. */
+  payments: PaymentHistoryRow[]
+}
+
+/**
+ * The student's own Pay Now form's payload. The UTR is stored on the payment's `providerTxnId`,
+ * which is otherwise unused by the manual path.
+ */
+export interface StudentPaymentInput {
+  invoiceId: string
+  amountPaise: number
+  method: PaymentMethod
+  /** Transaction / UTR id. */
+  reference: string
+  remarks: string | null
+}
+
 export interface DayBookRow {
   id: string
   receiptNo: string
