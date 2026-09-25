@@ -125,7 +125,12 @@ import type {
 } from '@/types/people'
 import type { BackupJob, GradingScale, NotificationSettings, SecuritySettings, TermStructure } from '@/types/school'
 import type {
+  ChartPoint,
   IconTone,
+  ParentChild,
+  ParentDashboard,
+  ParentHomeworkRow,
+  ParentNotice,
   StatMetric,
   StudentAttendanceDay,
   StudentDashboard,
@@ -2623,6 +2628,176 @@ function studentDashboard(studentId: string): StudentDashboard | undefined {
   }
 }
 
+/**
+ * `GET /dashboard/parent?studentId=` — a guardian's view of **one** child. Every figure is the read
+ * model the child's own screens already use: the register totals behind the Attendance tab, the
+ * invoices behind Fee history, the published marks behind My Results, the class's assignments behind
+ * Homework and the papers behind Tests & exams. Because the child is one of the caller's own, the
+ * switcher and the payload cannot disagree about who is being read.
+ */
+function parentDashboard(parentId: string, requestedStudentId = ''): ParentDashboard | undefined {
+  const children: ParentChild[] = parentStudents
+    .filter((link) => link.parentId === parentId)
+    .flatMap((link) => {
+      const child = findStudent(link.studentId)
+      if (!child) return []
+
+      const classRoom = findClass(child.classId)
+      return [
+        {
+          id: child.id,
+          name: `${child.firstName} ${child.lastName}`,
+          className: classRoom ? classLabel(classRoom) : 'Unassigned',
+          rollNo: child.rollNo,
+        },
+      ]
+    })
+    .sort((left, right) => left.className.localeCompare(right.className) || left.name.localeCompare(right.name))
+
+  // A guardian may read only their own children.
+  const allowed = children.map((entry) => entry.id)
+  if (requestedStudentId && !allowed.includes(requestedStudentId)) return undefined
+
+  const child = children.find((entry) => entry.id === (requestedStudentId || allowed[0] || ''))
+  const student = child ? findStudent(child.id) : undefined
+  if (!child || !student || !student.classId) return undefined
+
+  const today = dateOffset(0)
+  const daysAway = (date: string): number => Math.round((Date.parse(date) - Date.parse(today)) / 86_400_000)
+
+  // Attendance — present and late count as attended, the rate the register, roster and reports share.
+  const totals = studentAttendance(child.id)?.totals ?? { total: 0, present: 0, absent: 0, late: 0, rate: 0 }
+
+  // Fees — billed net of concession, so the outstanding sum is what the guardian actually owes.
+  const invoices = feeInvoices.filter((invoice) => invoice.studentId === child.id)
+  const pendingInvoices = invoices.filter((invoice) => outstanding(invoice) > 0)
+  const pendingPaise = invoices.reduce((total, invoice) => total + outstanding(invoice), 0)
+  const fees: StudentInvoice[] = [...invoices]
+    .sort((left, right) => right.dueDate.localeCompare(left.dueDate))
+    .map((invoice) => ({
+      id: invoice.id,
+      title: findFeeHead(invoice.feeHeadId)?.name ?? 'Fee invoice',
+      receiptNo: invoice.receiptNo,
+      amountPaise: invoice.amountPaise,
+      paidPaise: invoice.paidPaise,
+      dueDate: invoice.dueDate,
+      status: invoice.status,
+    }))
+
+  // The child's published marks — the same rows their own My Results tab lists.
+  const results = studentExams(child.id)?.results ?? []
+  const recent = results.slice(0, 5)
+  const averageScore =
+    recent.length === 0 ? 0 : Math.round(recent.reduce((total, row) => total + row.percentage, 0) / recent.length)
+  // The chart plots the same rows the list beside it shows, oldest first, so the two cannot disagree.
+  const progress: ChartPoint[] = [...results]
+    .reverse()
+    .slice(-6)
+    .map((row) => ({ label: row.subjectName, value: row.percentage }))
+
+  // Assignments on the child's class they have not submitted, soonest due first.
+  const homework: ParentHomeworkRow[] = homeworkListItems()
+    .filter((assignment) => assignment.classId === student.classId)
+    .filter(
+      (assignment) =>
+        !homeworkSubmissions.some(
+          (submission) => submission.homeworkId === assignment.id && submission.studentId === child.id,
+        ),
+    )
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .slice(0, 4)
+    .map((assignment) => ({
+      id: assignment.id,
+      subjectName: assignment.subjectName,
+      title: assignment.title,
+      dueDate: assignment.dueDate,
+      daysAway: daysAway(assignment.dueDate),
+    }))
+
+  // The class's papers still ahead — the same schedule the child's Exams tab reads.
+  const upcomingExams: UpcomingExam[] = examSubjects
+    .filter((paper) => paper.examDate >= today)
+    .filter((paper) => exams.find((exam) => exam.id === paper.examId)?.classId === student.classId)
+    .sort((left, right) => left.examDate.localeCompare(right.examDate))
+    .slice(0, 4)
+    .map((paper) => {
+      const exam = exams.find((item) => item.id === paper.examId)
+
+      return {
+        id: paper.id,
+        title: `${findSubject(paper.subjectId)?.name ?? 'Subject'} — ${exam?.name ?? 'Exam'}`,
+        className: child.className,
+        date: paper.examDate,
+        daysAway: daysAway(paper.examDate),
+      }
+    })
+
+  // Published notices a guardian is in the audience of, narrowed to the child's class.
+  const parentNotices: ParentNotice[] = notices
+    .filter((notice) => notice.publishedAt !== null && notice.deletedAt === null)
+    .filter((notice) => notice.audience.includes('ALL') || notice.audience.includes('PARENTS'))
+    .filter((notice) => notice.classIds.length === 0 || notice.classIds.includes(student.classId as string))
+    .sort((left, right) => (right.publishedAt ?? '').localeCompare(left.publishedAt ?? ''))
+    .slice(0, 4)
+    .map((notice) => ({
+      id: notice.id,
+      title: notice.title,
+      body: notice.body,
+      publishedAt: notice.publishedAt ?? '',
+      priority: notice.priority,
+    }))
+
+  const attended = totals.present + totals.late
+  const attendanceTone: IconTone = totals.rate >= 85 ? 'success' : totals.rate >= 70 ? 'warning' : 'error'
+
+  const stats: StatMetric[] = [
+    {
+      id: 'attendance',
+      label: 'Attendance',
+      value: `${totals.rate}%`,
+      delta: `${attended}/${totals.total} days attended`,
+      icon: CalendarCheck,
+      iconTone: attendanceTone,
+    },
+    {
+      id: 'pending-fees',
+      label: 'Pending Fees',
+      value: formatPaise(pendingPaise),
+      delta: pendingInvoices.length === 0 ? 'All settled' : `${pendingInvoices.length} pending`,
+      icon: ReceiptIcon,
+      iconTone: pendingPaise > 0 ? 'error' : 'success',
+    },
+    {
+      id: 'average-score',
+      label: 'Avg Score',
+      value: `${averageScore}%`,
+      delta: recent.length === 0 ? 'No results yet' : `Last ${recent.length} ${recent.length === 1 ? 'exam' : 'exams'}`,
+      icon: TrendingUp,
+      iconTone: recent.length === 0 ? 'primary' : averageScore >= 60 ? 'success' : 'warning',
+    },
+    {
+      id: 'homework-due',
+      label: 'Homework Due',
+      value: String(homework.length),
+      delta: homework.length === 0 ? 'Nothing due' : 'Upcoming tasks',
+      icon: ClipboardList,
+      iconTone: homework.length === 0 ? 'primary' : 'warning',
+    },
+  ]
+
+  return {
+    children,
+    child,
+    stats,
+    progress,
+    results: recent,
+    homework,
+    fees,
+    exams: upcomingExams,
+    notices: parentNotices,
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // attendance — the month register. A student's own month and a class's are the same rows rolled up,
 // so the two screens cannot disagree about a day.
@@ -3252,6 +3427,26 @@ const routes: Route[] = [
 
       const summary = studentDashboard(user.profileId)
       return summary ? ok<StudentDashboard>(summary) : fail(404, 'DASHBOARD_NOT_FOUND', 'Student not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/dashboard/parent',
+    handler: ({ params, userId }) => {
+      const user = users.find((item) => item.id === userId)
+
+      // A guardian's own child — a staff or student account has no children to show.
+      if (user?.role !== 'PARENT' || !user.profileId) {
+        return fail(403, 'DASHBOARD_FORBIDDEN', 'This dashboard belongs to a guardian account')
+      }
+
+      const requested = params.studentId ? String(params.studentId) : ''
+      const summary = parentDashboard(user.profileId, requested)
+      if (summary) return ok<ParentDashboard>(summary)
+
+      return requested
+        ? fail(403, 'PARENT_FORBIDDEN', 'That student is not on your account')
+        : fail(404, 'DASHBOARD_NOT_FOUND', 'No children on this account')
     },
   },
   { method: 'GET', path: '/classes', handler: () => ok<ClassOption[]>(classChoices()) },

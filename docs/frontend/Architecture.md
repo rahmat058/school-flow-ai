@@ -29,6 +29,7 @@ frontend/
 │   │   ├── dashboard/        # the dashboard's role halves + the pieces they share
 │   │   │   ├── admin/        # OverviewHeader, the three charts, PendingFeesCard, RecentActivityCard, SchoolCalendarCard, AdminDashboard
 │   │   │   ├── student/      # StudentDashboard, TodayTimetableCard, StudentFeesCard, StudentAttendanceCard, StudentNoticesCard
+│   │   │   ├── parent/       # ParentDashboard, the child picker, AcademicProgressCard, RecentResultsCard, PendingHomeworkCard, FeeHistoryCard, ParentNoticesCard
 │   │   │   └── common/       # StatCard, StatGrid, UpcomingExamsCard, iconTone
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)

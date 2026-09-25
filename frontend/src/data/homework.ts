@@ -151,8 +151,10 @@ export const homeworkSubmissions: HomeworkSubmission[] = homework.flatMap((assig
   students
     .filter((student) => student.classId === assignment.classId)
     .map((student, studentOffset) => {
-      // Two of every three students have submitted; the rest are still pending.
-      if ((studentOffset + homeworkOffset) % 3 === 2) return null
+      // One student in three is still to hand in each assignment, and *which* one alternates by
+      // assignment — a fixed seat would leave the first student of every class with nothing pending,
+      // which is exactly the child the demo guardian opens.
+      if ((studentOffset + homeworkOffset) % 3 === 0) return null
 
       const isLate = (studentOffset + homeworkOffset) % 5 === 4
       const isGraded = (studentOffset + homeworkOffset) % 2 === 0

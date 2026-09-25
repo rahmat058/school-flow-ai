@@ -17,6 +17,7 @@
 
 - [ ] Dashboard analytics (stat cards, charts from real API)
 - [x] Student dashboard (own timetable, attendance, fees, exams and notices)
+- [x] Parent dashboard (the guardian's chosen child — attendance, fees, marks, homework, exams and notices)
 - [ ] Students / Teachers / Parents management tables + forms
 - [x] Classes & subjects management
 - [x] School settings page

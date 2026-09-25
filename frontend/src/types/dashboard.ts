@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { Role } from '@/types/auth'
 import type { AttendanceStatus } from '@/types/attendance'
 import type { NoticePriority } from '@/types/communication'
+import type { StudentResultRow } from '@/types/exams'
 import type { InvoiceStatus } from '@/types/fees'
 
 export type TrendDirection = 'up' | 'down'
@@ -175,4 +176,60 @@ export interface StudentDashboard {
   notices: StudentNotice[]
   fees: StudentFeeBreakdown
   attendance: StudentAttendanceOverview
+}
+
+/** One of a guardian's children — the parent dashboard's switcher and its header chip. */
+export interface ParentChild {
+  id: string
+  name: string
+  /** Display label, e.g. `1-A`. */
+  className: string
+  rollNo: number
+}
+
+/** An assignment on the child's class that they have not submitted yet. */
+export interface ParentHomeworkRow {
+  id: string
+  subjectName: string
+  title: string
+  /** ISO date (`YYYY-MM-DD`) — the late-submission boundary. */
+  dueDate: string
+  /** Whole days from today; negative once the due date has passed. */
+  daysAway: number
+}
+
+/** A published notice a guardian is in the audience of, with the body its list line shows. */
+export interface ParentNotice {
+  id: string
+  title: string
+  body: string
+  publishedAt: string
+  priority: NoticePriority
+}
+
+/**
+ * `GET /dashboard/parent?studentId=` — a guardian's view of **one** child in one payload. The child
+ * comes from the session's own children, so `studentId` may only name one of them; omitted, the
+ * first is used. Every figure reuses the read model the child's own screens already show — the
+ * register totals, the invoices, the published marks, the class's assignments — so a parent and
+ * their child cannot be shown different numbers.
+ */
+export interface ParentDashboard {
+  /** The guardian's children, so the screen can switch between them. */
+  children: ParentChild[]
+  child: ParentChild | null
+  /** Attendance, pending fees, average score and homework due. */
+  stats: StatMetric[]
+  /** One point per published result, oldest first — the child's scores over time. */
+  progress: ChartPoint[]
+  /** The child's published marks, newest first. */
+  results: StudentResultRow[]
+  /** Class assignments the child has not submitted. */
+  homework: ParentHomeworkRow[]
+  /** Every invoice raised against the child, newest due date first. */
+  fees: StudentInvoice[]
+  /** The class's papers still ahead, soonest first. */
+  exams: UpcomingExam[]
+  /** Published notices for a guardian, newest first. */
+  notices: ParentNotice[]
 }
