@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { ChartPoint } from '@/types/dashboard'
 
 interface ClassPerformanceChartProps {
@@ -57,7 +58,7 @@ export function ClassPerformanceChart({ performance }: ClassPerformanceChartProp
                   )
                 }}
               />
-              <Bar dataKey="value" maxBarSize={36} radius={[6, 6, 0, 0]} fill="#6366F1" isAnimationActive={false} />
+              <Bar dataKey="value" maxBarSize={36} radius={[6, 6, 0, 0]} fill="#6366F1" {...chartAnimation} />
             </BarChart>
           </ResponsiveContainer>
         </div>

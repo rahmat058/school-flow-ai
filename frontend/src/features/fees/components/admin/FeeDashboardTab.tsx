@@ -7,6 +7,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import { formatDate, formatPaise } from '@/lib/format'
 import { statCardShell, statGradientStyles, statMarkStyles } from '@/lib/statTone'
 import { ApiError } from '@/services/apiClient'
@@ -157,15 +158,9 @@ export function FeeDashboardTab() {
                   fill="#6366F1"
                   radius={[6, 6, 0, 0]}
                   maxBarSize={16}
-                  isAnimationActive={false}
+                  {...chartAnimation}
                 />
-                <Bar
-                  dataKey="pendingPaise"
-                  fill="#F59E0B"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={16}
-                  isAnimationActive={false}
-                />
+                <Bar dataKey="pendingPaise" fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={16} {...chartAnimation} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -201,7 +196,7 @@ export function FeeDashboardTab() {
                       )
                     }}
                   />
-                  <Bar dataKey="value" fill="#6366F1" radius={[6, 6, 0, 0]} maxBarSize={26} isAnimationActive={false} />
+                  <Bar dataKey="value" fill="#6366F1" radius={[6, 6, 0, 0]} maxBarSize={26} {...chartAnimation} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

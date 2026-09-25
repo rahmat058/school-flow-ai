@@ -1,4 +1,5 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { ChartPoint } from '@/types/dashboard'
 
 interface AttendanceChartProps {
@@ -50,7 +51,7 @@ export function AttendanceChart({ trend }: AttendanceChartProps) {
               strokeWidth={2.5}
               dot={{ r: 3, fill: '#6366F1', strokeWidth: 0 }}
               activeDot={{ r: 5, strokeWidth: 0 }}
-              isAnimationActive={false}
+              {...chartAnimation}
             />
           </LineChart>
         </ResponsiveContainer>

@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { StudentSubjectPerformance } from '@/types/exams'
 
 interface SubjectPerformanceChartProps {
@@ -54,13 +55,7 @@ export function SubjectPerformanceChart({ subjects }: SubjectPerformanceChartPro
                     )
                   }}
                 />
-                <Bar
-                  dataKey="percentage"
-                  maxBarSize={44}
-                  radius={[6, 6, 0, 0]}
-                  fill={PRIMARY}
-                  isAnimationActive={false}
-                />
+                <Bar dataKey="percentage" maxBarSize={44} radius={[6, 6, 0, 0]} fill={PRIMARY} {...chartAnimation} />
               </BarChart>
             </ResponsiveContainer>
           </div>

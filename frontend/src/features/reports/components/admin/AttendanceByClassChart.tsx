@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { AttendanceReportRow } from '@/types/reports'
 
 interface AttendanceByClassChartProps {
@@ -54,13 +55,7 @@ export function AttendanceByClassChart({ label, rows }: AttendanceByClassChartPr
                   )
                 }}
               />
-              <Bar
-                dataKey="percentage"
-                maxBarSize={36}
-                radius={[6, 6, 0, 0]}
-                fill="#6366F1"
-                isAnimationActive={false}
-              />
+              <Bar dataKey="percentage" maxBarSize={36} radius={[6, 6, 0, 0]} fill="#6366F1" {...chartAnimation} />
             </BarChart>
           </ResponsiveContainer>
         </div>

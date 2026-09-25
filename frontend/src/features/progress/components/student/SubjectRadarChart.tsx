@@ -1,4 +1,5 @@
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { ProgressSubjectRow } from '@/types/progress'
 
 interface SubjectRadarChartProps {
@@ -52,7 +53,7 @@ export function SubjectRadarChart({ subjects }: SubjectRadarChartProps) {
                 stroke={CLASS}
                 fill={CLASS}
                 fillOpacity={0.12}
-                isAnimationActive={false}
+                {...chartAnimation}
               />
               <Radar
                 name="Student"
@@ -60,7 +61,7 @@ export function SubjectRadarChart({ subjects }: SubjectRadarChartProps) {
                 stroke={STUDENT}
                 fill={STUDENT}
                 fillOpacity={0.28}
-                isAnimationActive={false}
+                {...chartAnimation}
               />
             </RadarChart>
           </ResponsiveContainer>

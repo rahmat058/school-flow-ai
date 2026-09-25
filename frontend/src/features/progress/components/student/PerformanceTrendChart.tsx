@@ -1,4 +1,5 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import { EXAM_TYPE_LABELS } from '@/lib/options'
 import type { ProgressTrendPoint } from '@/types/progress'
 
@@ -68,7 +69,7 @@ export function PerformanceTrendChart({ trend }: PerformanceTrendChartProps) {
                 strokeWidth={2}
                 dot={{ r: 4, fill: PRIMARY, strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
-                isAnimationActive={false}
+                {...chartAnimation}
               />
             </LineChart>
           </ResponsiveContainer>

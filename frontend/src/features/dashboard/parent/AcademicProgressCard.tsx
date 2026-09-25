@@ -1,4 +1,5 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import type { ChartPoint } from '@/types/dashboard'
 
 interface AcademicProgressCardProps {
@@ -64,7 +65,7 @@ export function AcademicProgressCard({ progress }: AcademicProgressCardProps) {
                 strokeWidth={2}
                 dot={{ r: 4, fill: PRIMARY, strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
-                isAnimationActive={false}
+                {...chartAnimation}
               />
             </LineChart>
           </ResponsiveContainer>

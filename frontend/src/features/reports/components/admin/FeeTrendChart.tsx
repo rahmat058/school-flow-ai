@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import { formatPaiseCompact } from '@/lib/format'
 import type { ReportTrendPoint } from '@/types/reports'
 
@@ -61,14 +62,8 @@ export function FeeTrendChart({ title, description, trend, action }: FeeTrendCha
                 )
               }}
             />
-            <Bar
-              dataKey="collectedPaise"
-              name="Collected"
-              fill={COLLECTED}
-              radius={[4, 4, 0, 0]}
-              isAnimationActive={false}
-            />
-            <Bar dataKey="pendingPaise" name="Pending" fill={PENDING} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="collectedPaise" name="Collected" fill={COLLECTED} radius={[4, 4, 0, 0]} {...chartAnimation} />
+            <Bar dataKey="pendingPaise" name="Pending" fill={PENDING} radius={[4, 4, 0, 0]} {...chartAnimation} />
           </BarChart>
         </ResponsiveContainer>
       </div>

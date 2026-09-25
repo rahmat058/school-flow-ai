@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartAnimation } from '@/lib/chart'
 import { cn } from '@/lib/cn'
 import { formatPaise } from '@/lib/format'
 import type { ChartPoint } from '@/types/dashboard'
@@ -107,7 +108,7 @@ export function CollectionChart({ monthly, quarterly, highlightedMonth }: Collec
             <Bar
               dataKey="value"
               maxBarSize={42}
-              isAnimationActive={false}
+              {...chartAnimation}
               activeBar={false}
               shape={(props) => <TrendBar {...props} highlightLabel={peakLabel} />}
             />
