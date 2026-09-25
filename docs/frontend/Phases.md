@@ -47,7 +47,7 @@
 
 - [ ] Notices & events feed
 - [ ] Real-time chat (Socket.io) with conversation list + message pane
-- [ ] AI assistant screens (chat, quiz, homework helper, generators)
+- [ ] AI assistant screens (chat, quiz, homework helper, generators) — the screen, its role-conditional tool rail and its rendered output shipped on mock data; the LLM calls remain
 
 **Done when:** two roles exchange real-time messages; AI features work end-to-end.
 

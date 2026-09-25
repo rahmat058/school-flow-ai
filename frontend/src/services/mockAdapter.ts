@@ -68,7 +68,7 @@ import type {
 } from '@/types/fees'
 import type { ChatMessageListItem, ConversationListItem, Notice, NoticePriority } from '@/types/communication'
 import type { PermissionGroupRow, StaffPermissionRow, UserPermissions } from '@/types/permission'
-import type { AiConversation, AiGeneration } from '@/types/ai'
+import type { AiContext, AiConversation, AiGeneration } from '@/types/ai'
 import type {
   Exam,
   ExamKind,
@@ -2240,8 +2240,34 @@ function generationOf(conversation: AiConversation): AiGeneration | undefined {
     feature: conversation.feature,
     title: conversation.title ?? 'Untitled generation',
     promptArgs: conversation.promptArgs,
+    // The turns travel with the read, because the chat tools render the thread rather than one reply.
+    messages: conversation.messages,
     output: reply.content,
     createdAt: conversation.createdAt,
+  }
+}
+
+/**
+ * `GET /ai/context` — what the assistant's own forms need to know about the caller. A student's
+ * tools fill a class from it (the class chip, the quiz's subject list) and cannot call the
+ * staff-only `/classes` or `/subjects` reads, so the assistant carries the class itself; staff have
+ * no class of their own and get the whole catalogue instead.
+ */
+function aiContextFor(user: AuthUser | undefined): AiContext {
+  if (user?.role === 'STUDENT' && user.classId) {
+    const classRoom = findClass(user.classId)
+
+    return {
+      classId: user.classId,
+      className: classRoom ? classLabel(classRoom) : null,
+      subjects: subjectsForClass(user.classId).map((subject) => ({ id: subject.id, name: subject.name })),
+    }
+  }
+
+  return {
+    classId: null,
+    className: null,
+    subjects: subjects.map((subject) => ({ id: subject.id, name: subject.name })),
   }
 }
 
@@ -5123,6 +5149,11 @@ const routes: Route[] = [
         ? fail(403, 'TIMETABLE_FORBIDDEN', 'That student is not on your account')
         : fail(404, 'TIMETABLE_NOT_FOUND', 'No timetable for this account')
     },
+  },
+  {
+    method: 'GET',
+    path: '/ai/context',
+    handler: ({ userId }) => ok<AiContext>(aiContextFor(users.find((item) => item.id === userId))),
   },
   {
     method: 'GET',

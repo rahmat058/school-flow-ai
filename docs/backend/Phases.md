@@ -58,7 +58,7 @@
 - [ ] Notices & events CRUD with audience targeting + publish side effects (socket broadcast + email)
 - [ ] Chat gateway: JWT handshake, `chat:join`/`chat:message`/`chat:typing`/`chat:read`, allowed-pair enforcement
 - [ ] Chat REST history: conversations, paginated messages, read receipts
-- [ ] AI module: 7 features (the `ai_feature` enum) with prompt templates, per-user rate limits, history in `ai_conversations`
+- [ ] AI module: 7 features (the `ai_feature` enum) with prompt templates — `/ai/chat` role-scoped (school insights for an admin, a tutor for a student) — per-user rate limits, history in `ai_conversations`, and the assistant's own `GET /ai/context`
 
 **Done when:** permitted role pairs chat in real time and every AI feature returns output.
 

@@ -1,38 +1,59 @@
 import { useState } from 'react'
-import { Copy } from 'lucide-react'
+import { Copy, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Textarea } from '@/components/ui/Textarea'
-import { useAiGenerations } from '@/features/ai/api'
+import { useAiContext, useAiGenerations } from '@/features/ai/api'
+import { useHomework } from '@/features/homework/api'
+import { AiMarkdown } from '@/features/ai/components/common/AiMarkdown'
 import type { AiTool, AiToolField } from '@/features/ai/lib/tools'
+import type { HomeworkListItem } from '@/types/homework'
 
-interface AiToolPanelProps {
+interface AiFormPanelProps {
   tool: AiTool
 }
 
 /**
- * One tool's screen: its header, its form and the newest result. The form is a design preview —
+ * One form tool's screen: its header, its form and the newest result. The form is a design preview —
  * generation arrives with the `AiModule`, so the action is inert rather than pretending to call it.
+ * The option lists are real though: a student's subjects come from their class context, and the
+ * homework picker from their own assignments.
  */
-export function AiToolPanel({ tool }: AiToolPanelProps) {
+export function AiFormPanel({ tool }: AiFormPanelProps) {
   const generations = useAiGenerations(tool.id)
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(tool.fields.map((field) => [field.name, ''])),
-  )
+  const context = useAiContext()
+  const [values, setValues] = useState<Record<string, string>>(() => initialValues(tool))
 
+  const latest = generations.data?.[0]
   const shortest = tool.fields.filter((field) => field.kind !== 'textarea')
   const longest = tool.fields.filter((field) => field.kind === 'textarea')
-  const latest = generations.data?.[0]
 
   function setValue(name: string, value: string) {
     setValues((current) => ({ ...current, [name]: value }))
   }
 
+  /** Picking an assignment copies its subject and description into the fields that want them. */
+  function pickHomework(field: AiToolField, item: HomeworkListItem) {
+    setValues((current) => {
+      const next: Record<string, string> = { ...current, [field.name]: item.id }
+      for (const [target, attribute] of Object.entries(field.prefill ?? {})) {
+        next[target] = String((item as unknown as Record<string, unknown>)[attribute] ?? '')
+      }
+      return next
+    })
+  }
+
   function renderField(field: AiToolField) {
-    const value = values[field.name] || (field.kind === 'select' ? (field.options?.[0] ?? '') : '')
+    const value = values[field.name] ?? ''
+
+    if (field.optionsFrom === 'homework') {
+      return (
+        <HomeworkSelect key={field.name} field={field} value={value} onPick={(item) => pickHomework(field, item)} />
+      )
+    }
 
     if (field.kind === 'textarea') {
       return (
@@ -48,12 +69,17 @@ export function AiToolPanel({ tool }: AiToolPanelProps) {
     }
 
     if (field.kind === 'select') {
+      const options =
+        field.optionsFrom === 'subjects'
+          ? (context.data?.subjects ?? []).map((subject) => ({ value: subject.id, label: subject.name }))
+          : (field.options ?? []).map((option) => ({ value: option, label: option }))
+
       return (
         <Select
           key={field.name}
           label={field.label}
-          placeholder={field.placeholder || 'Choose…'}
-          options={(field.options ?? []).map((option) => ({ value: option, label: option }))}
+          placeholder={field.optionsFrom === 'subjects' && context.isPending ? 'Loading subjects…' : field.placeholder}
+          options={options}
           value={value}
           onValueChange={(next) => setValue(field.name, next)}
         />
@@ -86,6 +112,13 @@ export function AiToolPanel({ tool }: AiToolPanelProps) {
           </div>
         </header>
 
+        {context.data?.className ? (
+          <p className="bg-canvas text-ink-muted mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium">
+            <GraduationCap className="size-3.5" strokeWidth={1.75} />
+            Class {context.data.className}
+          </p>
+        ) : null}
+
         <div className="mt-5 space-y-4">
           {shortest.length > 0 ? <div className="grid gap-4 sm:grid-cols-2">{shortest.map(renderField)}</div> : null}
           {longest.map(renderField)}
@@ -115,9 +148,9 @@ export function AiToolPanel({ tool }: AiToolPanelProps) {
             </Button>
           </header>
 
-          <pre className="text-ink overflow-x-auto p-5 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap">
-            {latest.output}
-          </pre>
+          <div className="p-5">
+            <AiMarkdown text={latest.output} />
+          </div>
         </section>
       ) : (
         <EmptyState
@@ -127,5 +160,45 @@ export function AiToolPanel({ tool }: AiToolPanelProps) {
         />
       )}
     </div>
+  )
+}
+
+/** The empty form: a static select opens on its first option, a data-backed one waits for a choice. */
+function initialValues(tool: AiTool): Record<string, string> {
+  return Object.fromEntries(
+    tool.fields.map((field) => [
+      field.name,
+      field.kind === 'select' && !field.optionsFrom ? (field.options?.[0] ?? '') : '',
+    ]),
+  )
+}
+
+/**
+ * The picker over the student's own assignments. It owns its query so no other tool's form fetches
+ * the homework list, and it hands back the whole row so the caller can prefill from it.
+ */
+function HomeworkSelect({
+  field,
+  value,
+  onPick,
+}: {
+  field: AiToolField
+  value: string
+  onPick: (item: HomeworkListItem) => void
+}) {
+  const homework = useHomework()
+  const items = homework.data ?? []
+
+  return (
+    <Select
+      label={field.label}
+      placeholder={homework.isPending ? 'Loading assignments…' : field.placeholder}
+      options={items.map((item) => ({ value: item.id, label: `${item.subjectName}: ${item.title}` }))}
+      value={value}
+      onValueChange={(next) => {
+        const picked = items.find((item) => item.id === next)
+        if (picked) onPick(picked)
+      }}
+    />
   )
 }

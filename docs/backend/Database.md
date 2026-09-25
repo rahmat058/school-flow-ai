@@ -1870,9 +1870,12 @@ erDiagram
 <!-- table: ai_conversations · module: AiModule · prd: §4.12 · phase: 5 · tenant: yes · soft-delete: no -->
 
 History per user per AI feature. `messages` is a JSONB array of `{ role, content, createdAt }` turns.
-Prompts are server-side templates, so raw user input is never forwarded to the LLM. For the four tool
-screens (quiz, homework helper, event planner, notice) a row **is** a generation: `prompt_args` keeps the
-form's own fields, and the reply is the text the panel renders.
+Prompts are server-side templates, so raw user input is never forwarded to the LLM. For the five tool
+screens (chat, quiz, homework helper, event planner, notice) a row **is** a generation: `prompt_args`
+keeps the form's own fields, and the reply is the text the panel renders. The read model returns
+`messages` alongside `output`, because the chat tools render the thread rather than one reply. Nothing
+new is stored for `GET /ai/context`: a student's class is `students.class_id` and its subjects are
+`class_subjects`, so that read is a projection over §3/§4 like the assistant's history is over this table.
 
 | Column        | Type          | Null | Key | Notes                 |
 | ------------- | ------------- | ---- | --- | --------------------- |

@@ -227,4 +227,37 @@ Bright Future School`,
     createdAt: dateTimeOffset(-3, 12, 0),
     updatedAt: dateTimeOffset(-3, 12, 4),
   },
+  {
+    id: 'aic_7',
+    schoolId: SCHOOL_ID,
+    userId: 'usr_admin_1',
+    feature: 'CHAT',
+    title: 'How is this term tracking?',
+    promptArgs: { question: 'How is this term tracking?' },
+    messages: [
+      { role: 'user', content: 'How is this term tracking?' },
+      {
+        role: 'assistant',
+        content: `Here is where the school stands on the three signals the dashboard tracks.
+
+## 1. Attendance
+| Signal | Reading | What it means |
+| --- | --- | --- |
+| **Register rate** | holding in the high 80s | the present-and-late share across every class's register |
+| **Weakest classes** | those with no register day this month | a class is only as current as its last mark, so an untaken register reads low |
+
+## 2. Fee collection
+- **Collected** is running ahead of the same point last term.
+- The **defaulter list** is led by invoices past their due date — chase those rows first.
+
+## 3. Results
+- Published report cards put the **class averages** within a normal spread.
+- A paper only counts once its exam is published, so an unpublished test is in no average yet.
+
+**Next step:** open *Fees → Reports → Defaulters* and work the list top-down; it is sorted by how far past due each balance is.`,
+      },
+    ],
+    createdAt: dateTimeOffset(-1, 11, 5),
+    updatedAt: dateTimeOffset(-1, 11, 12),
+  },
 ]

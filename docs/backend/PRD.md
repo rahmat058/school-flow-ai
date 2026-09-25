@@ -479,22 +479,29 @@ Concessions
 
 **Endpoints** — the seven `ai_feature` values from `Database.md`, one endpoint each: a server-side prompt template plus a throttled LLM call, history in `ai_conversations`
 
-- [ ] `POST /api/v1/ai/chat` — school insights (admin): DB aggregates via Supabase RPC, answered by the LLM `(admin)`
+- [ ] `POST /api/v1/ai/chat` — the general assistant, with a **role-scoped prompt template**: for an admin it answers **school insights** grounded in DB aggregates (via Supabase RPC), for a student it is an **academic tutor** answering with their own class and subjects in mind `(admin, student)`
 - [ ] `POST /api/v1/ai/report-comment` — report card comment generator `(admin, teacher)`
 - [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator `(admin)`
 - [ ] `POST /api/v1/ai/notice` — notice drafting: takes the notice **type** and the **details**, returns the announcement text `(admin)`
 - [ ] `POST /api/v1/ai/event-plan` — event planner: takes the event **name**, **type**, **date**, expected **participants** and **budget**, returns a full plan (objectives, hour-by-hour timeline, budget split, checklist) `(admin)`
 - [ ] `POST /api/v1/ai/homework-help` — student homework helper: takes an optional **subject** and the **question**, returns a step-by-step explanation `(student)`
-- [ ] `POST /api/v1/ai/quiz` — quiz generator: takes **subject**, **topic** and the **question count**, returns the questions with their options `(student, teacher)`
-- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by `feature`, newest first. Each row is the **generation read model**: `id`, `feature`, `title`, `promptArgs` (the tool form's fields, so a past run can be reopened with its inputs), `output` (the last reply) and `createdAt` `(authenticated)`
+- [ ] `POST /api/v1/ai/quiz` — quiz generator: takes **subject**, **topic** and the **question count**, returns the questions with their options `(admin, student, teacher)`
+- [ ] `GET /api/v1/ai/conversations` — the caller's own history, optionally filtered by `feature`, newest first. Each row is the **generation read model**: `id`, `feature`, `title`, `promptArgs` (the tool form's fields, so a past run can be reopened with its inputs), `messages` (the stored turns, oldest first — the chat tools render the thread), `output` (the last reply) and `createdAt` `(authenticated)`
+- [ ] `GET /api/v1/ai/context` — what the assistant's own forms need to know about the caller: for a **student**, their class (`classId`, `className`) and the subjects it runs, so the quiz's subject picker and the class chip need no access to the staff-only `/classes` or `/subjects` reads; for **staff** there is no class of their own, so the **whole subject catalogue** comes back instead `(authenticated)`
 
 **Behavior**
 
 - Server-side prompt templates per feature; no raw user prompts to LLM
 - Rate-limited per user (`@Throttle`); conversation history stored in `AiConversation` (JSONB messages)
-- Four of the seven features own a screen (quiz, homework helper, event planner, notice) and each is offered
-  only to the roles `§2` allows — a teacher sees the quiz, a student the quiz and the homework helper, and a
-  guardian none of them
+- **Five** of the seven features own a screen (chat, quiz, homework helper, event planner, notice) and each is
+  offered only to the roles `§2` allows — an admin sees the tutor, the quiz, the event planner and the notice
+  generator; a teacher the quiz; a student the tutor, the quiz and the homework helper; a guardian none of them.
+  `/ai/chat` is **one feature with a role-scoped template** rather than two: school insights for an admin, an
+  academic tutor for a student
+- The assistant's forms are filled from the **caller's own context**, never from the staff-only reads: a
+  student's quiz subjects and class chip come from `GET /ai/context`, and the homework picker from their own
+  `GET /homework` (already role-scoped). Choosing an assignment copies its subject and description into the
+  form, so a student does not retype what the assignment already says
 - A generation is two turns — the template-filled prompt, then the reply — and `prompt_args` keeps the form's
   own fields alongside them, so the tool can be re-run with the same inputs
 - School insights grounded in real DB aggregations (attendance %, fee collection, performance)

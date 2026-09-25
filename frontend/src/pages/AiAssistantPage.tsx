@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Bot, Sparkles } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCurrentUser } from '@/store/auth'
-import { AiToolList } from '@/features/ai/components/admin/AiToolList'
-import { AiToolPanel } from '@/features/ai/components/admin/AiToolPanel'
+import { AiChatPanel } from '@/features/ai/components/common/AiChatPanel'
+import { AiFormPanel } from '@/features/ai/components/common/AiFormPanel'
+import { AiToolList } from '@/features/ai/components/common/AiToolList'
 import { aiToolsForRole } from '@/features/ai/lib/tools'
 import type { AiToolId } from '@/types/ai'
 
 export function AiAssistantPage() {
   const user = useCurrentUser()
-  // The contract scopes each feature to a role, so the rail shows only the tools this caller may use.
+  // The contract scopes each feature to a role, so a student sees their three tools and staff theirs.
   const tools = aiToolsForRole(user?.role)
   const [picked, setPicked] = useState<AiToolId | null>(null)
   const active = tools.find((tool) => tool.id === picked) ?? tools[0] ?? null
@@ -35,7 +36,11 @@ export function AiAssistantPage() {
           <AiToolList tools={tools} activeId={active.id} onSelect={setPicked} />
 
           {/* Keyed on the tool so its form starts empty rather than carrying the last one's values. */}
-          <AiToolPanel key={active.id} tool={active} />
+          {active.panel === 'chat' ? (
+            <AiChatPanel key={active.id} tool={active} />
+          ) : (
+            <AiFormPanel key={active.id} tool={active} />
+          )}
         </div>
       )}
     </div>
