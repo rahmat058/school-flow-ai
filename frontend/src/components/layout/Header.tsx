@@ -3,26 +3,31 @@ import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/hooks/useToast'
 import { useCurrentUser } from '@/store/auth'
 import { useLogout } from '@/features/auth/api'
+import { useCurrentSchool } from '@/features/school/api'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { NotificationBell } from '@/components/layout/NotificationBell'
+import { BRAND } from '@/lib/brand'
 import { AnimatePresence, motion } from 'motion/react'
 import type { DropdownItemConfig } from '@/components/ui/Dropdown'
-import { CircleHelp, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
+import { Building2, CircleHelp, LogOut, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 
 interface HeaderProps {
-  title: string
   onMenuClick: () => void
   /** Desktop rail state — ignored on small screens, where the sidebar is a drawer instead. */
   sidebarCollapsed: boolean
   onToggleSidebar: () => void
 }
 
-export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }: HeaderProps) {
+export function Header({ onMenuClick, sidebarCollapsed, onToggleSidebar }: HeaderProps) {
   const user = useCurrentUser()
+  const school = useCurrentSchool()
   const logout = useLogout()
   const navigate = useNavigate()
   const { toast } = useToast()
+
+  // The caller's school, not their name — the account menu beside it already carries who they are.
+  const schoolName = school.data?.name ?? BRAND.name
 
   const menuItems: DropdownItemConfig[] = [
     {
@@ -106,9 +111,12 @@ export function Header({ title, onMenuClick, sidebarCollapsed, onToggleSidebar }
 
         <span className="bg-line mx-2 hidden h-6 w-px sm:block" />
 
-        <p className="text-ink hidden max-w-40 truncate text-[14px] font-medium sm:block">
-          {user ? `${user.firstName} ${user.lastName}` : title}
-        </p>
+        {/* The school, not the person: the avatar menu beside it already names the account, and the
+            tenant is what a header is worth stating. Static because there is one school to be in. */}
+        <span className="border-line bg-canvas text-ink hidden items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-medium sm:inline-flex">
+          <Building2 className="text-ink-subtle size-4 shrink-0" strokeWidth={1.75} />
+          <span className="max-w-40 truncate">{schoolName}</span>
+        </span>
 
         {user ? (
           <Dropdown

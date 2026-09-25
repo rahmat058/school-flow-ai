@@ -51,11 +51,14 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
             'flex items-center gap-3 pt-7 pb-6 transition-[padding] duration-200 ease-out',
             collapsed ? 'lg:justify-center lg:px-3' : 'lg:px-6',
           )}>
-          <span
-            aria-hidden="true"
-            className="bg-primary-soft text-primary inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
-            <School className="size-4.5" strokeWidth={1.75} />
-          </span>
+          {/* The heading collapses to its icon, so the name it stands for comes back on hover. */}
+          <Tooltip content={schoolName} side="right" disabled={!collapsed}>
+            <span
+              aria-hidden="true"
+              className="bg-primary-soft text-primary inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <School className="size-4.5" strokeWidth={1.75} />
+            </span>
+          </Tooltip>
 
           <div
             className={cn(
@@ -116,27 +119,36 @@ export function Sidebar({ open, onClose, collapsed }: SidebarProps) {
             collapsed ? 'lg:px-2' : 'lg:px-4',
           )}>
           {user ? (
-            <div className={cn('flex items-center gap-3', collapsed && 'lg:justify-center lg:gap-2')}>
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
+            // Icon-only mode **stacks** the two controls: side by side they overflow a 76px rail.
+            <div className={cn('flex items-center gap-3', collapsed && 'lg:flex-col lg:justify-center lg:gap-2.5')}>
+              <Tooltip content={`${user.firstName} ${user.lastName}`} side="right" disabled={!collapsed}>
+                <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
+              </Tooltip>
+
               <div
                 className={cn(
-                  'min-w-0 flex-1 overflow-hidden transition-[max-width,opacity] duration-200 ease-out',
-                  collapsed ? 'lg:max-w-0 lg:opacity-0' : 'lg:max-w-37.5 lg:opacity-100',
+                  // The hidden block collapses on **both** axes, so it takes no height in the column.
+                  'min-w-0 flex-1 overflow-hidden transition-[max-width,max-height,opacity] duration-200 ease-out',
+                  collapsed ? 'lg:max-h-0 lg:max-w-0 lg:opacity-0' : 'lg:max-w-37.5 lg:opacity-100',
                 )}>
                 <p className="text-ink truncate text-[13px] font-medium">
                   {user.firstName} {user.lastName}
                 </p>
                 <p className="text-ink-subtle text-[11px]">{humanizeEnum(user.role)}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => logout.mutate()}
-                disabled={logout.isPending}
-                aria-label="Sign out"
-                title="Sign out"
-                className="text-ink-subtle hover:bg-primary-soft hover:text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
-                <LogOut className="size-4" strokeWidth={1.75} />
-              </button>
+
+              <Tooltip content="Sign out" side="right" disabled={!collapsed}>
+                <button
+                  type="button"
+                  onClick={() => logout.mutate()}
+                  disabled={logout.isPending}
+                  aria-label="Sign out"
+                  // The native hint stands in while the rail is wide, where the tooltip is off.
+                  title={collapsed ? undefined : 'Sign out'}
+                  className="text-ink-subtle hover:bg-primary-soft hover:text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
+                  <LogOut className="size-4" strokeWidth={1.75} />
+                </button>
+              </Tooltip>
             </div>
           ) : null}
         </div>

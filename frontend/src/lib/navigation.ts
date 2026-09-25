@@ -60,16 +60,3 @@ export function navItemsForRole(role: Role | null | undefined): NavItem[] {
   if (!role) return []
   return navItems.filter((item) => item.roles.includes(role))
 }
-
-/**
- * Longest-prefix match so `/students/std_1` still highlights "Students"; `/` matches exactly.
- * Passing a role resolves the item that role actually has — `/exams` is "Results" to a guardian and
- * "Tests & exams" to everyone else, and the header title follows the sidebar, not the first entry.
- */
-export function findNavItem(pathname: string, role?: Role | null): NavItem | undefined {
-  const candidates = role ? navItemsForRole(role) : navItems
-  const matches = candidates.filter((item) =>
-    item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(`${item.href}/`),
-  )
-  return matches.sort((left, right) => right.href.length - left.href.length)[0]
-}
