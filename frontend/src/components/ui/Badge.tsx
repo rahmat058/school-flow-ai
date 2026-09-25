@@ -1,8 +1,9 @@
 import { cn } from '@/lib/cn'
 import { humanizeEnum } from '@/lib/format'
+import { EXAM_TYPE_LABELS } from '@/lib/options'
 import type { NoticePriority } from '@/types/communication'
 import type { AttendanceStatus } from '@/types/attendance'
-import type { ExamStatus } from '@/types/exams'
+import type { ExamStatus, ExamType } from '@/types/exams'
 import type { RecordStatus, FeeStanding } from '@/types/people'
 import type { InvoiceStatus, PaymentStatus } from '@/types/fees'
 
@@ -83,6 +84,23 @@ export function AttendanceBadge({ status }: AttendanceBadgeProps) {
         attendanceStyles[status],
       )}>
       {humanizeEnum(status)}
+    </span>
+  )
+}
+
+/**
+ * An exam's type — a category, not a state, so it carries one informational tint rather than a
+ * semantic one: a `FINAL` is not an error and a `UNIT` test is not a warning. Shared so the three
+ * grids that render it (both staff exam tables and the student's cards and results) agree.
+ */
+interface ExamTypeBadgeProps {
+  type: ExamType
+}
+
+export function ExamTypeBadge({ type }: ExamTypeBadgeProps) {
+  return (
+    <span className="bg-primary-soft text-primary inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap">
+      {EXAM_TYPE_LABELS[type]}
     </span>
   )
 }

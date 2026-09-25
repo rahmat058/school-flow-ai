@@ -1,13 +1,12 @@
 import { Fragment, useState } from 'react'
 import { BookOpen, ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { StatusBadge } from '@/components/ui/Badge'
+import { ExamTypeBadge, StatusBadge } from '@/components/ui/Badge'
 import { Dropdown } from '@/components/ui/Dropdown'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
-import { EXAM_TYPE_LABELS } from '@/lib/options'
 import type { ExamListItem } from '@/types/exams'
 
 interface ExamTableProps {
@@ -78,9 +77,7 @@ export function ExamTable({ rows, canManage, loading, onEdit, onDelete }: ExamTa
                   </TableCell>
                   <TableCell className="text-ink-muted">{exam.className}</TableCell>
                   <TableCell>
-                    <span className="bg-canvas text-ink-muted inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                      {EXAM_TYPE_LABELS[exam.type]}
-                    </span>
+                    <ExamTypeBadge type={exam.type} />
                   </TableCell>
                   <TableCell className="text-ink-muted whitespace-nowrap">
                     {formatDate(exam.startDate, 'dd MMM yyyy')}

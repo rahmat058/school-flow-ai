@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
-import { StatusBadge } from '@/components/ui/Badge'
+import { ExamTypeBadge, StatusBadge } from '@/components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { formatDate } from '@/lib/format'
-import { EXAM_TYPE_LABELS } from '@/lib/options'
 import { ExamCountdown } from '@/features/exams/components/student/ExamCountdown'
 import type { StudentExamRow } from '@/types/exams'
 
@@ -25,9 +24,7 @@ export function StudentExamsTab({ exams }: StudentExamsTabProps) {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="font-display text-ink text-[20px] font-semibold tracking-[-0.03em]">{exam.name}</h2>
-                  <span className="bg-canvas text-ink-muted inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                    {EXAM_TYPE_LABELS[exam.type]}
-                  </span>
+                  <ExamTypeBadge type={exam.type} />
                 </div>
                 {exam.description ? <p className="text-ink-muted mt-1 text-[13px]">{exam.description}</p> : null}
               </div>

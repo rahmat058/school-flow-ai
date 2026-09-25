@@ -236,7 +236,16 @@ function MarksGrid({ examId }: { examId: string | null }) {
               <span className="text-ink-subtle text-[11.5px]">
                 ({formatDate(subject.examDate, 'd MMM yyyy')} · {subject.maxMarks}M)
               </span>
-              <span className="bg-canvas text-ink-muted rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums">
+              <span
+                className={cn(
+                  'rounded-full px-1.5 py-0.5 text-[10.5px] font-medium tabular-nums',
+                  // Nothing entered yet is not a state, so it stays neutral; a full subject reads green.
+                  subject.enteredCount === 0
+                    ? 'bg-canvas text-ink-muted'
+                    : subject.enteredCount === data.students.length
+                      ? 'bg-success-soft text-success'
+                      : 'bg-orange-soft text-warning',
+                )}>
                 {subject.enteredCount}/{data.students.length}
               </span>
             </button>

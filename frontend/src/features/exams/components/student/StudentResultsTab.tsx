@@ -1,9 +1,8 @@
-import { StatusBadge } from '@/components/ui/Badge'
+import { ExamTypeBadge, StatusBadge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { cn } from '@/lib/cn'
 import { formatDate } from '@/lib/format'
-import { EXAM_TYPE_LABELS } from '@/lib/options'
 import type { StudentExamsSummary, StudentResultRow, StudentSubjectPerformance } from '@/types/exams'
 
 interface StudentResultsTabProps {
@@ -44,7 +43,7 @@ export function StudentResultsTab({ results, summary, performance }: StudentResu
                 <TableHead>Date</TableHead>
                 <TableHead align="right">Obtained</TableHead>
                 <TableHead align="right">Out of</TableHead>
-                <TableHead align="right">Percentage</TableHead>
+                <TableHead>Percentage</TableHead>
                 <TableHead align="right">Grade</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -65,9 +64,7 @@ export function StudentResultsTab({ results, summary, performance }: StudentResu
                   <TableCell className="text-ink-muted">{row.subjectName}</TableCell>
 
                   <TableCell>
-                    <span className="bg-canvas text-ink-muted inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                      {EXAM_TYPE_LABELS[row.examType]}
-                    </span>
+                    <ExamTypeBadge type={row.examType} />
                   </TableCell>
 
                   <TableCell className="text-ink-muted whitespace-nowrap">
@@ -79,8 +76,17 @@ export function StudentResultsTab({ results, summary, performance }: StudentResu
                   <TableCell align="right" className="tabular-nums">
                     {row.total}
                   </TableCell>
-                  <TableCell align="right" className="tabular-nums">
-                    {row.percentage}%
+                  <TableCell>
+                    {/* The share draws as a slim bar with its percentage beside it, left-anchored like the
+                        roster's attendance bar — a right-anchored track reads as filling backwards. */}
+                    <div className="flex items-center gap-2.5">
+                      <Progress
+                        className="w-16 shrink-0"
+                        value={row.percentage}
+                        tone={row.result === 'PASS' ? 'success' : 'error'}
+                      />
+                      <span className="text-ink text-[12.5px] font-medium tabular-nums">{row.percentage}%</span>
+                    </div>
                   </TableCell>
                   <TableCell align="right">
                     <span className="text-ink font-medium">{row.grade}</span>

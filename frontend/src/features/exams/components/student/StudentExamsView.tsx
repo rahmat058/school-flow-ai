@@ -3,6 +3,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { StatGrid } from '@/components/dashboard/common/StatGrid'
+import { cn } from '@/lib/cn'
 import { ApiError } from '@/services/apiClient'
 import { useStudentExams } from '@/features/exams/api'
 import { StudentExamsTab } from '@/features/exams/components/student/StudentExamsTab'
@@ -53,7 +54,7 @@ export function StudentExamsView() {
             <span className="flex items-center gap-2">
               <ClipboardList className="size-4" strokeWidth={1.75} />
               Tests
-              <TabCount value={data.counts.tests} />
+              <TabCount value={data.counts.tests} tone="warning" />
             </span>
           </Tab>
 
@@ -61,7 +62,7 @@ export function StudentExamsView() {
             <span className="flex items-center gap-2">
               <GraduationCap className="size-4" strokeWidth={1.75} />
               Exams
-              <TabCount value={data.counts.exams} />
+              <TabCount value={data.counts.exams} tone="primary" />
             </span>
           </Tab>
 
@@ -69,7 +70,7 @@ export function StudentExamsView() {
             <span className="flex items-center gap-2">
               <ChartColumn className="size-4" strokeWidth={1.75} />
               My Results
-              <TabCount value={data.counts.results} />
+              <TabCount value={data.counts.results} tone="success" />
             </span>
           </Tab>
         </TabList>
@@ -91,6 +92,16 @@ export function StudentExamsView() {
 }
 
 /** The record's size beside the tab label — e.g. "Tests 3". */
-function TabCount({ value }: { value: number }) {
-  return <span className="bg-canvas text-ink-muted rounded-full px-2 py-0.5 text-[11px] font-medium">{value}</span>
+const countTones = {
+  warning: 'bg-orange-soft text-warning',
+  primary: 'bg-primary-soft text-primary',
+  success: 'bg-success-soft text-success',
+} as const
+
+function TabCount({ value, tone }: { value: number; tone: keyof typeof countTones }) {
+  return (
+    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums', countTones[tone])}>
+      {value}
+    </span>
+  )
 }
