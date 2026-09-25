@@ -1,6 +1,7 @@
-import { BookMarked, LayoutGrid, Link2 } from 'lucide-react'
+import { BookMarked, LayoutGrid, Link2, Table } from 'lucide-react'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { AssignSubjectsTab } from '@/features/subjects/components/admin/AssignSubjectsTab'
+import { MatrixTab } from '@/features/subjects/components/admin/MatrixTab'
 import { SubjectsTab } from '@/features/subjects/components/admin/SubjectsTab'
 import { SummaryTab } from '@/features/subjects/components/admin/SummaryTab'
 
@@ -8,6 +9,7 @@ const TABS = [
   { value: 'subjects', label: 'Subjects', icon: BookMarked },
   { value: 'assign', label: 'Assign Subjects', icon: Link2 },
   { value: 'summary', label: 'Summary', icon: LayoutGrid },
+  { value: 'matrix', label: 'Matrix', icon: Table },
 ] as const
 
 /** The subject catalogue and the class × subject assignment over it. Only the open tab queries. */
@@ -41,6 +43,9 @@ export function SubjectClassPage() {
         </TabPanel>
         <TabPanel value="summary">
           <SummaryTab />
+        </TabPanel>
+        <TabPanel value="matrix">
+          <MatrixTab />
         </TabPanel>
       </Tabs>
     </div>
