@@ -19,6 +19,16 @@
   --color-error: #ef4444;
   --color-error-soft: #fef2f2;
   --color-orange-soft: #fff7ed;
+  /* Stat-card gradients — light → deep, one pair per metric tone. Scoped to stat cards, where the
+     fill carries the metric's meaning; nothing else in the app is gradient-filled. */
+  --color-stat-primary-light: #818cf8;
+  --color-stat-primary-deep: #4f46e5;
+  --color-stat-success-light: #34d399;
+  --color-stat-success-deep: #047857;
+  --color-stat-warning-light: #fbbf24;
+  --color-stat-warning-deep: #b45309;
+  --color-stat-error-light: #f87171;
+  --color-stat-error-deep: #b91c1c;
   --color-scrollbar-thumb: rgb(10 10 10 / 0.14);
   --color-scrollbar-thumb-hover: rgb(10 10 10 / 0.28);
 
