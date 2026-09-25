@@ -378,6 +378,7 @@ Concessions
 
 - [ ] `POST /api/v1/exams` — schedule one class's assessment: `kind: TEST` takes a single `subjectId` with its date, total marks and duration; `kind: EXAM` takes a `subjects[]` set, each paper carrying its own date, marks and duration `(admin, teacher)`
 - [ ] `GET /api/v1/exams` — filter by `kind` (TEST/EXAM), `classId`, `subjectId`, type and status `(admin, teacher, student, parent of child)`
+- [ ] `GET /api/v1/exams/me` — the **student's own** tests, exams and marks in one payload: the class's tests, exam windows and papers still ahead (each with its countdown), the published marks with their summary, and each subject's average; the tab counts and the four headline figures come off the same read `(student)` — 403 `EXAM_FORBIDDEN` for every other role
 - [ ] `GET /api/v1/exams/:id` — exam with its subjects `(admin, teacher, student, parent of child)`
 - [ ] `GET /api/v1/exams/:id/results` — the marks sheet: every subject with its entry count, the class roster and every entry so far, so the grid loads all subjects at once `(admin, teacher)`
 - [ ] `PATCH /api/v1/exams/:id` — edit; the body replaces the subject set whole, and a published exam is refused with 409 `EXAM_PUBLISHED` `(admin, teacher)`
@@ -400,6 +401,8 @@ Concessions
   mark — it does not affect the grade
 - Grade computation from school grading scheme (JSONB in School.settings)
 - Results locked after publish; unpublish is admin-only
+- `exams/me` is **self-scoped**: the student comes from the session, every row is drawn from their own class, and **only published marks are returned** — a result a teacher has not published is not yet the student's to read. It reuses the same rows the staff reads do, so a student's screen and the marks sheet cannot disagree
+- The student's lists are the **upcoming** papers and windows, soonest first, while each tab's count is the whole record the class holds — a test already sat still counts in "Tests" but leaves the upcoming list, which is why a tab can read "Tests 2" over a single row
 
 ### 4.10 Real-Time Communication (`ChatModule` — Socket.io Gateway)
 

@@ -6,6 +6,7 @@ import type {
   ExamType,
   ResultEntryInput,
   ResultSheet,
+  StudentExams,
   TestInput,
   TestListItem,
 } from '@/types/exams'
@@ -22,9 +23,18 @@ export interface ExamListQuery {
 
 export const examKeys = {
   all: ['exams'] as const,
+  me: () => [...examKeys.all, 'me'] as const,
   tests: (query: TestListQuery) => [...examKeys.all, 'tests', query] as const,
   exams: (query: ExamListQuery) => [...examKeys.all, 'exams', query] as const,
   results: (examId: string) => [...examKeys.all, 'results', examId] as const,
+}
+
+/** The student's own tests, exams and published marks — `GET /exams/me`. */
+export function useStudentExams() {
+  return useQuery({
+    queryKey: examKeys.me(),
+    queryFn: async (): Promise<StudentExams> => (await get<StudentExams>('/exams/me')).data,
+  })
 }
 
 /** Single-subject tests — `GET /exams?kind=TEST`. */

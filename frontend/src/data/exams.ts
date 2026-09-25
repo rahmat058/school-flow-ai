@@ -2,7 +2,7 @@ import type { Exam, ExamResult, ExamSubject, ReportCard } from '@/types/exams'
 import { SCHOOL_ID, dateOffset, dateTimeOffset } from '@/data/seed'
 import { classes } from '@/data/classes'
 import { students } from '@/data/students'
-import { classSubjectFor, subjectForClassCode, subjectsForClass } from '@/data/subjects'
+import { classSubjectFor, subjectsForClass } from '@/data/subjects'
 import { gradeForPercentage } from '@/lib/grades'
 
 const MAX_MARKS = 100
@@ -13,13 +13,44 @@ const TEST_DURATION_MIN = 40
 
 const TODAY = dateOffset(0)
 
-/** Single-subject class tests — the Tests tab's rows, drawn one subject from the class's catalogue. */
-const TEST_SEEDS = [
-  { classOffset: 8, subjectCode: 'ENG', title: 'English Class Test 1', examDate: dateOffset(-6), maxMarks: 20 },
-  { classOffset: 8, subjectCode: 'SST', title: 'Social Science Class Test 1', examDate: dateOffset(4), maxMarks: 20 },
-  { classOffset: 3, subjectCode: 'MATH', title: 'Mathematics Class Test 1', examDate: dateOffset(-2), maxMarks: 25 },
-  { classOffset: 12, subjectCode: 'CS', title: 'Computer Science Class Test 1', examDate: dateOffset(6), maxMarks: 20 },
-]
+/** One class test: a single subject sat on a single date. */
+interface TestSeed {
+  classId: string
+  subjectId: string
+  title: string
+  examDate: string
+  maxMarks: number
+}
+
+/**
+ * Two tests per class — one already sat and one still ahead — drawn from that class's own catalogue
+ * and rotated by class so the titles vary. Every class needs a record: a student's Tests tab reads
+ * their own class only, and a demo login in a class with no tests would open on an empty screen.
+ */
+const TEST_SEEDS: TestSeed[] = classes.flatMap((classRoom, classOffset) => {
+  const subjects = subjectsForClass(classRoom.id)
+  if (subjects.length === 0) return []
+
+  const sat = subjects[classOffset % subjects.length]
+  const ahead = subjects[(classOffset + 1) % subjects.length]
+
+  return [
+    {
+      classId: classRoom.id,
+      subjectId: sat.id,
+      title: `${sat.name} Class Test 1`,
+      examDate: dateOffset(-6 - (classOffset % 5)),
+      maxMarks: 20,
+    },
+    {
+      classId: classRoom.id,
+      subjectId: ahead.id,
+      title: `${ahead.name} Class Test 2`,
+      examDate: dateOffset(4 + (classOffset % 5)),
+      maxMarks: 20,
+    },
+  ]
+})
 
 /**
  * Every assessment on record. **Tests and exams share this table**, told apart by `kind`: a test is
@@ -58,7 +89,7 @@ export const exams: Exam[] = [
   ...TEST_SEEDS.map((seed, offset) => ({
     id: `test_${offset + 1}`,
     schoolId: SCHOOL_ID,
-    classId: classes[seed.classOffset].id,
+    classId: seed.classId,
     name: seed.title,
     kind: 'TEST' as const,
     type: 'UNIT' as const,
@@ -66,7 +97,7 @@ export const exams: Exam[] = [
     endDate: seed.examDate,
     description: 'Single-subject class test.',
     isPublished: seed.examDate <= TODAY,
-    publishedAt: seed.examDate <= TODAY ? dateTimeOffset(-1, 16, 0) : null,
+    publishedAt: seed.examDate <= TODAY ? dateTimeOffset(-1, 16, 0) : (null as string | null),
   })),
 ]
 
@@ -87,23 +118,16 @@ export const examSubjects: ExamSubject[] = [
         durationMin: unit ? UNIT_DURATION_MIN : EXAM_DURATION_MIN,
       }))
     }),
-  ...TEST_SEEDS.flatMap((seed, offset) => {
-    const subject = subjectForClassCode(classes[seed.classOffset].id, seed.subjectCode)
-    if (!subject) return []
-
-    return [
-      {
-        id: `exs_test_${offset + 1}`,
-        schoolId: SCHOOL_ID,
-        examId: `test_${offset + 1}`,
-        subjectId: subject.id,
-        examDate: seed.examDate,
-        maxMarks: seed.maxMarks,
-        passMarks: Math.round(seed.maxMarks * (PASS_MARKS / MAX_MARKS)),
-        durationMin: TEST_DURATION_MIN,
-      },
-    ]
-  }),
+  ...TEST_SEEDS.map((seed, offset) => ({
+    id: `exs_test_${offset + 1}`,
+    schoolId: SCHOOL_ID,
+    examId: `test_${offset + 1}`,
+    subjectId: seed.subjectId,
+    examDate: seed.examDate,
+    maxMarks: seed.maxMarks,
+    passMarks: Math.round(seed.maxMarks * (PASS_MARKS / MAX_MARKS)),
+    durationMin: TEST_DURATION_MIN,
+  })),
 ]
 
 /** Scaled to the paper, so a 20-mark test and a 100-mark paper both land in the same bands. */

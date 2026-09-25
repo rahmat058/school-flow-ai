@@ -1,5 +1,13 @@
 // `Receipt` is already a fees type in this file's imports, so the icon takes a suffix.
-import { CalendarCheck, GraduationCap, Receipt as ReceiptIcon, Wallet } from 'lucide-react'
+import {
+  CalendarCheck,
+  CheckCircle2,
+  ClipboardList,
+  GraduationCap,
+  Receipt as ReceiptIcon,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react'
 import { AxiosError } from 'axios'
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type { ApiEnvelope, PaginationMeta } from '@/types/api'
@@ -64,6 +72,11 @@ import type {
   ExamSubjectRow,
   ExamType,
   ResultSheet,
+  StudentExamRow,
+  StudentExams,
+  StudentResultRow,
+  StudentSubjectPerformance,
+  StudentTestRow,
   TestListItem,
 } from '@/types/exams'
 import type { Homework, HomeworkListItem } from '@/types/homework'
@@ -1674,6 +1687,190 @@ function resultSheet(examId: string): ResultSheet | undefined {
         remarks: result.remarks,
         isAbsent: result.isAbsent,
       })),
+  }
+}
+
+/**
+ * `GET /exams/me` — the student's own tests, exams and marks. Every row comes from their own class,
+ * and the marks are the **published** ones only: a result a teacher has not published is not yet the
+ * student's to read.
+ */
+function studentExams(studentId: string): StudentExams | undefined {
+  const student = findStudent(studentId)
+  if (!student) return undefined
+
+  const today = dateOffset(0)
+  const daysAway = (date: string): number => Math.round((Date.parse(date) - Date.parse(today)) / 86_400_000)
+  const classExams = exams.filter((exam) => exam.classId === student.classId)
+
+  const upcomingTests: StudentTestRow[] = classExams
+    .filter((exam) => exam.kind === 'TEST')
+    .flatMap((exam) => {
+      const paper = examSubjects.find((item) => item.examId === exam.id)
+      const subject = paper ? findSubject(paper.subjectId) : undefined
+      if (!paper || !subject || paper.examDate < today) return []
+
+      return [
+        {
+          id: exam.id,
+          name: exam.name,
+          description: exam.description,
+          subjectName: subject.name,
+          examDate: paper.examDate,
+          maxMarks: paper.maxMarks,
+          passMarks: paper.passMarks,
+          durationMin: paper.durationMin,
+          status: examStatusOf(exam),
+          daysAway: daysAway(paper.examDate),
+        },
+      ]
+    })
+    .sort((left, right) => left.examDate.localeCompare(right.examDate))
+
+  const upcomingExams: StudentExamRow[] = classExams
+    .filter((exam) => exam.kind === 'EXAM' && exam.startDate >= today)
+    .map((exam) => {
+      const papers = examSubjects
+        .filter((paper) => paper.examId === exam.id)
+        .sort((left, right) => left.examDate.localeCompare(right.examDate))
+        .flatMap((paper) => {
+          const subject = findSubject(paper.subjectId)
+          if (!subject) return []
+
+          return [
+            {
+              id: paper.id,
+              subjectName: subject.name,
+              subjectCode: subject.code.split('-')[0],
+              examDate: paper.examDate,
+              maxMarks: paper.maxMarks,
+              passMarks: paper.passMarks,
+              durationMin: paper.durationMin,
+              daysAway: daysAway(paper.examDate),
+            },
+          ]
+        })
+
+      return {
+        id: exam.id,
+        name: exam.name,
+        type: exam.type,
+        description: exam.description,
+        startDate: exam.startDate,
+        endDate: exam.endDate,
+        durationDays: Math.max(1, daysAway(exam.endDate) - daysAway(exam.startDate) + 1),
+        daysAway: daysAway(exam.startDate),
+        status: examStatusOf(exam),
+        papers,
+        totalMarks: papers.reduce((total, paper) => total + paper.maxMarks, 0),
+        totalPassMarks: papers.reduce((total, paper) => total + (paper.passMarks ?? 0), 0),
+      }
+    })
+    .sort((left, right) => left.startDate.localeCompare(right.startDate))
+
+  const results: StudentResultRow[] = examResults
+    .filter((result) => result.studentId === studentId)
+    .flatMap((result) => {
+      const exam = exams.find((item) => item.id === result.examId)
+      const subject = findSubject(result.subjectId)
+      if (!exam || !subject || !exam.isPublished) return []
+
+      const paper = examSubjects.find((item) => item.examId === exam.id && item.subjectId === subject.id)
+      const total = paper?.maxMarks ?? maxMarks
+      const percentage = Number(((result.obtainedMarks / total) * 100).toFixed(1))
+
+      return [
+        {
+          id: result.id,
+          examName: exam.name,
+          examType: exam.type,
+          subjectName: subject.name,
+          date: paper?.examDate ?? exam.startDate,
+          marks: result.obtainedMarks,
+          total,
+          percentage,
+          grade: gradeForPercentage(percentage),
+          // The pass mark is the school's 40%, the same line `lib/grades.ts` draws.
+          result: percentage >= 40 ? ('PASS' as const) : ('FAIL' as const),
+          isPublished: exam.isPublished,
+          remarks: result.remarks,
+        },
+      ]
+    })
+    .sort((left, right) => right.date.localeCompare(left.date))
+
+  // Subject-wise performance: each subject's mean across the student's own papers.
+  const bySubject = new Map<string, { total: number; count: number }>()
+  for (const row of results) {
+    const entry = bySubject.get(row.subjectName) ?? { total: 0, count: 0 }
+    entry.total += row.percentage
+    entry.count += 1
+    bySubject.set(row.subjectName, entry)
+  }
+
+  const subjectPerformance: StudentSubjectPerformance[] = [...bySubject.entries()]
+    .map(([subjectName, entry]) => ({
+      subjectName,
+      results: entry.count,
+      percentage: Number((entry.total / entry.count).toFixed(1)),
+    }))
+    .sort((left, right) => right.percentage - left.percentage)
+
+  const passed = results.filter((row) => row.result === 'PASS').length
+  const failed = results.length - passed
+  const averageScore =
+    results.length === 0
+      ? 0
+      : Number((results.reduce((total, row) => total + row.percentage, 0) / results.length).toFixed(1))
+  const passRate = results.length === 0 ? 0 : Math.round((passed / results.length) * 100)
+
+  const stats: StatMetric[] = [
+    {
+      id: 'upcoming-tests',
+      label: 'Upcoming Tests',
+      value: String(upcomingTests.length),
+      delta: upcomingTests[0] ? `Next: ${formatDate(upcomingTests[0].examDate, 'dd MMM yyyy')}` : 'None scheduled',
+      icon: ClipboardList,
+      iconTone: 'primary',
+    },
+    {
+      id: 'upcoming-exams',
+      label: 'Upcoming Exams',
+      value: String(upcomingExams.length),
+      delta: upcomingExams[0] ? `Next: ${formatDate(upcomingExams[0].startDate, 'dd MMM yyyy')}` : 'None scheduled',
+      icon: GraduationCap,
+      iconTone: 'warning',
+    },
+    {
+      id: 'average-score',
+      label: 'Average Score',
+      value: `${averageScore}%`,
+      delta: results.length === 0 ? 'No results yet' : averageScore >= 60 ? 'Good standing' : 'Needs improvement',
+      icon: TrendingUp,
+      iconTone: results.length === 0 ? 'primary' : averageScore >= 60 ? 'success' : 'warning',
+    },
+    {
+      id: 'pass-rate',
+      label: 'Pass Rate',
+      value: `${passRate}%`,
+      delta: results.length === 0 ? 'No results yet' : `${passed} passed · ${failed} failed`,
+      icon: CheckCircle2,
+      iconTone: results.length === 0 ? 'primary' : failed === 0 ? 'success' : 'warning',
+    },
+  ]
+
+  return {
+    stats,
+    summary: { passed, failed, averageScore, passRate },
+    counts: {
+      tests: classExams.filter((exam) => exam.kind === 'TEST').length,
+      exams: classExams.filter((exam) => exam.kind === 'EXAM').length,
+      results: results.length,
+    },
+    upcomingTests,
+    upcomingExams,
+    results,
+    subjectPerformance,
   }
 }
 
@@ -4122,6 +4319,21 @@ const routes: Route[] = [
 
       const summary = userPermissionSummary(user.id)
       return summary ? ok(summary) : fail(404, 'USER_NOT_FOUND', 'User not found')
+    },
+  },
+  {
+    method: 'GET',
+    path: '/exams/me',
+    handler: ({ userId }) => {
+      const user = users.find((item) => item.id === userId)
+
+      // Tests, exams and marks are the student's own — no other role has a personal record here.
+      if (user?.role !== 'STUDENT' || !user.profileId) {
+        return fail(403, 'EXAM_FORBIDDEN', 'This record belongs to a student account')
+      }
+
+      const record = studentExams(user.profileId)
+      return record ? ok<StudentExams>(record) : fail(404, 'EXAM_NOT_FOUND', 'Student not found')
     },
   },
   {

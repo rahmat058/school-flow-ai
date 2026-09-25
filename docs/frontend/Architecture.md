@@ -27,7 +27,7 @@ frontend/
 │   │   └── …                 # teacher/, student/, parent/ as those phases land
 │   ├── components/
 │   │   ├── layout/           # AppShell, Header, Sidebar
-│   │   ├── dashboard/        # StatGrid, StatCard, CollectionChart, RecentPaymentsTable, AiInsightsCard, OverviewHeader
+│   │   ├── dashboard/        # role halves: admin/ (OverviewHeader, charts, PendingFeesCard, AdminDashboard) and student/ (StudentDashboard + its cards); StatCard, StatGrid, UpcomingExamsCard and iconTone stay shared at the root
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
 │   ├── features/             # auth/, dashboard/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, timetable/, school/
 │   │                         # each: components/ (+ hooks/, lib/ where a domain needs them) and query hooks in api.ts

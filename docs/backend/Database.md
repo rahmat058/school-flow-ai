@@ -1399,6 +1399,14 @@ erDiagram
 **Tests and exams share one table**: a `TEST` is one subject sat on one date (the Tests tab), an `EXAM` is a
 multi-subject window (the Exams tab), and only an `EXAM` produces report cards.
 
+**Student reads.** `GET /exams/me` is a projection over the same rows — no new table and no new column:
+the student's class comes from `students.class_id`, the schedule is `exam_subjects` dated today or later,
+and the marks are `results` **filtered to published exams** (a result whose exam has no `published_at` is
+not yet the student's to read). The existing `results` index `(student_id, exam_id)` carries the marks
+lookup and `exam_subjects`' `(exam_id, subject_id)` carries the papers, so the read adds **no schema
+change** — the tab counts, the four headline figures and each subject's average are all counted in the
+read model rather than stored.
+
 ```mermaid
 erDiagram
   classes ||--o{ exams : "sits"
@@ -2113,8 +2121,9 @@ projections, not tables: `mv_attendance_monthly` (attendance % per class/month �
 `GET /reports/attendance` and the class register `GET /attendance/monthly`), `mv_fee_collection`
 (collected/pending/concessions per period — backs
 `GET /reports/overview` and `GET /reports/finance`), plus on-demand RPCs for the defaulter list,
-`GET /reports/exam-results` (a paper's marks per student), `GET /dashboard/admin` and
-`GET /dashboard/student` (one student's own day, scoped by the session). No table is added
+`GET /reports/exam-results` (a paper's marks per student), `GET /dashboard/admin`,
+`GET /dashboard/student` (one student's own day, scoped by the session) and `GET /exams/me` (a student's
+own schedule and marks). No table is added
 by the module — every figure is read from the tables above.
 
 ## 17. Feature Coverage

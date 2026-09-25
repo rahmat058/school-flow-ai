@@ -3,13 +3,11 @@ import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/Tabs'
 import { useCurrentUser } from '@/store/auth'
 import { ExamsTab } from '@/features/exams/components/ExamsTab'
 import { ResultsTab } from '@/features/exams/components/ResultsTab'
+import { StudentExamsView } from '@/features/exams/components/StudentExamsView'
 import { TestsTab } from '@/features/exams/components/TestsTab'
 
-export function ExamsPage() {
-  const user = useCurrentUser()
-  // Everyone reads the schedule; scheduling and mark entry are the staff's, per the API contract.
-  const canManage = user?.role === 'ADMIN' || user?.role === 'TEACHER'
-
+/** Scheduling, mark entry and the marks sheet — the staff view of the same route. */
+function StaffExamsView({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-2">
@@ -57,4 +55,16 @@ export function ExamsPage() {
       </Tabs>
     </div>
   )
+}
+
+/**
+ * A student reads their own tests, exams and marks; everyone else gets the schedule, with the marks
+ * sheet and write controls reserved for staff — per the API contract.
+ */
+export function ExamsPage() {
+  const user = useCurrentUser()
+
+  if (user?.role === 'STUDENT') return <StudentExamsView />
+
+  return <StaffExamsView canManage={user?.role === 'ADMIN' || user?.role === 'TEACHER'} />
 }
