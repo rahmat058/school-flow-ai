@@ -1,7 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, patch, post, remove } from '@/services/apiClient'
 import type { FieldOption } from '@/lib/options'
-import type { AssignmentSummary, ClassAssignment, Subject, SubjectInput, SubjectRow } from '@/types/academic'
+import type {
+  AssignmentSummary,
+  ClassAssignment,
+  Subject,
+  SubjectCreateInput,
+  SubjectInput,
+  SubjectRow,
+} from '@/types/academic'
 
 export interface SubjectListQuery {
   classId?: string
@@ -61,7 +68,7 @@ function useSubjectMutation<TInput, TResult>(mutationFn: (input: TInput) => Prom
 }
 
 export function useCreateSubject() {
-  return useSubjectMutation(async (input: SubjectInput) => (await post<SubjectRow>('/subjects', input)).data)
+  return useSubjectMutation(async (input: SubjectCreateInput) => (await post<SubjectRow>('/subjects', input)).data)
 }
 
 export function useUpdateSubject() {

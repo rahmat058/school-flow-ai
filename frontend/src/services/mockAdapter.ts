@@ -2250,6 +2250,8 @@ const routes: Route[] = [
       const code = String(body.code ?? '')
         .trim()
         .toUpperCase()
+      // The create form can hand the new subject to a class in the same call.
+      const classId = body.classId ? String(body.classId) : ''
 
       if (!name) return fail(400, 'SUBJECT_INVALID', 'A subject name is required', ['name'])
       if (!SUBJECT_CODE_PATTERN.test(code)) {
@@ -2257,6 +2259,9 @@ const routes: Route[] = [
       }
       if (subjectNameTaken(name)) return fail(409, 'SUBJECT_NAME_TAKEN', 'That subject already exists', ['name'])
       if (subjectCodeTaken(code)) return fail(409, 'SUBJECT_CODE_TAKEN', 'That code is already in use', ['code'])
+      if (classId && !classes.some((classRoom) => classRoom.id === classId)) {
+        return fail(400, 'SUBJECT_INVALID', 'Choose a class to assign it to', ['classId'])
+      }
 
       const subject: Subject = {
         id: `subj_${code.toLowerCase()}`,
@@ -2267,6 +2272,8 @@ const routes: Route[] = [
       }
 
       subjects.push(subject)
+      if (classId) addAssignments(classId, [subject.id])
+
       return created(subjectRows().find((row) => row.id === subject.id))
     },
   },

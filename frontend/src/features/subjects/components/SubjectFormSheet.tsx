@@ -1,16 +1,18 @@
 import { useId } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import type { SubmitHandler } from 'react-hook-form'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
+import { useClassOptions } from '@/features/classes/api'
 import { useCreateSubject, useUpdateSubject } from '@/features/subjects/api'
-import type { SubjectInput, SubjectRow } from '@/types/academic'
+import type { SubjectCreateInput, SubjectInput, SubjectRow } from '@/types/academic'
 
 interface SubjectFormSheetProps {
   open: boolean
@@ -23,20 +25,27 @@ interface FormValues {
   name: string
   code: string
   description: string
+  classId: string
 }
 
 /**
  * Add and edit share one form. The parent keys the sheet on the target subject, so it mounts with
  * that subject's values and never carries a previous edit across.
+ *
+ * The class picker is a **create-only** field: a school rarely adds a subject to nobody, so the form
+ * can hand it to a class in the same call. Editing a subject does not move assignments — that is the
+ * Assign Subjects tab's job, where adding and removing are both explicit.
  */
 export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetProps) {
   const { toast } = useToast()
   const formId = useId()
+  const classOptions = useClassOptions()
   const createSubject = useCreateSubject()
   const updateSubject = useUpdateSubject()
   const editing = subject !== null
 
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -46,9 +55,15 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       name: subject?.name ?? '',
       code: subject?.code ?? '',
       description: subject?.description ?? '',
+      classId: '',
     },
     mode: 'onTouched',
   })
+
+  const classSelectOptions = [
+    { value: '', label: 'Leave unassigned' },
+    ...(classOptions.data ?? []).map((option) => ({ value: option.id, label: option.label })),
+  ]
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     const input: SubjectInput = {
@@ -62,11 +77,16 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
         await updateSubject.mutateAsync({ id: subject.id, input })
         toast({ tone: 'success', title: `${input.name} updated` })
       } else {
-        await createSubject.mutateAsync(input)
+        const created: SubjectCreateInput = { ...input, classId: values.classId || null }
+        await createSubject.mutateAsync(created)
+
+        const className = classOptions.data?.find((option) => option.id === values.classId)?.label
         toast({
           tone: 'success',
           title: `${input.name} added to the catalogue`,
-          description: 'Assign it to a class from the Assign Subjects tab.',
+          description: className
+            ? `Already assigned to ${className} — it shows there in the Assign Subjects tab.`
+            : 'Assign it to a class from the Assign Subjects tab.',
         })
       }
 
@@ -86,7 +106,7 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
       description={
         editing
           ? 'Rename the subject, change its code or rewrite the description.'
-          : 'Add a subject to the school catalogue, then assign it to classes.'
+          : 'Add a subject to the school catalogue and assign it to a class.'
       }
       footer={
         <>
@@ -127,6 +147,24 @@ export function SubjectFormSheet({ open, onClose, subject }: SubjectFormSheetPro
           error={errors.description?.message}
           {...register('description')}
         />
+
+        {!editing ? (
+          <Controller
+            control={control}
+            name="classId"
+            render={({ field }) => (
+              <Select
+                label="Assign to class"
+                options={classSelectOptions}
+                placeholder="Leave unassigned"
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={classOptions.isPending}
+                error={errors.classId?.message}
+              />
+            )}
+          />
+        ) : null}
       </form>
     </Sheet>
   )

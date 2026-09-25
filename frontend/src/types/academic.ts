@@ -47,6 +47,11 @@ export interface SubjectInput {
   description: string | null
 }
 
+/** The create form's payload — the row plus, optionally, the class to assign it to in the same call. */
+export interface SubjectCreateInput extends SubjectInput {
+  classId: string | null
+}
+
 /** A catalogue subject with how many classes offer it — the Subjects tab's row. */
 export interface SubjectRow extends Subject {
   classCount: number
