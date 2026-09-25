@@ -1,3 +1,5 @@
+import type { StudentSubject } from '@/types/people'
+
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LEAVE' | 'LATE'
 
 export interface AttendanceRecord {
@@ -30,13 +32,8 @@ export interface AttendanceMonthOption {
   label: string
 }
 
-/** A student a caller may open a register for: their own account, or a guardian's child. */
-export interface AttendanceSubject {
-  id: string
-  label: string
-  /** The student's class label, e.g. `1-A`. */
-  meta: string
-}
+/** A student a caller may open a register for — their own account, or a guardian's child. */
+export type AttendanceSubject = StudentSubject
 
 /** One register day inside a month. */
 export interface AttendanceDay {

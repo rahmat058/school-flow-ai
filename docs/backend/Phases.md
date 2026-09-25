@@ -45,7 +45,7 @@
 
 ## Phase 4: Fees & Exams — PRD §4.6, §4.9, §4.14
 
-- [ ] Fee structures + fee heads, bulk invoice generation, invoice list/detail, pending list, payment history, summary
+- [ ] Fee structures + fee heads, bulk invoice generation, invoice list/detail, pending list, payment history, summary — where the self-service pair (`/fees/me`, `/fees/me/payments`) a student and a guardian share is already defined
 - [ ] Stripe + SSLCommerz order/create, verify, both webhooks, and manual payment recording — receipt sequence inside one transaction
 - [ ] Concessions with the admin approval flow
 - [ ] Exams CRUD, marks entry, publish (+ unpublish), report cards with grade computation and AI comments, and the student's own tests/exams/marks read (`/exams/me`) — which a guardian also reads for their own child via `?studentId=`

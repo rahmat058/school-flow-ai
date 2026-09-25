@@ -1,3 +1,5 @@
+import type { StudentSubject } from '@/types/people'
+
 export type FeeFrequency = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'ONE_TIME'
 export type InvoiceStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE'
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
@@ -214,16 +216,39 @@ export interface StudentCollectSummary {
   payments: PaymentHistoryRow[]
 }
 
-/** A student's own totals — `paid + pending = total`, so the three tiles can never disagree. */
+/** A student's own totals — `paid + pending = total`, so the tiles can never disagree. */
 export interface StudentFeesSummary {
   paidPaise: number
   pendingPaise: number
   totalPaise: number
+  /** Balance past its due date — a **subset** of `pendingPaise`, not an addition to it. */
+  overduePaise: number
+  /** Paid share of the total, 0–100. */
+  progress: number
+}
+
+/** One invoice as the records list draws it — the demand, plus when and under which receipt it was paid. */
+export interface StudentFeeRecordRow extends StudentDueRow {
+  /** The most recent payment's date (`YYYY-MM-DD`); `null` until something is paid. */
+  paidOn: string | null
+  receiptNo: string | null
+}
+
+/** One month of the student's demands — the Monthly breakdown tab's row. */
+export interface StudentFeeMonthRow {
+  /** ISO month key (`2026-07`), taken from the invoice's due date. */
+  month: string
+  /** e.g. "July 2026". */
+  label: string
+  billedPaise: number
+  paidPaise: number
+  balancePaise: number
 }
 
 /**
- * `GET /fees/me` — the caller's own fees, resolved from the session. Deliberately narrower than
- * `StudentCollectSummary`: raising invoices is a staff action, so there are no candidates here.
+ * `GET /fees/me?studentId=` — the caller's own fees, resolved from the session (a student) or from
+ * one of a guardian's own children. Deliberately narrower than `StudentCollectSummary`: raising
+ * invoices is a staff action, so there are no candidates here.
  */
 export interface StudentFeesOverview {
   studentName: string
@@ -233,8 +258,16 @@ export interface StudentFeesOverview {
   summary: StudentFeesSummary
   /** Outstanding and partially paid demands, soonest due first. */
   dues: StudentDueRow[]
+  /** Every invoice raised, soonest due first — what the records list renders. */
+  records: StudentFeeRecordRow[]
+  /** The same invoices grouped by due month, newest month first. */
+  months: StudentFeeMonthRow[]
+  /** Account counts, display-ready so a tile never counts a list. */
+  counts: { payments: number; dues: number; records: number; overdue: number }
   /** Settled payments, newest first. */
   payments: PaymentHistoryRow[]
+  /** The students a guardian may switch between; a student's own account holds one entry. */
+  students: StudentSubject[]
 }
 
 /**

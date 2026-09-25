@@ -9,6 +9,8 @@ import { ConcessionsTab } from '@/features/fees/components/admin/ConcessionsTab'
 import { FeeDashboardTab } from '@/features/fees/components/admin/FeeDashboardTab'
 import { FeeReportsTab } from '@/features/fees/components/admin/FeeReportsTab'
 import { FeeStructureTab } from '@/features/fees/components/admin/FeeStructureTab'
+import { ParentFeesView } from '@/features/fees/components/parent/ParentFeesView'
+import { useCurrentUser } from '@/store/auth'
 
 const TABS = [
   { value: 'dashboard', label: 'Dashboard' },
@@ -18,7 +20,20 @@ const TABS = [
   { value: 'concessions', label: 'Concessions' },
 ]
 
+/**
+ * A guardian reads their child's fee account; staff get the school-wide module. The role picks the
+ * view, so one URL serves both and neither loads the other's payload.
+ */
 export function FeesPage() {
+  const user = useCurrentUser()
+
+  if (user?.role === 'PARENT') return <ParentFeesView />
+
+  return <AdminFeesView />
+}
+
+/** The school-wide fee module — the five staff tabs. */
+function AdminFeesView() {
   const [tab, setTab] = useState('dashboard')
   const queryClient = useQueryClient()
 

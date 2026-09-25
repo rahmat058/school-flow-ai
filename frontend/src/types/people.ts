@@ -49,6 +49,18 @@ export interface TeacherClass {
   classId: string
 }
 
+/**
+ * A student a caller may read a personal slice for: a guardian's own children, or a student's single
+ * entry. Every `me` route that a guardian may point at a child (`/attendance/me`, `/exams/me`,
+ * `/fees/me`) returns this list, so one shape serves them all.
+ */
+export interface StudentSubject {
+  id: string
+  label: string
+  /** The student's class label, e.g. `1-A`. */
+  meta: string
+}
+
 export interface Student {
   id: string
   schoolId: string

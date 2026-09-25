@@ -31,9 +31,10 @@ interface FormValues {
 }
 
 /**
- * A student's own Pay Now form. Deliberately a `Modal` rather than the app's usual `Sheet`, matching
- * the reference — every other create/edit form opens in a Sheet, and only the receipt preview is a
- * Modal. Mounted with a key of the target invoice, so each demand opens with its own amount.
+ * The Pay Now form a student and a guardian share — both settle an invoice on their own account (a
+ * guardian's child's, which the API validates). Deliberately a `Modal` rather than the app's usual
+ * `Sheet`, matching the reference: every other create/edit form opens in a Sheet and only the receipt
+ * preview is a Modal. Mounted with a key of the target invoice, so each demand opens with its own amount.
  */
 export function PayFeeModal({ open, onClose, due, onPaid }: PayFeeModalProps) {
   const { toast } = useToast()

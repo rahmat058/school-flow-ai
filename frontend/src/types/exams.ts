@@ -1,4 +1,5 @@
 import type { StatMetric } from '@/types/dashboard'
+import type { StudentSubject } from '@/types/people'
 
 /** `UNIT` and `MID` are the seeded terms; `ANNUAL` is the year-end examination. */
 export type ExamType = 'UNIT' | 'MID' | 'FINAL' | 'ANNUAL'
@@ -254,12 +255,7 @@ export interface StudentExamsSummary {
 }
 
 /** A student the caller may read — a guardian's children, or a student's own single entry. */
-export interface ExamSubjectOption {
-  id: string
-  label: string
-  /** The student's class label, e.g. `1-A`. */
-  meta: string
-}
+export type ExamSubjectOption = StudentSubject
 
 /**
  * `GET /exams/me` — the caller's own tests, exams and marks in one payload. Self-scoped: a student

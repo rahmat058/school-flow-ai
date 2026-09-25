@@ -62,6 +62,8 @@ import type {
   Receipt,
   StudentCollectSummary,
   StudentDueRow,
+  StudentFeeMonthRow,
+  StudentFeeRecordRow,
   StudentFeesOverview,
   StudentLedger,
   StudentLedgerRow,
@@ -125,6 +127,7 @@ import type {
   Gender,
 } from '@/types/people'
 import type { BackupJob, GradingScale, NotificationSettings, SecuritySettings, TermStructure } from '@/types/school'
+import type { StudentSubject } from '@/types/people'
 import type {
   ChartPoint,
   IconTone,
@@ -1259,9 +1262,57 @@ function studentCollectSummary(studentId: string): StudentCollectSummary | undef
 }
 
 /** The student's own fee view — the collect summary minus the staff-only invoice candidates. */
-function studentFeesOverview(studentId: string): StudentFeesOverview | undefined {
+function studentFeesOverview(studentId: string, students: StudentSubject[] = []): StudentFeesOverview | undefined {
   const summary = studentCollectSummary(studentId)
   if (!summary) return undefined
+
+  // Every invoice as the records list draws it — the latest payment supplies the paid-on date and
+  // the receipt it was settled under.
+  const records: StudentFeeRecordRow[] = feeInvoices
+    .filter((invoice) => invoice.studentId === studentId)
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate))
+    .map((invoice) => {
+      const latest = feePayments
+        .filter((payment) => payment.invoiceId === invoice.id)
+        .sort((left, right) => (right.paidAt ?? '').localeCompare(left.paidAt ?? ''))[0]
+
+      return {
+        invoiceId: invoice.id,
+        title: findFeeHead(invoice.feeHeadId)?.name ?? 'Fee invoice',
+        // Billed **net of concession**, so `paid + balance = total` holds on every row.
+        totalPaise: invoice.amountPaise - invoice.discountPaise,
+        paidPaise: invoice.paidPaise,
+        balancePaise: outstanding(invoice),
+        dueDate: invoice.dueDate,
+        status: invoice.status,
+        paidOn: latest?.paidAt ? latest.paidAt.slice(0, 10) : null,
+        receiptNo: invoice.receiptNo,
+      }
+    })
+
+  // The same invoices grouped by the month they fall due, newest month first.
+  const byMonth = new Map<string, { billed: number; paid: number; balance: number }>()
+  for (const record of records) {
+    const key = record.dueDate.slice(0, 7)
+    const entry = byMonth.get(key) ?? { billed: 0, paid: 0, balance: 0 }
+    entry.billed += record.totalPaise
+    entry.paid += record.paidPaise
+    entry.balance += record.balancePaise
+    byMonth.set(key, entry)
+  }
+
+  const months: StudentFeeMonthRow[] = [...byMonth.entries()]
+    .sort((left, right) => right[0].localeCompare(left[0]))
+    .map(([month, entry]) => ({
+      month,
+      label: monthLabelOf(month),
+      billedPaise: entry.billed,
+      paidPaise: entry.paid,
+      balancePaise: entry.balance,
+    }))
+
+  const overdue = records.filter((record) => record.status === 'OVERDUE')
+  const totalPaise = summary.totalPaidPaise + summary.balancePaise
 
   return {
     studentName: summary.studentName,
@@ -1271,10 +1322,22 @@ function studentFeesOverview(studentId: string): StudentFeesOverview | undefined
     summary: {
       paidPaise: summary.totalPaidPaise,
       pendingPaise: summary.balancePaise,
-      totalPaise: summary.totalPaidPaise + summary.balancePaise,
+      totalPaise,
+      // A balance past its due date reads as overdue even when the stored status has not caught up.
+      overduePaise: overdue.reduce((total, record) => total + record.balancePaise, 0),
+      progress: totalPaise === 0 ? 0 : Math.round((summary.totalPaidPaise / totalPaise) * 100),
     },
     dues: summary.dues,
+    records,
+    months,
+    counts: {
+      payments: summary.payments.length,
+      dues: summary.dues.length,
+      records: records.length,
+      overdue: overdue.length,
+    },
     payments: summary.payments,
+    students,
   }
 }
 
@@ -1913,10 +1976,11 @@ function studentExams(studentId: string, students: ExamSubjectOption[] = []): St
 }
 
 /**
- * The students a caller may read a results record for: a guardian's own children, or a student's own
+ * The students a caller may read a personal slice for: a guardian's own children, or a student's own
  * single entry. A staff account has none — what they read is the class lists, not a personal record.
+ * Shared by every `me` route a guardian may point at a child (exams, fees).
  */
-function examSubjectOptionsFor(user: AuthUser | undefined): { options: ExamSubjectOption[]; allowed: string[] } {
+function subjectOptionsFor(user: AuthUser | undefined): { options: StudentSubject[]; allowed: string[] } {
   if (user?.role === 'PARENT') {
     const options = parentStudents
       .filter((link) => link.parentId === user.profileId)
@@ -4618,30 +4682,40 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/fees/me',
-    handler: ({ userId }) => {
+    handler: ({ params, userId }) => {
       const user = users.find((item) => item.id === userId)
-      if (user?.role !== 'STUDENT' || !user.profileId) {
-        return fail(403, 'FEE_FORBIDDEN', 'Only a student can read their own fees')
+
+      // A student's own account, or a guardian's own child — a staff account reads the collect views.
+      if (user?.role !== 'STUDENT' && user?.role !== 'PARENT') {
+        return fail(403, 'FEE_FORBIDDEN', 'This account belongs to a student or guardian')
       }
 
-      const overview = studentFeesOverview(user.profileId)
+      const { options, allowed } = subjectOptionsFor(user)
+      const requested = params.studentId ? String(params.studentId) : ''
+      if (requested && !allowed.includes(requested)) {
+        return fail(403, 'PARENT_FORBIDDEN', 'That student is not on your account')
+      }
+
+      const overview = studentFeesOverview(requested || allowed[0] || '', options)
       return overview ? ok<StudentFeesOverview>(overview) : fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
     },
   },
   {
-    // Self-service payment: a student may only settle an invoice raised against their own account.
+    // Self-service payment: the caller may settle only an invoice raised against their own account,
+    // or — for a guardian — against one of their own children.
     method: 'POST',
     path: '/fees/me/payments',
     handler: ({ body, userId }) => {
       const user = users.find((item) => item.id === userId)
-      if (user?.role !== 'STUDENT' || !user.profileId) {
-        return fail(403, 'FEE_FORBIDDEN', 'Only a student can pay their own fees')
+      if (user?.role !== 'STUDENT' && user?.role !== 'PARENT') {
+        return fail(403, 'FEE_FORBIDDEN', 'This account belongs to a student or guardian')
       }
 
+      const { allowed } = subjectOptionsFor(user)
       const invoice = findFeeInvoice(String(body.invoiceId ?? ''))
       if (!invoice) return fail(404, 'FEE_INVOICE_NOT_FOUND', 'Invoice not found')
-      if (invoice.studentId !== user.profileId) {
-        return fail(403, 'FEE_FORBIDDEN', 'That invoice belongs to another student')
+      if (!allowed.includes(invoice.studentId)) {
+        return fail(403, 'FEE_FORBIDDEN', 'That invoice is not on your account')
       }
 
       const amountPaise = Number(body.amountPaise ?? 0)
@@ -5004,7 +5078,7 @@ const routes: Route[] = [
         return fail(403, 'EXAM_FORBIDDEN', 'This record belongs to a student or guardian account')
       }
 
-      const { options, allowed } = examSubjectOptionsFor(user)
+      const { options, allowed } = subjectOptionsFor(user)
       const requested = params.studentId ? String(params.studentId) : ''
       if (requested && !allowed.includes(requested)) {
         return fail(403, 'PARENT_FORBIDDEN', 'That student is not on your account')

@@ -36,6 +36,7 @@
 ## Phase 4: Fees & Exams
 
 - [ ] Fees module — Dashboard (cards, collection charts, pending/defaulter list), Fee structure (per-class fee heads), Collect fee (class-wise status → individual collect page, invoice from structure, manual payment + printable receipt), Reports (day book, class report, defaulters, student ledger + CSV) and Concessions
+- [x] Guardian's fee view — Fee Details with the four tiles, payment progress, the fee records list (status filter, Pay Now) and the monthly breakdown, on the self-scoped `/fees/me`
 - [ ] Stripe / SSLCommerz checkout integration
 - [ ] Exam schedule, marks entry, publish, report card view
 - [x] Student tests & exams view (own Tests / Exams / My Results tabs, with the result summary and subject averages) — a guardian reads the same record as **Results & Report Card**

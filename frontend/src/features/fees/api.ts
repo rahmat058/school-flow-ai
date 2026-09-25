@@ -56,8 +56,8 @@ export const feeKeys = {
   collectSummary: (query: FeeCollectQuery) => [...feeKeys.all, 'collect-summary', query] as const,
   collectStudents: (query: FeeCollectStudentsQuery) => [...feeKeys.all, 'collect-students', query] as const,
   studentCollect: (studentId: string) => [...feeKeys.all, 'collect-student', studentId] as const,
-  /** The caller's own fees, resolved from the session — no id in the key. */
-  me: () => [...feeKeys.all, 'me'] as const,
+  /** The caller's own fee account; a guardian's key carries the child they picked. */
+  me: (studentId: string) => [...feeKeys.all, 'me', studentId] as const,
   receipt: (paymentId: string) => [...feeKeys.all, 'receipt', paymentId] as const,
   dayBook: (date: string) => [...feeKeys.all, 'day-book', date] as const,
   classReport: (classId: string) => [...feeKeys.all, 'class-report', classId] as const,
@@ -153,11 +153,11 @@ export function useStudentCollect(studentId: string) {
   })
 }
 
-/** The caller's own fees — `GET /fees/me`, self-scoped by the session. */
-export function useMyFees() {
+/** The caller's own fee account — a student's, or a guardian's chosen child. */
+export function useMyFees(studentId = '') {
   return useQuery({
-    queryKey: feeKeys.me(),
-    queryFn: async () => (await get<StudentFeesOverview>('/fees/me')).data,
+    queryKey: feeKeys.me(studentId),
+    queryFn: async () => (await get<StudentFeesOverview>('/fees/me', { studentId: studentId || undefined })).data,
   })
 }
 
