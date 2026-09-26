@@ -1,10 +1,10 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { COUNTRIES, COUNTRY_BY_CODE, DEFAULT_COUNTRY, countryForValue, nationalDigitsOf } from '@/lib/countries'
 import type { Country } from '@/lib/countries'
 import type { ChangeEvent, KeyboardEvent } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Check, ChevronDown, Search } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { COUNTRIES, COUNTRY_BY_CODE, DEFAULT_COUNTRY, countryForValue, nationalDigitsOf } from '@/lib/countries'
 
 function Flag({ code, className }: { code: string; className?: string }) {
   return (
@@ -12,7 +12,7 @@ function Flag({ code, className }: { code: string; className?: string }) {
       src={`/flags/${code.toLowerCase()}.svg`}
       alt=""
       aria-hidden
-      className={cn('ring-line h-3.5 w-[21px] shrink-0 rounded-xs object-cover ring-1', className)}
+      className={cn('ring-line h-3.5 w-5.25 shrink-0 rounded-xs object-cover ring-1', className)}
     />
   )
 }
