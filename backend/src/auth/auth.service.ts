@@ -3,21 +3,21 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 import { IsNull, Repository } from 'typeorm';
-import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { LoginDto } from './dto/login.dto.js';
 import type { Role } from '../common/enums/role.enum.js';
 import { School } from '../database/entities/school.entity.js';
 import { User } from '../database/entities/user.entity.js';
-import type { LoginDto } from './dto/login.dto.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import type { AccessTokenPayload } from './strategies/jwt.strategy.js';
+import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
 
-export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;
-export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;
+export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;       // eg: 7d
+export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;     // eg: 7d
 
 export interface AuthUser {
   id: string;

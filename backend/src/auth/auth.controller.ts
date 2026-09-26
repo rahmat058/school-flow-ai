@@ -10,12 +10,12 @@ import {
   CurrentUser,
   type AuthenticatedUser,
 } from '../common/decorators/current-user.decorator.js';
-import { Public } from '../common/decorators/public.decorator.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { VerifyEmailDto } from './dto/verify-email.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { ResendVerificationDto } from './dto/resend-verification.dto.js';
-import { VerifyEmailDto } from './dto/verify-email.dto.js';
+import { Public } from '../common/decorators/public.decorator.js';
 import { RegistrationService } from './registration.service.js';
 
 @Controller('auth')
