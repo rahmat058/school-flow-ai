@@ -41,7 +41,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 - Paginated list endpoints by `page`/`limit`; `limit` defaults to 10 (see §5)
 - DTO validation on all request bodies via global `ValidationPipe` (`whitelist: true`, `transform: true`)
 - Global exception filter with consistent error shape
-- Rate limiting on auth endpoints (OTP, login) via `@nestjs/throttler`
+- Rate limiting on auth endpoints (email verification, login) via `@nestjs/throttler`
 - Helmet, CORS whitelist, parameterized queries via the Supabase client (SQL-injection safe by default)
 
 ---
@@ -63,7 +63,7 @@ Four roles — `ADMIN | TEACHER | STUDENT | PARENT` — each with its own sideba
 
 ## 3. Data Models (PostgreSQL — Supabase)
 
-The schema is **32 tables**, of which **four are junction tables** (`parent_students`, `teacher_classes`, `class_subjects`, `user_permissions`), holding **84 enforced foreign keys** plus **two relationships the mock keeps as embedded arrays** rather than child tables (`conversations.participant_ids[]`, `notices.class_ids[]`). The per-table reference — columns, keys, indexes, constraints and enums — is [`Schema.md`](./Schema.md); the whole-schema diagram and the foreign-key map are [`Erd.md`](./Erd.md); roles and route gates are [`Access.md`](./Access.md); and [`Database.md`](./Database.md) is the short index that points at all three. Tables the real backend will need but the mock has never had (`otps`, `refresh_tokens`, `receipt_sequences`, `notice_classes`, `conversation_participants`) are listed in `Schema.md` §16.
+The schema is **32 tables**, of which **four are junction tables** (`parent_students`, `teacher_classes`, `class_subjects`, `user_permissions`), holding **84 enforced foreign keys** plus **two relationships the mock keeps as embedded arrays** rather than child tables (`conversations.participant_ids[]`, `notices.class_ids[]`). The per-table reference — columns, keys, indexes, constraints and enums — is [`Schema.md`](./Schema.md); the whole-schema diagram and the foreign-key map are [`Erd.md`](./Erd.md); roles and route gates are [`Access.md`](./Access.md); and [`Database.md`](./Database.md) is the short index that points at all three. Tables the real backend will need but the mock has never had (`otps`, `refresh_tokens`, `receipt_sequences`, `notice_classes`, `conversation_participants`) are listed in `Schema.md` §16 — note that `otps` is **deferred**, since registration now verifies by email link (§4.1).
 
 ---
 
@@ -71,15 +71,15 @@ The schema is **32 tables**, of which **four are junction tables** (`parent_stud
 
 Each module lists the routes the mock actually serves as a **checklist — build one endpoint at a time**, controller route first, then service, DTO and guard. Build a module's list top to bottom: creation and reads unblock the frontend, aggregates and exports come last. The guard in parentheses is what `frontend/src/services/mockAdapter.ts` enforces today: `(public)` needs no token, `(token)` needs any valid bearer token, and a role in parentheses is one of the **ten role-gated routes** in §2. A route the mock does **not** serve is listed under **Planned, not yet in the mock** in its own section and carries no guard. The error codes are the mock's own ([`Access.md`](./Access.md) §4); each module's tables are in [`Schema.md`](./Schema.md).
 
-### 4.1 School Registration & OTP Verification (`SchoolsModule`)
+### 4.1 School Registration & Email Verification (`SchoolsModule`)
 
-**Tables:** `schools`, `users`, `otps` · Database.md §3
+**Tables:** `schools`, `users` · Database.md §3
 
 **Endpoints**
 
-- [ ] `POST /api/v1/schools/register` — create school + admin user, trigger OTP `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
-- [ ] `POST /api/v1/schools/verify-otp` — validate OTP, activate account `(public)` — 400 `AUTH_OTP_INVALID`
-- [ ] `POST /api/v1/schools/resend-otp` — resend within the 60s cooldown `(public)`
+- [ ] `POST /api/v1/schools/register` — create school + admin user, then email a verification link `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
+- [ ] `POST /api/v1/auth/verify-email` — confirm the emailed link token, activating the account (route listed in §4.2) `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
+- [ ] `POST /api/v1/auth/resend-verification` — reissue the verification link for an unverified account (route listed in §4.2) `(public)`
 - [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
 - [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
 - [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
@@ -87,10 +87,10 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 **Behavior**
 
-- 6-digit OTP (bcrypt-hashed in `Otp` table), 10-minute expiry, max 5 attempts, resend cooldown 60s
-- Email verification via Resend before admin login is allowed
+- Registration emails a **single-use verification link** through Resend: a 32-byte random token stored only as a SHA-256 hash (`users.verification_token_hash`) with a 24-hour expiry. Admin login is refused with `403 AUTH_NOT_VERIFIED` until the link is opened
+- `POST /schools/register` runs in a database transaction (school + admin user + verification token)
 - Unique school slug auto-generated at registration; a rename leaves it alone so stored links keep working
-- Registration runs in a database transaction (school + admin user + OTP)
+- **OTP is deferred.** Registration previously used a 6-digit OTP (bcrypt-hashed in the planned `otps` table); that table and the `otp_purpose` enum stay planned (`Schema.md` §16) and OTP is a **future** re-introduction, not part of the current contract
 - **Settings are addressable by tab, not as one document.** The Settings screen's four tabs map onto one `schools.settings` JSONB: School Profile writes the school's own **columns** (`PATCH /schools/current`), while Academic writes `academicYear`/`gradingScale`/`termStructure`/`passPercentage`, Notifications writes the `notifications` object and Security writes the `security` object — all through `PATCH …/settings`, which **merges only the keys sent** so the tabs cannot overwrite one another
 - Settings unions are contract-level, not DB enums (they live in JSONB): `gradingScale` ∈ `PERCENTAGE | LETTER | GPA`, `termStructure` ∈ `SEMESTER | TRIMESTER | ANNUAL`, `passPercentage` an integer `0–100`, `security.sessionTimeoutMinutes` `5–240`, `security.maxLoginAttempts` `1–10` — anything else is `400 SETTINGS_INVALID` with the offending fields in `details`
 - **No settings route carries a school id** — the screen edits the caller's own school, so the tenant comes from the session, not the path. The earlier `GET`/`PATCH /schools/:id/settings` pair is superseded by the `current`-scoped routes
@@ -103,6 +103,8 @@ Each module lists the routes the mock actually serves as a **checklist — build
 **Endpoints**
 
 - [ ] `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
+- [ ] `POST /api/v1/auth/verify-email` — confirm the emailed verification link token, activating the account; the token is single-use and lives 24h `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
+- [ ] `POST /api/v1/auth/resend-verification` — reissue the verification link for an _unverified_ account; always `200`, so an unknown address is never revealed `(public)`
 - [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
 - [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
 - [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
@@ -125,6 +127,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - bcrypt hashing (12 rounds)
 - Refresh token rotation; hashed refresh tokens stored server-side
 - Teachers/students/parents receive auto-generated credentials via email on creation
+- Registration verification is by **email link**, not OTP: the token is single-use, stored only as a SHA-256 hash with a 24-hour expiry (`users.verification_token_hash` / `verification_token_expires_at`), and confirming it flips `users.is_verified` and stamps `email_verified_at`. `POST /auth/verify-invite`, `POST /auth/forgot-password` and `POST /auth/reset-password` still use the **deferred** OTP mechanism (`otp_purpose` `INVITE` / `RESET_PASSWORD`)
 
 ### 4.3 User Management (`UsersModule` — Admin only)
 
@@ -559,7 +562,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Templates & triggers**
 
-- [ ] OTP verification (registration, password reset)
+- [ ] Email verification link (registration) — the single-use token from §4.1
 - [ ] Student invite — the verification link plus the generated login password
 - [ ] Teacher/student/parent login credentials on creation
 - [ ] Fee reminders (manual trigger + `@nestjs/schedule` cron)
@@ -570,6 +573,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 - Email queue with retry (BullMQ + Redis)
 - React Email (`.tsx`) templates in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend
+- The OTP verification email (registration code, password reset) is **deferred** with the planned `otps` table (§4.1)
 
 ### 4.16 Platform endpoints (no feature module)
 
@@ -577,7 +581,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Planned, not yet in the mock** — the mock exposes no health route:
 
-- [ ] `GET /api/v1/health` — liveness/readiness for the Render health check (see §8)
+- [x] `GET /api/v1/health` — liveness/readiness for the Render health check (see §8)
 
 ---
 
@@ -615,12 +619,12 @@ No HTTP endpoints — this module is called by the other services and by the sch
 - bcrypt (12 rounds) password hashing
 - `JwtAuthGuard` + `RolesGuard` on every protected route; all queries scoped by `schoolId` (tenant guard)
 - Protected APIs reject cross-school access
-- Rate limiting (`@nestjs/throttler`): 5/min on OTP & login, 100/min general
+- Rate limiting (`@nestjs/throttler`): 5/min on verification & login, 100/min general
 - DTO validation (`class-validator`, global `ValidationPipe` with `whitelist: true`)
 - Parameterized queries via the Supabase client (SQL-injection safe)
 - Cloudinary signed uploads; file type/size validation (PDFs, images ≤ 10MB)
 - Stripe signature verification and SSLCommerz IPN verification on all payment confirmations and webhooks
-- No sensitive data (passwords, OTPs) in logs or responses (`ClassSerializerInterceptor` to strip fields)
+- No sensitive data (passwords, OTPs, verification tokens) in logs or responses (`ClassSerializerInterceptor` to strip fields)
 
 ---
 

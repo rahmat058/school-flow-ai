@@ -11,8 +11,10 @@ Part of the [school-flow-ai](../README.md) monorepo. The backend docs in
 > answers every request from `frontend/src/services/mockAdapter.ts` over the deterministic seed
 > in `frontend/src/data/`, so that adapter's routes, payloads, guards and error codes are the
 > contract these modules build to — where the mock and a doc disagree, the disagreement is a
-> documentation bug ([`Database.md`](../docs/backend/Database.md)). Phase 1 has not been scaffolded
-> yet: `src/` does not exist, so `npm run start:dev` has nothing to start.
+> documentation bug ([`Database.md`](../docs/backend/Database.md)). Phase 1 is under way: `src/`
+> holds the config, Supabase (`database/`), mail and auth modules — school registration with email
+> verification, login/refresh/logout and `GET /auth/me` — over the Phase 1 migration in
+> `supabase/migrations/`.
 
 ---
 
@@ -68,6 +70,10 @@ backend/
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
 │   └── mail/                 # Resend mailer + react-email .tsx templates
+├── test/                     # scaffold e2e spec
+├── nest-cli.json
+├── tsconfig.json
+├── tsconfig.build.json
 ├── package.json
 ├── .env                      # not committed
 └── .env.example              # committed template — `cp .env.example .env`
@@ -103,14 +109,15 @@ same internal layout:
 
 ## Scripts
 
-| Command              | Description                         |
-| -------------------- | ----------------------------------- |
-| `npm run start:dev`  | Dev server with watch               |
-| `npm run build`      | `nest build`                        |
-| `npm run start:prod` | Run the built server                |
-| `npm run lint`       | ESLint                              |
-| `npm test`           | Jest (`test:watch` to watch)        |
-| `npm run format`     | Prettier (`format:check` to verify) |
+| Command              | Description                          |
+| -------------------- | ------------------------------------ |
+| `npm run start:dev`  | Dev server with watch                |
+| `npm run build`      | `nest build`                         |
+| `npm run start:prod` | Run the built server                 |
+| `npm run lint`       | oxlint                               |
+| `npm test`           | Vitest (`test:watch` to watch)       |
+| `npm run test:e2e`   | Vitest e2e (`test/**/*.e2e-spec.ts`) |
+| `npm run format`     | Prettier (`format:check` to verify)  |
 
 ---
 

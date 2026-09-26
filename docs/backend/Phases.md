@@ -11,19 +11,21 @@
 ## Phase 1: Foundation & Auth — PRD §4.1, §4.2, §4.15
 
 - [ ] NestJS scaffold, config module, global pipes/filters/interceptors, helmet, CORS, throttler
-- [ ] Supabase client module (`database/`) + base schema migration (`supabase/migrations`: `schools`, `users`, `teachers`/`students`/`parents`, `otps`)
-- [ ] OTP-integrated school registration — `POST /schools/register`, `POST /schools/verify-otp`, `POST /schools/resend-otp` (transactional create; bcrypt-hashed code, 10-minute expiry, 5 attempts, 60s resend cooldown)
+- [ ] Supabase client module (`database/`) + base schema migration (`supabase/migrations`: `schools`, `users` incl. the email-verification columns, `teachers`/`students`/`parents`)
+- [ ] Email-verified school registration — `POST /schools/register` (transactional create + emailed verification link), `POST /auth/verify-email`, `POST /auth/resend-verification` (single-use SHA-256-hashed token, 24-hour expiry)
 - [ ] School settings — `GET`/`PATCH /schools/current` (profile), `PATCH /schools/current/settings` (academic · notifications · security) and `POST /schools/current/backup`
-- [ ] MailModule (Resend) with React Email templates (`src/mail/templates/`) for the OTP + credentials messages
+- [ ] MailModule (Resend) with React Email templates (`src/mail/templates/`) for the verification-link + credentials messages
 - [ ] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
 - [ ] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard
 - [ ] Permissions — `GET /permissions` (the catalogue), `GET /permissions/staff`, `GET`/`PUT /users/:userId/permissions`, plus `@RequirePermission()` + `PermissionsGuard`; a new account's grants are seeded from the PRD §2 role matrix
 
-**Done when:** a school registers and verifies by OTP, the admin logs in, and a protected route rejects wrong roles.
+**Done when:** a school registers and verifies by email link, the admin logs in, and a protected route rejects wrong roles.
 
-> OTP registration stays in Phase 1 rather than moving later: nothing downstream can be exercised
+> Email verification stays in Phase 1 rather than moving later: nothing downstream can be exercised
 > without a verified admin and a working JWT, so it is a hard blocker for every other module.
+> OTP (the registration code and the password-reset code in the planned `otps` table) is **deferred** —
+> re-introduce it later on top of this verified-account flow.
 
 ## Phase 2: Core Domain — PRD §4.3, §4.4
 

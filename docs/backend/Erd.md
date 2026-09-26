@@ -152,6 +152,7 @@ erDiagram
     text email UK
     text role
     boolean is_verified
+    timestamptz email_verified_at
   }
   teachers {
     uuid id PK
@@ -450,6 +451,7 @@ erDiagram
     text email UK
     text role
     boolean is_verified
+    timestamptz email_verified_at
   }
 ```
 
