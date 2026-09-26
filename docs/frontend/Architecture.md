@@ -39,12 +39,13 @@ frontend/
 │   ├── services/             # apiClient.ts (axios + interceptors), mockAdapter.ts (demo API)
 │   ├── store/                # Zustand stores — auth session
 │   ├── hooks/                # useControllableState, useToast
-│   ├── lib/                  # cn(), env, format, queryClient, navigation, brand
+│   ├── lib/                  # cn(), env, format, countries (phone dialling data), queryClient, navigation, brand
 │   ├── data/                 # demo data — one file per domain, mirrors docs/backend/Database.md
 │   ├── types/                # shared TypeScript types mirroring API DTOs
 │   └── styles/               # index.css (Tailwind 4 theme tokens)
 ├── .env.example
 ├── index.html
+├── public/flags/            # vendored 3x2 SVG flags (MIT) — the phone field's country marks
 └── vite.config.ts
 ```
 
