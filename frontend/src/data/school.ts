@@ -8,7 +8,7 @@ export const activeSchool: School = {
   slug: 'bright-future-school',
   address: 'House 12, Road 5, Dhanmondi, Dhaka 1205',
   contactEmail: 'office@brightfuture.edu',
-  contactPhone: '+880 1711 000000',
+  contactPhone: '+8801711000000',
   logoUrl: null,
   subscriptionStatus: 'ACTIVE',
   settings: {

@@ -303,3 +303,34 @@ export const PRIMARY_DIAL_CODES: Record<string, string> = {
   '590': 'GP',
   '599': 'CW',
 }
+
+/** The national part of a value — its digits minus the country's calling code. Tolerates the
+ * spaces and punctuation a stored number may carry, not just a strict E.164 string. */
+export function nationalDigitsOf(value: string, country: Country): string {
+  const digits = value.replace(/\D/g, '')
+  return digits.startsWith(country.dialCode) ? digits.slice(country.dialCode.length) : digits
+}
+
+/**
+ * The country a value belongs to, or `null` when it doesn't look like a phone number. Where the
+ * calling code is shared (the `+1` group), the principal country wins — unless `preferred` is one of
+ * that group, which is how a field keeps the country the caller opened it on.
+ */
+export function countryForValue(value: string | undefined, preferred?: Country): Country | null {
+  if (!value?.startsWith('+')) return null
+
+  const digits = value.replace(/\D/g, '')
+  let best: Country | null = null
+  for (const country of COUNTRIES) {
+    if (!digits.startsWith(country.dialCode)) continue
+    if (!best || country.dialCode.length > best.dialCode.length) best = country
+  }
+  if (!best) return null
+
+  const match: Country = best
+  const principal = COUNTRY_BY_CODE[PRIMARY_DIAL_CODES[match.dialCode]] ?? match
+  if (!preferred) return principal
+
+  const sameDialCode = COUNTRIES.filter((country) => country.dialCode === match.dialCode)
+  return sameDialCode.some((country) => country.code === preferred.code) ? preferred : principal
+}

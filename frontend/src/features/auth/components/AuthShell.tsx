@@ -1,11 +1,11 @@
-import type { ReactNode } from 'react'
-import { BRAND } from '@/lib/brand'
 import { env } from '@/lib/env'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { activeSchool } from '@/data/school'
+import { BRAND } from '@/lib/brand'
+import { users } from '@/data/users'
+import type { ReactNode } from 'react'
 import { classes } from '@/data/classes'
 import { DEMO_PASSWORD } from '@/data/seed'
-import { users } from '@/data/users'
+import { activeSchool } from '@/data/school'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface AuthShellProps {
   title: string

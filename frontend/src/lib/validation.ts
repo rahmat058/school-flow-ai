@@ -6,6 +6,8 @@
  * against a specific form's fields, so annotating it here makes it fit none of them.
  */
 
+import { countryForValue, nationalDigitsOf } from '@/lib/countries'
+
 /** Deliberately permissive: enough to catch a typo, not a spec implementation. */
 export const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
@@ -25,20 +27,42 @@ export const passwordRules = {
 export const passwordHint = `At least ${MIN_PASSWORD_LENGTH} characters.`
 
 /**
- * E.164 — the shape `PhoneInput` hands back (`+`, then the 7–15 digit national number with its
- * country calling code). The field parses and formats through `react-phone-number-input`, so the
- * form only ever sees a value that passes this.
+ * E.164 — the shape `PhoneInput` hands back (`+`, then the 7–15 digits of the country calling code
+ * plus the national number). A loose shape check; `phoneLengthError` below narrows it per country.
  */
 export const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/
+
+/**
+ * Country-aware length check: the national part must fit the country's own range (`lib/countries.ts`).
+ * `PhoneInput` caps typing at that maximum, so this is what catches a value that arrives already
+ * wrong — too long, or too short for the country — from the API, a paste, or a country the user has
+ * since switched away from.
+ */
+function phoneLengthError(value: string): string | true {
+  const country = countryForValue(value)
+  if (!country) return true
+
+  const national = nationalDigitsOf(value, country).length
+  if (national >= country.minLength && national <= country.maxLength) return true
+
+  return country.minLength === country.maxLength
+    ? `Enter a ${country.maxLength}-digit number`
+    : `Enter ${country.minLength}–${country.maxLength} digits`
+}
 
 export const phoneRules = {
   required: 'Phone number is required',
   pattern: { value: PHONE_PATTERN, message: 'Enter a valid phone number' },
+  validate: (value?: string) => (!value ? true : phoneLengthError(value)),
 } as const
 
-/** For a phone field that may be left blank: empty passes, anything filled must be a complete E.164. */
+/** For a phone field that may be left blank: empty passes, anything filled must be a valid number. */
 export const optionalPhoneRules = {
-  validate: (value?: string) => !value || PHONE_PATTERN.test(value) || 'Enter a valid phone number',
+  validate: (value?: string) => {
+    if (!value) return true
+    if (!PHONE_PATTERN.test(value)) return 'Enter a valid phone number'
+    return phoneLengthError(value)
+  },
 } as const
 
 /**

@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { COUNTRIES, COUNTRY_BY_CODE, DEFAULT_COUNTRY, PRIMARY_DIAL_CODES } from '@/lib/countries'
+import { COUNTRIES, COUNTRY_BY_CODE, DEFAULT_COUNTRY, countryForValue, nationalDigitsOf } from '@/lib/countries'
 import type { Country } from '@/lib/countries'
 import type { ChangeEvent, KeyboardEvent } from 'react'
 
@@ -15,34 +15,6 @@ function Flag({ code, className }: { code: string; className?: string }) {
       className={cn('ring-line h-3.5 w-[21px] shrink-0 rounded-xs object-cover ring-1', className)}
     />
   )
-}
-
-/** The country a stored E.164 value belongs to. Where the calling code is shared (the `+1` group),
- * the caller's fallback wins if it is one of them, else the code's principal country. */
-function countryOf(value: string | undefined, fallback: Country): Country {
-  if (!value?.startsWith('+')) return fallback
-
-  const digits = value.slice(1)
-  let best: Country | null = null
-  for (const country of COUNTRIES) {
-    if (!digits.startsWith(country.dialCode)) continue
-    if (!best || country.dialCode.length > best.dialCode.length) best = country
-  }
-  if (!best) return fallback
-
-  const match: Country = best
-  const sameDialCode = COUNTRIES.filter((country) => country.dialCode === match.dialCode)
-  if (sameDialCode.some((country) => country.code === fallback.code)) return fallback
-
-  return COUNTRY_BY_CODE[PRIMARY_DIAL_CODES[match.dialCode]] ?? match
-}
-
-/** The national part shown in the input — the E.164 value minus its calling code. */
-function nationalDigits(value: string | undefined, country: Country): string {
-  if (!value?.startsWith('+')) return ''
-
-  const rest = value.slice(1)
-  return rest.startsWith(country.dialCode) ? rest.slice(country.dialCode.length) : rest
 }
 
 /** The E.164 value for what was typed, dropping the trunk prefix a user dials at home. */
@@ -106,7 +78,7 @@ export function PhoneInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const [country, setCountry] = useState<Country>(() => {
     const fallback = COUNTRY_BY_CODE[defaultCountry] ?? COUNTRY_BY_CODE[DEFAULT_COUNTRY] ?? COUNTRIES[0]
-    return countryOf(value, fallback)
+    return countryForValue(value, fallback) ?? fallback
   })
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -124,7 +96,7 @@ export function PhoneInput({
     )
   }, [query])
 
-  const digits = nationalDigits(value, country)
+  const digits = value?.startsWith('+') ? nationalDigitsOf(value, country) : ''
 
   useEffect(() => {
     if (!open) return
