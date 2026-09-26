@@ -6,8 +6,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Role } from '../../common/enums/role.enum.js';
 import { School } from './school.entity.js';
+import { Role } from '../../common/enums/role.enum.js';
 
 @Entity({ name: 'users' })
 @Index('idx_users_email', ['email'], { unique: true })
