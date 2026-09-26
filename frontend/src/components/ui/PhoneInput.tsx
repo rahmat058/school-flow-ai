@@ -12,7 +12,7 @@ function Flag({ code, className }: { code: string; className?: string }) {
       src={`/flags/${code.toLowerCase()}.svg`}
       alt=""
       aria-hidden
-      className={cn('ring-line h-4 w-6 shrink-0 rounded-xs object-cover ring-1', className)}
+      className={cn('ring-line h-3.5 w-[21px] shrink-0 rounded-xs object-cover ring-1', className)}
     />
   )
 }
@@ -224,7 +224,7 @@ export function PhoneInput({
       <div ref={containerRef} className="relative">
         <div
           className={cn(
-            'border-line bg-surface focus-within:border-primary focus-within:ring-primary/12 flex h-10.5 w-full items-center gap-1.5 rounded-md border pr-3.5 pl-2 transition-colors focus-within:ring-[3px]',
+            'border-line bg-surface focus-within:border-primary focus-within:ring-primary/12 flex h-10.5 w-full items-center gap-1 rounded-md border pr-3 pl-1.5 transition-colors focus-within:ring-[3px]',
             disabled && 'bg-canvas cursor-not-allowed',
             error && 'border-error focus-within:border-error focus-within:ring-error/12',
             className,
@@ -239,21 +239,21 @@ export function PhoneInput({
             onClick={() => (open ? setOpen(false) : openList())}
             onKeyDown={handleButtonKeyDown}
             className={cn(
-              'group flex shrink-0 items-center gap-1.5 self-stretch rounded-md px-1.5 transition-colors',
+              'group flex shrink-0 items-center gap-1 self-stretch rounded-md px-1 transition-colors',
               disabled ? 'cursor-not-allowed' : 'hover:bg-primary-soft',
               open && 'bg-primary-soft',
             )}>
             <Flag code={country.code} />
             <span
               className={cn(
-                'text-ink group-hover:text-primary text-[14px] font-medium tabular-nums transition-colors',
+                'text-ink group-hover:text-primary text-[13px] font-medium tabular-nums transition-colors',
                 open && 'text-primary',
               )}>
               +{country.dialCode}
             </span>
             <ChevronDown
               className={cn(
-                'text-ink-subtle group-hover:text-primary size-3.5 shrink-0 transition-transform',
+                'text-ink-subtle group-hover:text-primary size-3 shrink-0 transition-transform',
                 open && 'text-primary rotate-180',
               )}
               strokeWidth={2}
