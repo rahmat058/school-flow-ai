@@ -642,8 +642,9 @@ Apply the database schema to your Supabase project first: run the migrations in
 ```
 PORT=5000
 SUPABASE_URL=https://[project].supabase.co
-SUPABASE_ANON_KEY=           # public key — never used server-side for privileged queries
-SUPABASE_SERVICE_ROLE_KEY=   # server-only; bypasses RLS — never expose to the client
+SUPABASE_PUBLISHABLE_KEY=    # client-safe key (the former anon key) — never used for privileged queries
+SUPABASE_SECRET_KEY=         # server-only; bypasses RLS — never expose to the client
+SUPABASE_JWKS_URL=           # verifies Supabase-signed JWTs (auth/v1/.well-known/jwks.json)
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
 CLOUDINARY_CLOUD_NAME=
