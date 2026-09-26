@@ -3,8 +3,10 @@ import request from 'supertest';
 import { createHash } from 'node:crypto';
 import { AppModule } from '../../src/app.module.js';
 import { MailService } from '../../src/mail/mail.service.js';
+import { DataSource } from 'typeorm';
+import { School } from '../../src/database/entities/school.entity.js';
+import { User } from '../../src/database/entities/user.entity.js';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { DatabaseService } from '../../src/database/database.service.js';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,7 +35,7 @@ const sha256 = (value: string): string =>
  */
 describe('Auth flow (e2e)', () => {
   let app: INestApplication;
-  let db: DatabaseService;
+  let dataSource: DataSource;
   let adminSchoolId: string;
   let rotateSchoolId: string;
   let accessToken: string;
@@ -79,15 +81,15 @@ describe('Auth flow (e2e)', () => {
       },
     );
 
-    db = moduleFixture.get(DatabaseService);
+    dataSource = moduleFixture.get(DataSource);
     await app.init();
   });
 
   afterAll(async () => {
     for (const schoolId of [adminSchoolId, rotateSchoolId]) {
       if (!schoolId) continue;
-      await db.client.from('users').delete().eq('school_id', schoolId);
-      await db.client.from('schools').delete().eq('id', schoolId);
+      await dataSource.getRepository(User).delete({ schoolId });
+      await dataSource.getRepository(School).delete({ id: schoolId });
     }
     await app?.close();
   });
@@ -119,49 +121,47 @@ describe('Auth flow (e2e)', () => {
     });
 
     it('persists the school exactly as submitted', async () => {
-      const { data: school } = await db.client
-        .from('schools')
-        .select('*')
-        .eq('id', adminSchoolId)
-        .single();
+      const school = await dataSource
+        .getRepository(School)
+        .findOne({ where: { id: adminSchoolId } });
 
       expect(school).toMatchObject({
         name: admin.schoolName,
         address: admin.address,
-        contact_email: admin.contactEmail,
-        contact_phone: admin.contactPhone,
-        subscription_status: 'TRIAL',
+        contactEmail: admin.contactEmail,
+        contactPhone: admin.contactPhone,
+        subscriptionStatus: 'TRIAL',
         settings: {},
-        deleted_at: null,
+        deletedAt: null,
       });
-      expect(school.slug).toMatch(/^flow-test-school-/);
+      expect(school?.slug).toMatch(/^flow-test-school-/);
     });
 
     it('stores the admin login unverified, with a bcrypt hash and a hashed token', async () => {
-      const { data: user } = await db.client
-        .from('users')
-        .select('*')
-        .eq('email', admin.email)
-        .single();
+      const user = await dataSource
+        .getRepository(User)
+        .findOne({ where: { email: admin.email } });
 
       expect(user).toMatchObject({
-        school_id: adminSchoolId,
+        schoolId: adminSchoolId,
         role: 'ADMIN',
-        is_verified: false,
-        email_verified_at: null,
-        profile_id: null,
-        class_id: null,
-        deleted_at: null,
-        first_name: 'Flow',
-        last_name: 'Admin',
+        isVerified: false,
+        emailVerifiedAt: null,
+        profileId: null,
+        classId: null,
+        deletedAt: null,
+        firstName: 'Flow',
+        lastName: 'Admin',
       });
-      expect(user.password_hash).not.toBe(password);
-      expect(await bcrypt.compare(password, user.password_hash)).toBe(true);
+
+      const passwordHash = user?.passwordHash ?? '';
+      expect(passwordHash).not.toBe(password);
+      expect(await bcrypt.compare(password, passwordHash)).toBe(true);
 
       const token = tokenFrom(sent[0].link);
-      expect(user.verification_token_hash).toBe(sha256(token));
+      expect(user?.verificationTokenHash).toBe(sha256(token));
       const ttl =
-        new Date(user.verification_token_expires_at).getTime() - Date.now();
+        (user?.verificationTokenExpiresAt?.getTime() ?? 0) - Date.now();
       expect(ttl).toBeGreaterThan(23 * 60 * 60 * 1000);
       expect(ttl).toBeLessThan(25 * 60 * 60 * 1000);
     });
@@ -231,16 +231,14 @@ describe('Auth flow (e2e)', () => {
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({ email: admin.email, verified: true });
 
-      const { data: user } = await db.client
-        .from('users')
-        .select('*')
-        .eq('email', admin.email)
-        .single();
+      const user = await dataSource
+        .getRepository(User)
+        .findOne({ where: { email: admin.email } });
 
-      expect(user.is_verified).toBe(true);
-      expect(user.email_verified_at).toBeTruthy();
-      expect(user.verification_token_hash).toBeNull();
-      expect(user.verification_token_expires_at).toBeNull();
+      expect(user?.isVerified).toBe(true);
+      expect(user?.emailVerifiedAt).toBeTruthy();
+      expect(user?.verificationTokenHash).toBeNull();
+      expect(user?.verificationTokenExpiresAt).toBeNull();
     });
 
     it('rejects a reused or unknown token', async () => {
@@ -274,14 +272,13 @@ describe('Auth flow (e2e)', () => {
       accessToken = data.accessToken;
       refreshToken = data.refreshToken;
 
-      const { data: user } = await db.client
-        .from('users')
-        .select('last_login_at')
-        .eq('email', admin.email)
-        .single();
+      const user = await dataSource.getRepository(User).findOne({
+        where: { email: admin.email },
+        select: { lastLoginAt: true },
+      });
 
-      expect(user?.last_login_at).toBeTruthy();
-      expect(Date.parse(String(user?.last_login_at))).toBeGreaterThanOrEqual(
+      expect(user?.lastLoginAt).toBeTruthy();
+      expect(user?.lastLoginAt?.getTime() ?? 0).toBeGreaterThanOrEqual(
         before - 1000,
       );
     });

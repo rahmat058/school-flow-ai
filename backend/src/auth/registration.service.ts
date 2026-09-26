@@ -2,11 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import bcrypt from 'bcrypt';
-import { DatabaseService } from '../database/database.service.js';
+import { DataSource, IsNull, Repository } from 'typeorm';
+import { Role } from '../common/enums/role.enum.js';
+import { School } from '../database/entities/school.entity.js';
+import { User } from '../database/entities/user.entity.js';
 import { MailService } from '../mail/mail.service.js';
 import type { RegisterSchoolDto } from './dto/register-school.dto.js';
 import type { ResendVerificationDto } from './dto/resend-verification.dto.js';
@@ -18,19 +21,15 @@ import {
   verificationExpiry,
 } from './verification-token.util.js';
 
-interface VerificationUserRow {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  is_verified: boolean;
-  verification_token_expires_at: string | null;
-}
-
 @Injectable()
 export class RegistrationService {
   constructor(
-    private readonly database: DatabaseService,
+    @InjectRepository(School)
+    private readonly schools: Repository<School>,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
     private readonly mail: MailService,
     private readonly config: ConfigService,
   ) {}
@@ -43,50 +42,40 @@ export class RegistrationService {
       });
     }
 
-    const { data: school, error: schoolError } = await this.database.client
-      .from('schools')
-      .insert({
-        name: dto.schoolName,
-        slug: await this.uniqueSlug(dto.schoolName),
-        address: dto.address ?? null,
-        contact_email: dto.contactEmail,
-        contact_phone: dto.contactPhone ?? null,
-      })
-      .select('id, name, slug')
-      .single();
-
-    if (schoolError || !school) {
-      throw new InternalServerErrorException({
-        code: 'INTERNAL_ERROR',
-        message: 'Could not create the school',
-      });
-    }
-
+    const slug = await this.uniqueSlug(dto.schoolName);
     const token = createVerificationToken();
     const expiresAt = verificationExpiry();
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    const { error: userError } = await this.database.client
-      .from('users')
-      .insert({
-        school_id: school.id,
-        email: dto.email,
-        password_hash: passwordHash,
-        role: 'ADMIN',
-        is_verified: false,
-        first_name: dto.adminFirstName,
-        last_name: dto.adminLastName,
-        verification_token_hash: hashToken(token),
-        verification_token_expires_at: expiresAt.toISOString(),
-      });
+    // School + admin login are one unit of work: a failure in either rolls the
+    // whole registration back.
+    const schoolId = await this.dataSource.transaction(async (manager) => {
+      const school = await manager.getRepository(School).save(
+        manager.getRepository(School).create({
+          name: dto.schoolName,
+          slug,
+          address: dto.address ?? null,
+          contactEmail: dto.contactEmail,
+          contactPhone: dto.contactPhone ?? null,
+        }),
+      );
 
-    if (userError) {
-      await this.database.client.from('schools').delete().eq('id', school.id);
-      throw new InternalServerErrorException({
-        code: 'INTERNAL_ERROR',
-        message: 'Could not create the admin account',
-      });
-    }
+      await manager.getRepository(User).save(
+        manager.getRepository(User).create({
+          schoolId: school.id,
+          email: dto.email,
+          passwordHash,
+          role: Role.ADMIN,
+          isVerified: false,
+          firstName: dto.adminFirstName,
+          lastName: dto.adminLastName,
+          verificationTokenHash: hashToken(token),
+          verificationTokenExpiresAt: expiresAt,
+        }),
+      );
+
+      return school.id;
+    });
 
     await this.sendVerificationLink(
       dto.email,
@@ -95,64 +84,62 @@ export class RegistrationService {
     );
 
     return {
-      schoolId: school.id,
+      schoolId,
       email: dto.email,
       verification: { email: dto.email, expiresAt: expiresAt.toISOString() },
     };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
-    const { data } = await this.database.client
-      .from('users')
-      .select('id, email, is_verified, verification_token_expires_at')
-      .eq('verification_token_hash', hashToken(dto.token))
-      .is('deleted_at', null)
-      .maybeSingle();
+    const user = await this.users.findOne({
+      where: {
+        verificationTokenHash: hashToken(dto.token),
+        deletedAt: IsNull(),
+      },
+    });
 
-    const user = (data as VerificationUserRow | null) ?? null;
-    if (!user || isExpired(user.verification_token_expires_at)) {
+    if (
+      !user ||
+      isExpired(user.verificationTokenExpiresAt?.toISOString() ?? null)
+    ) {
       throw new BadRequestException({
         code: 'AUTH_VERIFY_TOKEN_INVALID',
         message: 'This verification link is invalid or has expired',
       });
     }
 
-    await this.database.client
-      .from('users')
-      .update({
-        is_verified: true,
-        email_verified_at: new Date().toISOString(),
-        verification_token_hash: null,
-        verification_token_expires_at: null,
-      })
-      .eq('id', user.id);
+    await this.users.update(
+      { id: user.id },
+      {
+        isVerified: true,
+        emailVerifiedAt: new Date(),
+        verificationTokenHash: null,
+        verificationTokenExpiresAt: null,
+      },
+    );
 
     return { email: user.email, verified: true };
   }
 
   async resendVerification(dto: ResendVerificationDto) {
-    const { data } = await this.database.client
-      .from('users')
-      .select('id, email, first_name, last_name, is_verified')
-      .eq('email', dto.email)
-      .is('deleted_at', null)
-      .maybeSingle();
+    const user = await this.users.findOne({
+      where: { email: dto.email, deletedAt: IsNull() },
+    });
 
-    const user = (data as VerificationUserRow | null) ?? null;
     const expiresAt = verificationExpiry();
 
-    if (user && !user.is_verified) {
+    if (user && !user.isVerified) {
       const token = createVerificationToken();
-      await this.database.client
-        .from('users')
-        .update({
-          verification_token_hash: hashToken(token),
-          verification_token_expires_at: expiresAt.toISOString(),
-        })
-        .eq('id', user.id);
+      await this.users.update(
+        { id: user.id },
+        {
+          verificationTokenHash: hashToken(token),
+          verificationTokenExpiresAt: expiresAt,
+        },
+      );
       await this.sendVerificationLink(
         user.email,
-        `${user.first_name} ${user.last_name}`.trim(),
+        `${user.firstName} ${user.lastName}`.trim(),
         token,
       );
     }
@@ -175,13 +162,11 @@ export class RegistrationService {
   }
 
   private async emailTaken(email: string): Promise<boolean> {
-    const { data } = await this.database.client
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .is('deleted_at', null)
-      .maybeSingle();
-    return Boolean(data);
+    const found = await this.users.findOne({
+      where: { email, deletedAt: IsNull() },
+      select: { id: true },
+    });
+    return Boolean(found);
   }
 
   private async uniqueSlug(name: string): Promise<string> {
@@ -189,12 +174,11 @@ export class RegistrationService {
     let candidate = base;
 
     for (let suffix = 2; suffix < 50; suffix += 1) {
-      const { data } = await this.database.client
-        .from('schools')
-        .select('id')
-        .eq('slug', candidate)
-        .maybeSingle();
-      if (!data) return candidate;
+      const taken = await this.schools.findOne({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+      if (!taken) return candidate;
       candidate = `${base}-${suffix}`;
     }
 

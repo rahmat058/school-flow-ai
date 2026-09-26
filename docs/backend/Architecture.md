@@ -2,9 +2,9 @@
 
 ## App flow
 
-React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → tenant scope) → services (business logic) → Supabase client → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis. Email jobs render a React Email template to HTML and deliver it through Resend.
+React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` → `RolesGuard` → `PermissionsGuard` → tenant scope) → services (business logic) → TypeORM repositories → PostgreSQL (Supabase). Real-time chat/notifications flow over a Socket.io gateway sharing the same HTTP server. Background jobs (emails, reminders) run through BullMQ/Redis. Email jobs render a React Email template to HTML and deliver it through Resend.
 
-Layers: **Controller → Service → Supabase client → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
+Layers: **Controller → Service → TypeORM repository → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
 ## Request lifecycle
 
@@ -17,7 +17,7 @@ flowchart TB
   token -->|valid token| role{"Per-route role +<br/>ownership check (where present)"}
   role -->|refused| forbidden["403 — role / ownership code"]
   role -->|allowed| service["Service (business logic)"]
-  service --> store[("Data store — Supabase, or the in-repo mock seed")]
+  service --> store[("Data store — PostgreSQL via TypeORM, or the in-repo mock seed")]
   store --> envelope["Envelope { success, data, meta? }"]
 ```
 
@@ -27,12 +27,12 @@ Today that chain runs against the **in-repo mock adapter** (`frontend/src/servic
 
 ```
 backend/
-├── supabase/
-│   └── migrations/             # SQL migrations — source of truth for the DB schema
 ├── src/
 │   ├── main.ts               # Bootstrap: prefix, pipes, filters, helmet, CORS
 │   ├── app.module.ts
-│   ├── database/             # Supabase client module (global injectable service)
+│   ├── database/             # TypeORM DataSource (global) + entities
+│   │   ├── data-source-options.ts  # the one place the connection is declared
+│   │   └── entities/               # *.entity.ts — the mapping onto the tables
 │   ├── common/               # guards, decorators, filters, interceptors, pipes
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
 │   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
@@ -92,7 +92,7 @@ The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns
 ## Tech stack
 
 - **NestJS 12 (TypeScript)** — modular framework with DI
-- **Supabase** — PostgreSQL database and data access (`@supabase/supabase-js`); service-role key on the server only; schema managed via Supabase migrations
+- **TypeORM + `pg`** — the data layer: entities in `src/database/entities/` map onto the tables and access is through injected `Repository<T>` classes. `synchronize` is **off** and there are **no migrations** — the ORM never reshapes the database; the schema is applied by hand (Supabase SQL editor). The database itself is PostgreSQL hosted on Supabase, reached over the session-mode pooler
 - **Passport.js + JWT** — access (15m) + refresh (7d) auth
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe

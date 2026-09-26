@@ -1,6 +1,6 @@
 # School Flow AI — Backend
 
-NestJS + Supabase (PostgreSQL) API for School Flow AI — auth, schools,
+NestJS + PostgreSQL (TypeORM) API for School Flow AI — auth, schools,
 users, and the attendance, fees, homework, exams, chat, notices, AI, and reports
 modules that serve the frontend over `/api/v1`.
 
@@ -12,9 +12,9 @@ Part of the [school-flow-ai](../README.md) monorepo. The backend docs in
 > in `frontend/src/data/`, so that adapter's routes, payloads, guards and error codes are the
 > contract these modules build to — where the mock and a doc disagree, the disagreement is a
 > documentation bug ([`Database.md`](../docs/backend/Database.md)). Phase 1 is under way: `src/`
-> holds the config, Supabase (`database/`), mail and auth modules — school registration with email
-> verification, login/refresh/logout and `GET /auth/me` — over the Phase 1 migration in
-> `supabase/migrations/`.
+> holds the config, TypeORM (`database/`), mail and auth modules — school registration with email
+> verification, login/refresh/logout and `GET /auth/me` — over the `schools`/`users` schema, which
+> is applied by hand (see Quick start).
 
 ---
 
@@ -23,13 +23,14 @@ Part of the [school-flow-ai](../README.md) monorepo. The backend docs in
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SECRET_KEY, JWT secrets, etc.
+cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
 npm run start:dev
 ```
 
-The schema's source of truth is `supabase/migrations/`. Apply it to your Supabase project
-with the CLI (`supabase db push`) or the SQL editor, and keep every change in a new migration
-([`Schema.md`](../docs/backend/Schema.md) is the per-table reference for what it should contain).
+The schema is **not** ORM-managed. There are no migrations and `synchronize` is off, so the
+entities in `src/database/entities/` only map onto the tables — create and change the schema by
+hand in the Supabase SQL editor ([`Schema.md`](../docs/backend/Schema.md) is the per-table
+reference). That keeps the ORM from ever reshaping a shared database.
 
 Validate before finishing any task:
 
@@ -43,12 +44,12 @@ npm run lint && npm run build
 
 ```text
 backend/
-├── supabase/
-│   └── migrations/           # SQL migrations — source of truth for the DB schema
 ├── src/
 │   ├── main.ts               # bootstrap: /api/v1 prefix, pipes, filters, helmet, CORS
 │   ├── app.module.ts
-│   ├── database/             # Supabase client module (global)
+│   ├── database/             # TypeORM DataSource (global) + entities
+│   │   ├── data-source-options.ts  # the one place the connection is declared
+│   │   └── entities/               # *.entity.ts — the mapping onto the tables
 │   ├── common/
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
 │   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
@@ -70,11 +71,12 @@ backend/
 │   ├── materials/            # study material uploads
 │   ├── reports/              # analytics + CSV export
 │   └── mail/                 # Resend mailer + react-email .tsx templates
-├── test/                     # scaffold e2e spec
+├── test/                     # test/<module>/ e2e specs
 ├── nest-cli.json
 ├── tsconfig.json
 ├── tsconfig.build.json
 ├── package.json
+├── .npmrc                    # legacy-peer-deps (TypeORM's optional ioredis ^5 peer vs ioredis 6)
 ├── .env                      # not committed
 └── .env.example              # committed template — `cp .env.example .env`
 ```
@@ -96,7 +98,8 @@ same internal layout:
 ## Stack
 
 - [NestJS](https://nestjs.com/) — modular framework with dependency injection
-- [Supabase](https://supabase.com/) — PostgreSQL database and data access (`@supabase/supabase-js`); the secret key (`SUPABASE_SECRET_KEY`) is used on the server only — never expose it to the client
+- [TypeORM](https://typeorm.io/) + [`pg`](https://node-postgres.com/) — the data layer: entities in `src/database/entities/`, injected `Repository<T>` classes in services, migrations in `src/database/migrations/`; `synchronize` stays **off**
+- PostgreSQL hosted on [Supabase](https://supabase.com/), reached over the session-mode pooler
 - [Passport.js + JWT](https://www.passportjs.org/) — access (15m) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
@@ -123,16 +126,18 @@ same internal layout:
 
 ## Conventions
 
-- **Layers:** Controller → Service → Supabase client → PostgreSQL. Controllers
+- **Layers:** Controller → Service → TypeORM repository → PostgreSQL. Controllers
   stay thin; services never touch HTTP objects.
 - **Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`;
   DTOs in per-module `dto/` as `create-*.dto.ts` / `update-*.dto.ts`.
 - **Tenancy:** every table carries `schoolId`, and every query is scoped to it —
   no unscoped reads.
-- **Transparency:** all DB access goes through the global Supabase client module;
-  the secret key is used on the server only — never expose it to the client.
-- **Migrations:** keep every schema change in a Supabase migration (SQL editor or
-  CLI) so the schema stays reproducible.
+- **Data access:** services inject `Repository<Entity>` classes
+  (`@InjectRepository`) and `DataSource` for transactions; nothing queries the
+  database outside a service.
+- **Schema:** there are no migrations and `synchronize` stays off — the entities
+  are a mapping onto existing tables, and every schema change is applied by hand
+  in the Supabase SQL editor. The ORM never reshapes a shared database.
 - **Responses:** the global interceptor/filter shape the response envelope;
   services throw `HttpException` subclasses and never build HTTP responses.
 - **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.

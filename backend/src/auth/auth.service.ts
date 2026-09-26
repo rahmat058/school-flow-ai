@@ -5,29 +5,19 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import bcrypt from 'bcrypt';
+import { IsNull, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
 import type { Role } from '../common/enums/role.enum.js';
-import { DatabaseService } from '../database/database.service.js';
+import { School } from '../database/entities/school.entity.js';
+import { User } from '../database/entities/user.entity.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import type { AccessTokenPayload } from './strategies/jwt.strategy.js';
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-interface UserRow {
-  id: string;
-  school_id: string;
-  email: string;
-  password_hash: string;
-  role: Role;
-  is_verified: boolean;
-  first_name: string;
-  last_name: string;
-  profile_id: string | null;
-  class_id: string | null;
-}
 
 export interface AuthUser {
   id: string;
@@ -51,20 +41,23 @@ export interface AuthSession {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly database: DatabaseService,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
+    @InjectRepository(School)
+    private readonly schools: Repository<School>,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
   ) {}
 
   async login(dto: LoginDto): Promise<AuthSession> {
     const user = await this.findByEmail(dto.email);
-    if (!user || !(await bcrypt.compare(dto.password, user.password_hash))) {
+    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException({
         code: 'AUTH_INVALID_CREDENTIALS',
         message: 'Email or password is incorrect',
       });
     }
-    if (!user.is_verified) {
+    if (!user.isVerified) {
       throw new ForbiddenException({
         code: 'AUTH_NOT_VERIFIED',
         message:
@@ -72,10 +65,7 @@ export class AuthService {
       });
     }
 
-    await this.database.client
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', user.id);
+    await this.users.update({ id: user.id }, { lastLoginAt: new Date() });
 
     return this.issueSession(user);
   }
@@ -113,19 +103,18 @@ export class AuthService {
       });
     }
 
-    const { data: school } = await this.database.client
-      .from('schools')
-      .select('id, name, slug')
-      .eq('id', user.school_id)
-      .maybeSingle();
+    const school = await this.schools.findOne({
+      where: { id: user.schoolId },
+      select: { id: true, name: true, slug: true },
+    });
 
-    return { ...this.toAuthUser(user), school: school ?? null };
+    return { ...this.toAuthUser(user), school };
   }
 
-  private issueSession(user: UserRow): AuthSession {
+  private issueSession(user: User): AuthSession {
     const payload: AccessTokenPayload = {
       sub: user.id,
-      sid: user.school_id,
+      sid: user.schoolId,
       email: user.email,
       role: user.role,
     };
@@ -146,37 +135,29 @@ export class AuthService {
     };
   }
 
-  private toAuthUser(user: UserRow): AuthUser {
+  private toAuthUser(user: User): AuthUser {
     return {
       id: user.id,
       email: user.email,
       role: user.role,
-      schoolId: user.school_id,
-      isVerified: user.is_verified,
-      profileId: user.profile_id,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      classId: user.class_id,
+      schoolId: user.schoolId,
+      isVerified: user.isVerified,
+      profileId: user.profileId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      classId: user.classId,
     };
   }
 
-  private async findByEmail(email: string): Promise<UserRow | null> {
-    const { data } = await this.database.client
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .is('deleted_at', null)
-      .maybeSingle();
-    return (data as UserRow | null) ?? null;
+  private findByEmail(email: string): Promise<User | null> {
+    return this.users.findOne({
+      where: { email, deletedAt: IsNull() },
+    });
   }
 
-  private async findById(id: string): Promise<UserRow | null> {
-    const { data } = await this.database.client
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .is('deleted_at', null)
-      .maybeSingle();
-    return (data as UserRow | null) ?? null;
+  private findById(id: string): Promise<User | null> {
+    return this.users.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
   }
 }

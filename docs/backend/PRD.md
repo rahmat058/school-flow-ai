@@ -10,26 +10,26 @@ Build the complete backend for a multi-role School Management System using **Nes
 
 ### 1.2 Tech Stack
 
-| Layer        | Technology                                                              |
-| ------------ | ----------------------------------------------------------------------- |
-| Runtime      | Node.js + TypeScript                                                    |
-| Framework    | NestJS (modular architecture)                                           |
-| Database     | PostgreSQL via Supabase                                                 |
-| Data access  | Supabase (`@supabase/supabase-js`), service-role key on the server only |
-| Real-Time    | Socket.io (NestJS WebSocket Gateways)                                   |
-| Auth         | JWT (Passport.js) + bcrypt                                              |
-| File Storage | Cloudinary (or Supabase Storage)                                        |
-| Email        | Resend (transactional email API) + React Email templates                |
-| Payments     | Stripe (international) + SSLCommerz (Bangladesh)                        |
-| AI           | LLM API (e.g., OpenAI/Gemini)                                           |
-| Validation   | class-validator + class-transformer (DTOs)                              |
-| Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                      |
-| Deployment   | Render (API), Supabase (DB), Cloudinary                                 |
+| Layer        | Technology                                                                      |
+| ------------ | ------------------------------------------------------------------------------- |
+| Runtime      | Node.js + TypeScript                                                            |
+| Framework    | NestJS (modular architecture)                                                   |
+| Database     | PostgreSQL via Supabase                                                         |
+| Data access  | TypeORM + `pg` — entities in `src/database/entities/`, repositories in services |
+| Real-Time    | Socket.io (NestJS WebSocket Gateways)                                           |
+| Auth         | JWT (Passport.js) + bcrypt                                                      |
+| File Storage | Cloudinary (or Supabase Storage)                                                |
+| Email        | Resend (transactional email API) + React Email templates                        |
+| Payments     | Stripe (international) + SSLCommerz (Bangladesh)                                |
+| AI           | LLM API (e.g., OpenAI/Gemini)                                                   |
+| Validation   | class-validator + class-transformer (DTOs)                                      |
+| Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                              |
+| Deployment   | Render (API), Supabase (DB), Cloudinary                                         |
 
 ### 1.3 Architecture
 
 - **NestJS modular structure**: one module per domain (`auth/`, `schools/`, `users/`, `attendance/`, `fees/`, `homework/`, `timetables/`, `exams/`, `chat/`, `notices/`, `ai/`, `materials/`, `reports/`), each with `*.module.ts`, `*.controller.ts`, `*.service.ts`, and `dto/`
-- Global Supabase client (single injectable service) in a shared `database/` module — all DB access goes through it
+- Global TypeORM `DataSource` in a shared `database/` module; services inject `Repository<Entity>` classes — all DB access goes through them
 - RESTful APIs versioned via `app.setGlobalPrefix('api/v1')` or NestJS URI versioning
 - Multi-tenant: every table carries a `schoolId` foreign key; a global tenant guard scopes all queries
 - Socket.io via NestJS `@WebSocketGateway()` on the same HTTP server
@@ -42,7 +42,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 - DTO validation on all request bodies via global `ValidationPipe` (`whitelist: true`, `transform: true`)
 - Global exception filter with consistent error shape
 - Rate limiting on auth endpoints (email verification, login) via `@nestjs/throttler`
-- Helmet, CORS whitelist, parameterized queries via the Supabase client (SQL-injection safe by default)
+- Helmet, CORS whitelist, parameterized queries via the TypeORM query builder (SQL-injection safe by default)
 
 ---
 
@@ -222,7 +222,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 - Unique (classId, studentId, date) constraint prevents duplicates
 - **The daily register is the class, not the register's rows** — it lists every active student, so a day that was never marked still opens complete (each row's `status` is `null` until it is marked). A write upserts the whole day on `(class, student, date)`: a resubmitted day replaces its rows instead of duplicating them, and the batch is validated in full **before** any row is written — an unknown student, a student from another class, an unknown status, an empty batch or a malformed date refuses the whole request — so a register is never left half-marked
-- Monthly %, streaks, and class analytics via SQL aggregations (Supabase RPC) / views
+- Monthly %, streaks, and class analytics via SQL aggregations (TypeORM query builder / raw parameterized SQL) or views
 - Socket.io event `attendance:marked` notifies parents in real time
 - **The two month reads share one shape** — `attendance/monthly` and `attendance/me` return the same totals, the same month picker and one row per register day; a `scope` field says whose month it is, and only a personal month carries a `status` per day (a class day has many students, so it carries that day's counts instead). `attendance/me` is **self-scoped** — a student reads only their own register, a guardian only their own children, and a staff account is refused because it has no personal register
 - Each month payload returns the **months on record**, so the picker never offers an empty month; a requested month with no register returns empty `days` and zeroed totals — an empty month is empty, not an error
@@ -476,7 +476,7 @@ Concessions
 
 **Planned, not yet in the mock** — one endpoint per `ai_feature` value: a server-side prompt template plus a throttled LLM call, history in `ai_conversations`. None exist yet:
 
-- [ ] `POST /api/v1/ai/chat` — the general assistant, with a **role-scoped prompt template**: for an admin it answers **school insights** grounded in DB aggregates (via Supabase RPC), for a student it is an **academic tutor** answering with their own class and subjects in mind
+- [ ] `POST /api/v1/ai/chat` — the general assistant, with a **role-scoped prompt template**: for an admin it answers **school insights** grounded in DB aggregates (raw parameterized SQL through the query builder), for a student it is an **academic tutor** answering with their own class and subjects in mind
 - [ ] `POST /api/v1/ai/report-comment` — report card comment generator
 - [ ] `POST /api/v1/ai/fee-reminder` — fee reminder message generator
 - [ ] `POST /api/v1/ai/notice` — notice drafting: takes the notice **type** and the **details**, returns the announcement text
@@ -543,7 +543,7 @@ Concessions
 
 **Behavior**
 
-- The module owns **no tables**: every figure is aggregated from the modules that do — attendance, fees, exams, classes, people — the way the SQL/RPC projections in `Database.md` §16 would. Aggregations via SQL (`group by`/aggregate through Supabase RPC) and PostgreSQL materialized views for the heavy ones; CSV streaming export for large datasets
+- The module owns **no tables**: every figure is aggregated from the modules that do — attendance, fees, exams, classes, people — the way the SQL projections in `Database.md` §16 would. Aggregations via SQL (`group by`/aggregate through the query builder or raw parameterized SQL) and PostgreSQL materialized views for the heavy ones; CSV streaming export for large datasets
 - **`dashboard/student` is self-scoped.** The student comes from the session, so no id appears in the path and an admin or teacher account is refused with `403 DASHBOARD_FORBIDDEN` rather than served someone else's day. Every figure reuses the read model the student's own screens already show — the register totals behind the profile's Attendance tab, the invoices behind Fee history, the class grid behind `/timetables/me` and the timetable module — so the dashboard and those screens cannot disagree
 - **`dashboard/parent` is scoped to the caller's own children**, on the same pattern: the guardian comes from the session, `?studentId=` may only name one of the `children` the response lists (anything else is `403 PARENT_FORBIDDEN`), and a non-guardian account is refused with `403 DASHBOARD_FORBIDDEN`. Every figure is the read model the child's own screens already show — the register totals, the invoices net of concession, the published marks, the class's assignments and its papers — so a guardian and their child cannot be shown different numbers. Two rules worth keeping: the **progress chart plots exactly the rows the results list shows**, so the two cannot disagree, and **pending homework is derived** — a class assignment the child holds no submission for — not a status column
 - **`progress/me` is self-scoped the same way**, and is a projection over the same published rows: `report_cards` supplies the rank (the newest published card; `null` until one exists), `results` joined to `exam_subjects` supplies the trend (one point per published assessment, oldest first, a share of the papers' total), the subject rows put the student's mean against the class's mean, and `results.remarks` supplies the teacher remarks. **A paper the student missed is excluded from every average** — absence is a state, not a score, the same rule `reports/exam-results` applies — and the class mean weights every classmate equally, so a small class is not dominated by one student. GPA is the average percentage on a 10-point scale (`percentage ÷ 10`), reported beside the raw average; a school on the `GPA` grading scale may substitute its own conversion
@@ -621,7 +621,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 - Protected APIs reject cross-school access
 - Rate limiting (`@nestjs/throttler`): 5/min on verification & login, 100/min general
 - DTO validation (`class-validator`, global `ValidationPipe` with `whitelist: true`)
-- Parameterized queries via the Supabase client (SQL-injection safe)
+- Parameterized queries via the TypeORM query builder (SQL-injection safe)
 - Cloudinary signed uploads; file type/size validation (PDFs, images ≤ 10MB)
 - Stripe signature verification and SSLCommerz IPN verification on all payment confirmations and webhooks
 - No sensitive data (passwords, OTPs, verification tokens) in logs or responses (`ClassSerializerInterceptor` to strip fields)
@@ -633,22 +633,22 @@ No HTTP endpoints — this module is called by the other services and by the sch
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in Supabase keys, JWT secrets, etc.
+cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
 npm run start:dev
 ```
 
-Apply the database schema to your Supabase project first: run the migrations in
-`supabase/migrations` (Supabase SQL editor or CLI), or push with
-`supabase db push`.
+The schema is **not** ORM-managed: there are no migrations and `synchronize` is
+off, so the entities in `src/database/entities/` only map onto the tables. Create
+and change the schema by hand in the Supabase SQL editor — the tables and columns
+are described in [`Schema.md`](./Schema.md).
 
 **Environment variables (.env)**
 
 ```
 PORT=5000
-SUPABASE_URL=https://[project].supabase.co
-SUPABASE_PUBLISHABLE_KEY=    # client-safe key (the former anon key) — never used for privileged queries
-SUPABASE_SECRET_KEY=         # server-only; bypasses RLS — never expose to the client
-SUPABASE_JWKS_URL=           # verifies Supabase-signed JWTs (auth/v1/.well-known/jwks.json)
+DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
+SUPABASE_URL=https://[project].supabase.co   # optional — Storage/JWKS only
+SUPABASE_SECRET_KEY=                          # optional
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
 CLOUDINARY_CLOUD_NAME=
@@ -670,12 +670,10 @@ CLIENT_URL=
 
 ```
 backend/
-├── supabase/
-│   └── migrations/         # SQL migrations — source of truth for the DB schema
 ├── src/
 │   ├── main.ts
 │   ├── app.module.ts
-│   ├── database/           # Supabase client module (global injectable service)
+│   ├── database/           # TypeORM DataSource (global) + entities
 │   ├── common/             # guards, decorators, filters, interceptors, pipes
 │   ├── auth/               # strategies, guards, dto
 │   ├── schools/
