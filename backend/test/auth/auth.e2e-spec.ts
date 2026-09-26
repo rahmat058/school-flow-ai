@@ -1,12 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
 import bcrypt from 'bcrypt';
-import { createHash } from 'node:crypto';
 import request from 'supertest';
-import type { App } from 'supertest/types';
-import { AppModule } from '../src/app.module.js';
-import { DatabaseService } from '../src/database/database.service.js';
-import { MailService } from '../src/mail/mail.service.js';
+import { createHash } from 'node:crypto';
+import { AppModule } from '../../src/app.module.js';
+import { MailService } from '../../src/mail/mail.service.js';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { DatabaseService } from '../../src/database/database.service.js';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -33,7 +32,7 @@ const sha256 = (value: string): string =>
  * The verification mail is captured in-memory so the flow does not need an inbox.
  */
 describe('Auth flow (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
   let db: DatabaseService;
   let adminSchoolId: string;
   let rotateSchoolId: string;
@@ -189,6 +188,17 @@ describe('Auth flow (e2e)', () => {
   });
 
   describe('login before verification', () => {
+    it('rejects a malformed body', async () => {
+      const res = await api()
+        .post('/api/v1/auth/login')
+        .send({ email: 'not-an-email', password: 'short' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(Array.isArray(res.body.error.details)).toBe(true);
+    });
+
     it('refuses an unverified account with AUTH_NOT_VERIFIED', async () => {
       const res = await login(admin.email, password);
 
@@ -269,7 +279,9 @@ describe('Auth flow (e2e)', () => {
         .select('last_login_at')
         .eq('email', admin.email)
         .single();
-      expect(new Date(user.last_login_at).getTime()).toBeGreaterThanOrEqual(
+
+      expect(user?.last_login_at).toBeTruthy();
+      expect(Date.parse(String(user?.last_login_at))).toBeGreaterThanOrEqual(
         before - 1000,
       );
     });
