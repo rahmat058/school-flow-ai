@@ -22,7 +22,7 @@ export interface AuthUser {
 export interface AuthSession {
   user: AuthUser
   accessToken: string
-  /** ISO-8601 — access tokens live 15 minutes per the backend contract. */
+  /** ISO-8601 — access tokens live 7 days per the backend contract. */
   expiresAt: string
 }
 

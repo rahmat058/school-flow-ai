@@ -93,7 +93,7 @@ The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns
 
 - **NestJS 12 (TypeScript)** — modular framework with DI
 - **TypeORM + `pg`** — the data layer: entities in `src/database/entities/` map onto the tables and access is through injected `Repository<T>` classes. `synchronize` is **off** and there are **no migrations** — the ORM never reshapes the database; the schema is applied by hand (Supabase SQL editor). The database itself is PostgreSQL hosted on Supabase, reached over the session-mode pooler
-- **Passport.js + JWT** — access (15m) + refresh (7d) auth
+- **Passport.js + JWT** — access (7d) + refresh (7d) auth
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe
 - **BullMQ + Redis** — email/notification queues; `@nestjs/schedule` for cron (fee reminders)

@@ -103,7 +103,7 @@ Per-side guides: **[frontend/README.md](./frontend/README.md)** · **[backend/RE
 - [NestJS 12](https://nestjs.com/) — modular backend with dependency injection
 - [Supabase](https://supabase.com/) — PostgreSQL database and data access from the backend
 - [PostgreSQL](https://www.postgresql.org/) — relational database (hosted on Supabase)
-- [Passport.js + JWT](https://www.passportjs.org/) — access (15m) + refresh (7d) auth
+- [Passport.js + JWT](https://www.passportjs.org/) — access (7d) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — real-time chat and notifications
 - [BullMQ + Redis](https://docs.bullmq.io/) — email and notification queues
 - [ESLint](https://eslint.org/) · [Prettier](https://prettier.io/) · [Husky](https://typicode.github.io/husky/) · [Commitlint](https://commitlint.js.org/)

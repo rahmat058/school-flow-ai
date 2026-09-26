@@ -20,7 +20,7 @@ commit SHA.
 
 ## What we protect
 
-- **Authentication** — JWT access (15m) + refresh (7d) via Passport.js;
+- **Authentication** — JWT access (7d) + refresh (7d) via Passport.js;
   passwords are hashed with bcrypt and never returned in responses
 - **Secrets** — `passwordHash`, OTPs, and tokens are stripped from API payloads;
   JWT/database/payment secrets live only in server-side environment variables

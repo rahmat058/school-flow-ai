@@ -6,6 +6,7 @@ import { MailService } from '../../src/mail/mail.service.js';
 import { DataSource } from 'typeorm';
 import { School } from '../../src/database/entities/school.entity.js';
 import { User } from '../../src/database/entities/user.entity.js';
+import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 
@@ -40,6 +41,8 @@ describe('Auth flow (e2e)', () => {
   let rotateSchoolId: string;
   let accessToken: string;
   let refreshToken: string;
+  let adminUserId: string;
+  let jwt: JwtService;
 
   const sent: SentMail[] = [];
   const password = 'FlowTest123!';
@@ -82,6 +85,7 @@ describe('Auth flow (e2e)', () => {
     );
 
     dataSource = moduleFixture.get(DataSource);
+    jwt = moduleFixture.get(JwtService);
     await app.init();
   });
 
@@ -271,6 +275,7 @@ describe('Auth flow (e2e)', () => {
 
       accessToken = data.accessToken;
       refreshToken = data.refreshToken;
+      adminUserId = data.user.id;
 
       const user = await dataSource.getRepository(User).findOne({
         where: { email: admin.email },
@@ -303,13 +308,33 @@ describe('Auth flow (e2e)', () => {
       expect(res.body.error.code).toBe('AUTH_UNAUTHENTICATED');
     });
 
-    it('refuses /auth/me with a tampered token', async () => {
+    it('names a tampered token as invalid', async () => {
       const res = await api()
         .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${accessToken}x`);
 
       expect(res.status).toBe(401);
-      expect(res.body.error.code).toBe('AUTH_UNAUTHENTICATED');
+      expect(res.body.error.code).toBe('AUTH_TOKEN_INVALID');
+    });
+
+    it('names an expired token as expired', async () => {
+      const expired = jwt.sign(
+        {
+          sub: adminUserId,
+          sid: adminSchoolId,
+          email: admin.email,
+          role: 'ADMIN',
+        },
+        { expiresIn: -1 },
+      );
+
+      const res = await api()
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${expired}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe('AUTH_TOKEN_EXPIRED');
+      expect(res.body.error.message).toMatch(/expired/i);
     });
 
     it('mints a fresh session from a refresh token', async () => {

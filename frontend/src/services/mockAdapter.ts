@@ -314,7 +314,7 @@ function tokenFor(userId: string): string {
 }
 
 function sessionFor(user: AuthUser): AuthSession {
-  const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60_000).toISOString()
   return { user, accessToken: tokenFor(user.id), expiresAt }
 }
 

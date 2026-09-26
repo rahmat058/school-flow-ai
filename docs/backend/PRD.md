@@ -102,7 +102,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 **Endpoints**
 
-- [ ] `POST /api/v1/auth/login` — JWT (access 15m + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
+- [ ] `POST /api/v1/auth/login` — JWT (access 7d + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
 - [ ] `POST /api/v1/auth/verify-email` — confirm the emailed verification link token, activating the account; the token is single-use and lives 24h `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
 - [ ] `POST /api/v1/auth/resend-verification` — reissue the verification link for an _unverified_ account; always `200`, so an unknown address is never revealed `(public)`
 - [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`

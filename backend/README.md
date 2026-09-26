@@ -98,9 +98,9 @@ same internal layout:
 ## Stack
 
 - [NestJS](https://nestjs.com/) — modular framework with dependency injection
-- [TypeORM](https://typeorm.io/) + [`pg`](https://node-postgres.com/) — the data layer: entities in `src/database/entities/`, injected `Repository<T>` classes in services, migrations in `src/database/migrations/`; `synchronize` stays **off**
+- [TypeORM](https://typeorm.io/) + [`pg`](https://node-postgres.com/) — the data layer: entities in `src/database/entities/` map onto the tables and services inject `Repository<T>` classes. `synchronize` stays **off** and there are no migrations — the schema is applied by hand
 - PostgreSQL hosted on [Supabase](https://supabase.com/), reached over the session-mode pooler
-- [Passport.js + JWT](https://www.passportjs.org/) — access (15m) + refresh (7d) auth
+- [Passport.js + JWT](https://www.passportjs.org/) — access (7d) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
 - [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)

@@ -16,7 +16,7 @@ import type { LoginDto } from './dto/login.dto.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import type { AccessTokenPayload } from './strategies/jwt.strategy.js';
 
-export const ACCESS_TTL_SECONDS = 15 * 60;
+export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface AuthUser {
