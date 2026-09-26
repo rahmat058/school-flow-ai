@@ -4,12 +4,13 @@ import type { SubmitHandler } from 'react-hook-form'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import { env } from '@/lib/env'
-import { emailRules } from '@/lib/validation'
+import { emailRules, optionalPhoneRules } from '@/lib/validation'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions } from '@/features/classes/api'
@@ -163,7 +164,21 @@ export function TeacherFormSheet({ open, onClose, teacher }: TeacherFormSheetPro
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Phone" type="tel" placeholder="Phone" {...register('phone')} />
+          <Controller
+            control={control}
+            name="phone"
+            rules={optionalPhoneRules}
+            render={({ field, fieldState }) => (
+              <PhoneInput
+                label="Phone"
+                placeholder="1712345678"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
           <Input
             label="Experience"
             type="number"

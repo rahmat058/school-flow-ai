@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import type { SubmitHandler } from 'react-hook-form'
-import { Building2, Lock, Mail, MapPin, Phone, User } from 'lucide-react'
+import { Building2, Lock, Mail, MapPin, User } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Spinner } from '@/components/ui/Spinner'
-import { emailRules, passwordHint, passwordRules } from '@/lib/validation'
+import { emailRules, passwordHint, passwordRules, phoneRules } from '@/lib/validation'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useRegisterSchool } from '@/features/auth/api'
@@ -30,6 +31,7 @@ export function SignupForm() {
   const registerSchool = useRegisterSchool()
 
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -97,12 +99,20 @@ export function SignupForm() {
             error={errors.contactEmail?.message}
             {...register('contactEmail', emailRules)}
           />
-          <Input
-            label="Contact number"
-            icon={Phone}
-            placeholder="+880 1700 000000"
-            error={errors.contactPhone?.message}
-            {...register('contactPhone', { required: 'Contact number is required' })}
+          <Controller
+            control={control}
+            name="contactPhone"
+            rules={phoneRules}
+            render={({ field, fieldState }) => (
+              <PhoneInput
+                label="Contact number"
+                placeholder="1712345678"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={fieldState.error?.message}
+              />
+            )}
           />
         </div>
       </fieldset>

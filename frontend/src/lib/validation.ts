@@ -25,6 +25,23 @@ export const passwordRules = {
 export const passwordHint = `At least ${MIN_PASSWORD_LENGTH} characters.`
 
 /**
+ * E.164 — the shape `PhoneInput` hands back (`+`, then the 7–15 digit national number with its
+ * country calling code). The field parses and formats through `react-phone-number-input`, so the
+ * form only ever sees a value that passes this.
+ */
+export const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/
+
+export const phoneRules = {
+  required: 'Phone number is required',
+  pattern: { value: PHONE_PATTERN, message: 'Enter a valid phone number' },
+} as const
+
+/** For a phone field that may be left blank: empty passes, anything filled must be a complete E.164. */
+export const optionalPhoneRules = {
+  validate: (value?: string) => !value || PHONE_PATTERN.test(value) || 'Enter a valid phone number',
+} as const
+
+/**
  * A study material's file rules (`docs/backend/Design.md`): PDF/JPG/PNG/DOCX up to 10MB. The form and
  * the mock's upload endpoint read the same list and the same check, so the client cannot accept a file
  * the API would refuse.

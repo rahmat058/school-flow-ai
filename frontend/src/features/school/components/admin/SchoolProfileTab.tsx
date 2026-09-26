@@ -1,12 +1,13 @@
-import { useForm, type SubmitHandler } from 'react-hook-form'
+import { Controller, useForm, type SubmitHandler } from 'react-hook-form'
 import { Building2 } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Input } from '@/components/ui/Input'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useUpdateSchoolProfile } from '@/features/school/api'
-import { emailRules } from '@/lib/validation'
+import { emailRules, optionalPhoneRules } from '@/lib/validation'
 import type { School } from '@/types/school'
 
 interface SchoolProfileFormValues {
@@ -26,6 +27,7 @@ export function SchoolProfileTab({ formId, school }: SchoolProfileTabProps) {
   const { toast } = useToast()
   const updateProfile = useUpdateSchoolProfile()
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -83,7 +85,21 @@ export function SchoolProfileTab({ formId, school }: SchoolProfileTabProps) {
             error={errors.contactEmail?.message}
             {...register('contactEmail', emailRules)}
           />
-          <Input label="Phone" type="tel" error={errors.contactPhone?.message} {...register('contactPhone')} />
+          <Controller
+            control={control}
+            name="contactPhone"
+            rules={optionalPhoneRules}
+            render={({ field, fieldState }) => (
+              <PhoneInput
+                label="Phone"
+                placeholder="1712345678"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
           <div className="sm:col-span-2">
             <Textarea label="Address" rows={2} error={errors.address?.message} {...register('address')} />
           </div>

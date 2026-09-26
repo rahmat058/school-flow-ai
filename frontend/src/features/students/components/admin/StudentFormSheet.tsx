@@ -4,6 +4,7 @@ import type { SubmitHandler } from 'react-hook-form'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
 import { env } from '@/lib/env'
 import { bloodGroupOptions, genderOptions } from '@/lib/options'
-import { emailRules } from '@/lib/validation'
+import { emailRules, phoneRules } from '@/lib/validation'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useCreateStudent, useUpdateStudent } from '@/features/students/api'
 import type { BloodGroup, Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
@@ -262,15 +263,20 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
               error={errors.guardianName?.message}
               {...register('guardianName', { required: 'Parent name is required' })}
             />
-            <Input
-              label="Phone"
-              type="tel"
-              placeholder="+8801XXXXXXXXX"
-              error={errors.guardianPhone?.message}
-              {...register('guardianPhone', {
-                required: 'Phone is required',
-                minLength: { value: 6, message: 'Enter a full phone number' },
-              })}
+            <Controller
+              control={control}
+              name="guardianPhone"
+              rules={phoneRules}
+              render={({ field, fieldState }) => (
+                <PhoneInput
+                  label="Phone"
+                  placeholder="1712345678"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  error={fieldState.error?.message}
+                />
+              )}
             />
           </div>
 
