@@ -6,7 +6,8 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import { STATUS_CODES } from 'node:http';
+import type { Request, Response } from 'express';
 
 const DEFAULT_CODES: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: 'VALIDATION_ERROR',
@@ -28,19 +29,32 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
+    const request = host.switchToHttp().getRequest<Request>();
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
     const body = this.toErrorBody(exception, status);
 
+    const text = STATUS_CODES[status] ?? 'Unknown Status';
+    const line = `${request.method} ${request.originalUrl} ${status} ${text} — ${this.exceptionName(exception)}: ${body.code}: ${body.message}`;
+
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        exception instanceof Error ? exception.message : String(exception),
+        line,
+        exception instanceof Error ? exception.stack : undefined,
       );
+    } else {
+      this.logger.warn(line);
     }
 
     response.status(status).json({ success: false, error: body });
+  }
+
+  private exceptionName(exception: unknown): string {
+    return exception instanceof Error
+      ? exception.constructor.name
+      : 'UnknownException';
   }
 
   private toErrorBody(exception: unknown, status: number): ErrorBody {

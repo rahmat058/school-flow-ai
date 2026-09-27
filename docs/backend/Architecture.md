@@ -6,7 +6,16 @@ React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` �
 
 Layers: **Controller → Service → TypeORM repository → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
-Global concerns are registered once on `AppModule` rather than per controller: `JwtAuthGuard` (token check), `ResponseInterceptor` (success envelope), `AllExceptionsFilter` (error envelope) and **`CacheControlInterceptor`**, which sets `Cache-Control` on every response — reading the same `@Public()` metadata the guard does, so a public route gets `public, max-age=60` and an authenticated one `private, max-age=5`, before the handler runs (error responses carry it too). Per-user data therefore never enters a shared cache.
+Global concerns are registered once on `AppModule` rather than per controller: `JwtAuthGuard` (token check), **`LoggingInterceptor`** (success log line), `ResponseInterceptor` (success envelope), **`CacheControlInterceptor`**, which sets `Cache-Control` on every response — reading the same `@Public()` metadata the guard does, so a public route gets `public, max-age=60` and an authenticated one `private, max-age=5`, before the handler runs (error responses carry it too) — and `AllExceptionsFilter` (error envelope + error log line). Per-user data therefore never enters a shared cache.
+
+## Request logging
+
+One line per outcome, through Nest's `Logger` (contexts `HTTP` and `AllExceptionsFilter`). Every line carries the HTTP method, the full path, the numeric status and its reason phrase:
+
+- **Success** — `LoggingInterceptor` logs once the response `finish` event fires, so the status is final (`@HttpCode` has already been applied, which reading it in `tap` would miss): `POST /api/v1/auth/login 200 OK — AuthController.login — 45ms`. It logs only `< 400`, so errors are never double-reported.
+- **Error** — `AllExceptionsFilter` logs **every** failure, because guards and pipes run outside the interceptor chain (a `401` from `JwtAuthGuard` never reaches an interceptor): `POST /api/v1/auth/login 401 Unauthorized — UnauthorizedException: AUTH_INVALID_CREDENTIALS: Invalid email or password`. `4xx` logs at `warn`; `5xx` at `error` with the stack.
+
+So a `401`, `403`, `409` or `500` names the thrown Nest exception class (`BadRequestException`, `NotFoundException`, …), its `code` and its `message`, and a `200`/`201`/`204` names the controller action and its duration — never a bare `Unauthorized` or `Internal server error`.
 
 ## Request lifecycle
 
