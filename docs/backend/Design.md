@@ -34,7 +34,10 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 
 ## Response headers
 
-- Every response carries `Cache-Control: no-store`, written globally by a response interceptor (not per route) — the API returns per-user authenticated data, so nothing may be held by a browser, proxy or CDN cache. Error responses carry it too, since the header is set before the handler runs
+- Every response carries a `Cache-Control` directive, written globally by a response interceptor (not per route), chosen by whether the route is public:
+  - **Public routes** (`@Public()` — registration, login, refresh, logout, health) → `public, max-age=60`, so a shared cache or CDN may hold them for a minute
+  - **Authenticated routes** (everything else) → `private, max-age=5`, so the browser may reuse a response for a few seconds but no shared cache stores per-user data
+- The header is set before the handler runs, so error responses carry it too
 - Standard security headers (`helmet`) apply to every response as well
 
 ## Field naming & types

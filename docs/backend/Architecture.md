@@ -6,7 +6,7 @@ React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` �
 
 Layers: **Controller → Service → TypeORM repository → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
-Global concerns are registered once on `AppModule` rather than per controller: `JwtAuthGuard` (token check), `ResponseInterceptor` (success envelope), `AllExceptionsFilter` (error envelope) and **`CacheControlInterceptor`**, which sets `Cache-Control: no-store` on every response — before the handler runs, so error responses carry it too. The API is per-user authenticated data, so no response is cacheable by default.
+Global concerns are registered once on `AppModule` rather than per controller: `JwtAuthGuard` (token check), `ResponseInterceptor` (success envelope), `AllExceptionsFilter` (error envelope) and **`CacheControlInterceptor`**, which sets `Cache-Control` on every response — reading the same `@Public()` metadata the guard does, so a public route gets `public, max-age=60` and an authenticated one `private, max-age=5`, before the handler runs (error responses carry it too). Per-user data therefore never enters a shared cache.
 
 ## Request lifecycle
 

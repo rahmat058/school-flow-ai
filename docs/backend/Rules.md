@@ -10,7 +10,7 @@
 - JSONB documents (e.g. `schools.settings`) are validated by their DTO against the unions in `Design.md`/`PRD.md` — Postgres constrains the column, not its keys — and a `PATCH` **merges** so a partial write never drops a key it did not send
 - `@Roles()` + `RolesGuard` for the coarse role check, then `@RequirePermission()` + `PermissionsGuard` against `user_permissions` for a fine-grained grant; tenant scope (`schoolId`) applied in every query
 - Response envelope + error envelope via global interceptor/filter — services throw `HttpException` subclasses, never shape responses manually
-- `Cache-Control: no-store` on every response, set by the global `CacheControlInterceptor` — the API is per-user authenticated data, so caching is never opt-in per route
+- `Cache-Control` on every response, set by the global `CacheControlInterceptor` from the `@Public()` marker — `public, max-age=60` for a public route, `private, max-age=5` for an authenticated one; never set per route
 - `@nestjs/throttler` on auth/OTP/AI endpoints
 - Emails: one React Email component per message (`.tsx` in `src/mail/templates/`), rendered to HTML with `render()` and sent through Resend — templates are code, reviewed like any module
 - Run `npm run lint` and `npm run build` before finishing any task
