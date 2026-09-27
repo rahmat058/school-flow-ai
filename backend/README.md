@@ -53,8 +53,9 @@ backend/
 │   ├── common/
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
 │   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
-│   │   ├── filters/          # global exception filter
-│   │   ├── interceptors/     # response envelope, logging
+│   │   ├── filters/          # global exception filter (logs every error)
+│   │   ├── interceptors/     # response envelope, cache-control, logging
+│   │   ├── utils/            # shared helpers (verification-token.util.ts, …)
 │   │   └── pipes/            # validation helpers
 │   ├── auth/                 # strategies, guards, dto + the RBAC catalogue and per-user grants
 │   ├── schools/              # registration, OTP, school profile + settings, backup
@@ -89,6 +90,7 @@ same internal layout:
 ├── <feature>.module.ts
 ├── <feature>.controller.ts
 ├── <feature>.service.ts
+├── <feature>.interface.ts    # the service's public types (never inline in the service)
 ├── dto/                      # create-*.dto.ts / update-*.dto.ts
 └── <feature>.gateway.ts      # only for real-time modules (chat)
 ```
@@ -129,7 +131,10 @@ same internal layout:
 - **Layers:** Controller → Service → TypeORM repository → PostgreSQL. Controllers
   stay thin; services never touch HTTP objects.
 - **Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`;
-  DTOs in per-module `dto/` as `create-*.dto.ts` / `update-*.dto.ts`.
+  DTOs in per-module `dto/` as `create-*.dto.ts` / `update-*.dto.ts`; a service's
+  public types in a sibling `<feature>.interface.ts` (imported with `import type`),
+  so a `*.service.ts` exports only its class. Shared DI-free helpers live in
+  `src/common/utils/` (e.g. `verification-token.util.ts`).
 - **Tenancy:** every table carries `schoolId`, and every query is scoped to it —
   no unscoped reads.
 - **Data access:** services inject `Repository<Entity>` classes
@@ -138,8 +143,11 @@ same internal layout:
 - **Schema:** there are no migrations and `synchronize` stays off — the entities
   are a mapping onto existing tables, and every schema change is applied by hand
   in the Supabase SQL editor. The ORM never reshapes a shared database.
-- **Responses:** the global interceptor/filter shape the response envelope;
-  services throw `HttpException` subclasses and never build HTTP responses.
+- **Responses:** the global `ResponseInterceptor`/`AllExceptionsFilter` shape the
+  envelope; `CacheControlInterceptor` sets `Cache-Control` (`public, max-age=60`
+  on a `@Public()` route, `private, max-age=5` otherwise) and `LoggingInterceptor`
+  logs each request — services throw `HttpException` subclasses and never build
+  HTTP responses.
 - **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.
 - **Money:** store as integer paise, never floats.
 - **Emails:** templates are React Email (`.tsx`) components in `src/mail/templates/`,

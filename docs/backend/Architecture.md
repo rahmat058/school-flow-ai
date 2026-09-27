@@ -44,11 +44,12 @@ backend/
 │   ├── database/             # TypeORM DataSource (global) + entities
 │   │   ├── data-source-options.ts  # the one place the connection is declared
 │   │   └── entities/               # *.entity.ts — the mapping onto the tables
-│   ├── common/               # guards, decorators, filters, interceptors, pipes
+│   ├── common/               # guards, decorators, filters, interceptors, utils, pipes
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
 │   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
-│   │   ├── filters/          # global exception filter
-│   │   └── interceptors/     # response envelope, cache-control, logging
+│   │   ├── filters/          # global exception filter (logs every error)
+│   │   ├── interceptors/     # response envelope, cache-control, logging
+│   │   └── utils/            # DI-free shared helpers (verification-token.util.ts)
 │   ├── auth/                 # strategies, guards, dto + the RBAC catalogue & per-user grants
 │   ├── schools/              # registration, OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
@@ -68,7 +69,7 @@ backend/
 └── .env
 ```
 
-**Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`; DTOs in `dto/` per module with `create-*.dto.ts` / `update-*.dto.ts`. Each feature module owns its routes under `/api/v1/<feature>`.
+**Naming:** `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.gateway.ts`; DTOs in `dto/` per module with `create-*.dto.ts` / `update-*.dto.ts`; a service's public types in a sibling `*.interface.ts` (`auth.interface.ts`, `registration.interface.ts`, `health.interface.ts`), so a `*.service.ts` exports only its class. Each feature module owns its routes under `/api/v1/<feature>`.
 
 ## Domain-to-module map
 

@@ -14,12 +14,17 @@ import { MailService } from '../mail/mail.service.js';
 import type { RegisterSchoolDto } from './dto/register-school.dto.js';
 import type { ResendVerificationDto } from './dto/resend-verification.dto.js';
 import type { VerifyEmailDto } from './dto/verify-email.dto.js';
+import type {
+  RegisteredSchool,
+  VerificationSent,
+  VerifiedEmail,
+} from './registration.interface.js';
 import {
   createVerificationToken,
   hashToken,
   isExpired,
   verificationExpiry,
-} from './verification-token.util.js';
+} from '../common/utils/verification-token.util.js';
 
 @Injectable()
 export class RegistrationService {
@@ -34,7 +39,7 @@ export class RegistrationService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(dto: RegisterSchoolDto) {
+  async register(dto: RegisterSchoolDto): Promise<RegisteredSchool> {
     if (await this.emailTaken(dto.email)) {
       throw new ConflictException({
         code: 'SCHOOL_EMAIL_TAKEN',
@@ -90,7 +95,7 @@ export class RegistrationService {
     };
   }
 
-  async verifyEmail(dto: VerifyEmailDto) {
+  async verifyEmail(dto: VerifyEmailDto): Promise<VerifiedEmail> {
     const user = await this.users.findOne({
       where: {
         verificationTokenHash: hashToken(dto.token),
@@ -121,7 +126,9 @@ export class RegistrationService {
     return { email: user.email, verified: true };
   }
 
-  async resendVerification(dto: ResendVerificationDto) {
+  async resendVerification(
+    dto: ResendVerificationDto,
+  ): Promise<VerificationSent> {
     const user = await this.users.findOne({
       where: { email: dto.email, deletedAt: IsNull() },
     });

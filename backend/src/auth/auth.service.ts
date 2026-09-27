@@ -9,34 +9,20 @@ import { IsNull, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { LoginDto } from './dto/login.dto.js';
-import type { Role } from '../common/enums/role.enum.js';
 import { School } from '../database/entities/school.entity.js';
 import { User } from '../database/entities/user.entity.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
-import type { AccessTokenPayload } from './strategies/jwt.strategy.js';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
+import type {
+  AccessTokenPayload,
+  AuthProfile,
+  AuthSession,
+  AuthUser,
+  LogoutResult,
+} from './auth.interface.js';
 
 export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;       // eg: 7d
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;     // eg: 7d
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: Role;
-  schoolId: string;
-  isVerified: boolean;
-  profileId: string | null;
-  firstName: string;
-  lastName: string;
-  classId: string | null;
-}
-
-export interface AuthSession {
-  user: AuthUser;
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: string;
-}
 
 @Injectable()
 export class AuthService {
@@ -90,11 +76,11 @@ export class AuthService {
     return this.issueSession(user);
   }
 
-  logout(): { loggedOut: true } {
+  logout(): LogoutResult {
     return { loggedOut: true };
   }
 
-  async me(current: AuthenticatedUser) {
+  async me(current: AuthenticatedUser): Promise<AuthProfile> {
     const user = await this.findById(current.id);
     if (!user) {
       throw new UnauthorizedException({

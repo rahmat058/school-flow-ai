@@ -14,6 +14,8 @@
 - `@nestjs/throttler` on auth/OTP/AI endpoints
 - Log through the global pipeline, never `console.log`: `LoggingInterceptor` emits the success line on response `finish` (skipping `>= 400`), and `AllExceptionsFilter` emits every error line with the thrown exception class, `code` and `message` (`warn` for `4xx`, `error` + stack for `5xx`) — each line carries the HTTP method, path and status reason phrase
 - Emails: one React Email component per message (`.tsx` in `src/mail/templates/`), rendered to HTML with `render()` and sent through Resend — templates are code, reviewed like any module
+- A service's exported types/interfaces live in a sibling `<service>.interface.ts` (`auth.interface.ts`, `registration.interface.ts`, `health.interface.ts`), never inline in the `*.service.ts` — import them with `import type`; the service file exports the class only
+- Shared DI-free helpers (pure functions, no `@Injectable`) live in `src/common/utils/` — e.g. `verification-token.util.ts` (token mint/hash/expiry) — imported directly rather than through a service
 - Run `npm run lint` and `npm run build` before finishing any task
 - `frontend/src/services/mockAdapter.ts` is the spec for routes and payloads — where it and `PRD.md` diverge, the divergence is a documentation bug until a real backend overtakes the mock
 
