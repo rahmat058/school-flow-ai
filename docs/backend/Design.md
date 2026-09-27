@@ -32,6 +32,11 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 - `details` is a `string[]` of **field names**, present on the 400 validation codes; the full catalogue of the mock's 60 codes is in `Access.md` §4
 - Codes: 200 OK · 201 Created · 400 Validation · 401 Unauthenticated · 403 Forbidden · 404 Not Found · 409 Conflict · 429 Rate Limited · 500 Server Error
 
+## Response headers
+
+- Every response carries `Cache-Control: no-store`, written globally by a response interceptor (not per route) — the API returns per-user authenticated data, so nothing may be held by a browser, proxy or CDN cache. Error responses carry it too, since the header is set before the handler runs
+- Standard security headers (`helmet`) apply to every response as well
+
 ## Field naming & types
 
 - `camelCase` everywhere in JSON

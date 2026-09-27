@@ -618,6 +618,8 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 - `code` is `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`). **`details` is a `string[]` of field names**, present on the 400 validation codes and omitted otherwise; the full 60-code catalogue is [`Access.md`](./Access.md) §4.
 
+**Response headers** (via global response interceptor) — every response carries `Cache-Control: no-store`, so an authenticated payload is never stored by a browser, proxy or CDN cache. The header is written before the handler runs, so error responses carry it too.
+
 **Money** — an integer in a minor unit, with a `*Paise` field suffix (`amountPaise`, `paidPaise`) — never a float. The demo school declares `currency: 'USD'` yet the fields are suffixed `*Paise` and the seed multiplies by 100 through `dollars()`: a **rupee-vs-dollar open question** recorded in `Schema.md` §1, not resolved here.
 
 **Status codes** — 200 OK, 201 Created, 400 Validation, 401 Unauthenticated, 403 Forbidden, 404 Not Found, 409 Conflict, 429 Rate Limited, 500 Server Error.
@@ -636,6 +638,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 - Cloudinary signed uploads; file type/size validation (PDFs, images ≤ 10MB)
 - Stripe signature verification and SSLCommerz IPN verification on all payment confirmations and webhooks
 - No sensitive data (passwords, OTPs, verification tokens) in logs or responses (`ClassSerializerInterceptor` to strip fields)
+- `Cache-Control: no-store` on every response (global interceptor) — authenticated payloads (`/auth/me`, the `me`-scoped reads, …) are never cached by a browser or intermediary
 
 ---
 
