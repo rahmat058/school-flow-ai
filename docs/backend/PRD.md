@@ -77,9 +77,9 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 **Endpoints**
 
-- [ ] `POST /api/v1/schools/register` — create school + admin user, then email a verification link `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
-- [ ] `POST /api/v1/auth/verify-email` — confirm the emailed link token, activating the account (route listed in §4.2) `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
-- [ ] `POST /api/v1/auth/resend-verification` — reissue the verification link for an unverified account (route listed in §4.2) `(public)`
+- [x] `POST /api/v1/schools/register` — create school + admin user, then email a verification link `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
+- [x] `POST /api/v1/auth/verify-email` — confirm the emailed link token, activating the account (route listed in §4.2) `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
+- [x] `POST /api/v1/auth/resend-verification` — reissue the verification link for an unverified account (route listed in §4.2) `(public)`
 - [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
 - [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
 - [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
@@ -102,19 +102,30 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 **Endpoints**
 
-- [ ] `POST /api/v1/auth/login` — JWT (access 7d + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
-- [ ] `POST /api/v1/auth/verify-email` — confirm the emailed verification link token, activating the account; the token is single-use and lives 24h `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
-- [ ] `POST /api/v1/auth/resend-verification` — reissue the verification link for an _unverified_ account; always `200`, so an unknown address is never revealed `(public)`
-- [ ] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
-- [ ] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
+- [x] `POST /api/v1/auth/login` — JWT (access 7d + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
+- [x] `POST /api/v1/auth/verify-email` — confirm the emailed verification link token, activating the account; the token is single-use and lives 24h `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
+- [x] `POST /api/v1/auth/resend-verification` — reissue the verification link for an _unverified_ account; always `200`, so an unknown address is never revealed `(public)`
+- [x] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
+- [x] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
 - [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
 - [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)` — 400 `AUTH_RESET_TOKEN_INVALID`, 400 `VALIDATION_ERROR`
 - [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)` — 404 `INVITE_NOT_FOUND`, 400 `INVITE_INVALID`
-- [ ] `GET /api/v1/auth/me` — current user + school + role `(token)` — 401 `AUTH_UNAUTHENTICATED`
+- [x] `GET /api/v1/auth/me` — current user + school + role `(token)` — 401 `AUTH_UNAUTHENTICATED`
 - [ ] `GET /api/v1/permissions` — the assignable catalogue, grouped and ordered for the editor `(token)`
 - [ ] `GET /api/v1/permissions/staff` — the staff picker: every active teacher with their grant count `(token)`
 - [ ] `GET /api/v1/users/:userId/permissions` — one account's granted keys `(token)` — 404 `USER_NOT_FOUND`
 - [ ] `PUT /api/v1/users/:userId/permissions` — replace that account's grant set (the body carries the whole set, so a role default can be turned off) `(token)` — 404 `USER_NOT_FOUND`, 400 `PERMISSION_INVALID`
+
+> **Built (2026-09-27):** `login`, `verify-email`, `resend-verification`, `refresh`, `logout` and `me`
+> are live in `backend/src/auth/` (`AuthController`, `RegistrationController`, `AuthService`,
+> `RegistrationService`) and covered by `backend/test/auth/auth.e2e-spec.ts` (23 tests). `GET /auth/me`
+> additionally answers `401 AUTH_TOKEN_EXPIRED` / `AUTH_TOKEN_INVALID` from `JwtAuthGuard`, which reads
+> the `jsonwebtoken` failure instead of collapsing every case into `AUTH_UNAUTHENTICATED`
+> ([`Access.md`](./Access.md) §4). **Two behaviours still lag this contract:** `refresh` re-signs from
+> the refresh JWT without rotating a server-stored token, and `logout` acknowledges without revoking —
+> both wait on the planned `refresh_tokens` table (§3). `RolesGuard` + `@Roles()` exist in `common/`
+> but are not registered globally yet, so protected routes are bearer-token only; `forgot-password`,
+> `reset-password`, `verify-invite` and the four permission routes are unbuilt.
 
 **Behavior**
 
@@ -579,9 +590,9 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Tables:** none — platform endpoint
 
-**Planned, not yet in the mock** — the mock exposes no health route:
+**Endpoints**
 
-- [x] `GET /api/v1/health` — liveness/readiness for the Render health check (see §8)
+- [x] `GET /api/v1/health` — liveness/readiness for the Render health check: `{ status: 'ok', uptimeSeconds, timestamp }` `(public)` — live as `HealthModule` in `backend/src/health/`, covered by `backend/test/health/health.e2e-spec.ts`; the frontend mock serves no health route
 
 ---
 
@@ -642,29 +653,37 @@ off, so the entities in `src/database/entities/` only map onto the tables. Creat
 and change the schema by hand in the Supabase SQL editor — the tables and columns
 are described in [`Schema.md`](./Schema.md).
 
-**Environment variables (.env)**
+**Environment variables (.env)** — `backend/.env.example` is the committed template and the two
+must stay identical.
 
 ```
 PORT=5000
+CLIENT_URL=http://localhost:5173
 DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
-SUPABASE_URL=https://[project].supabase.co   # optional — Storage/JWKS only
-SUPABASE_SECRET_KEY=                          # optional
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
+RESEND_API_KEY=
+RESEND_FROM=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-RESEND_API_KEY=
-RESEND_FROM=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 SSLCOMMERZ_STORE_ID=
 SSLCOMMERZ_STORE_PASSWORD=
-SSLCOMMERZ_IS_SANDBOX=
+SSLCOMMERZ_IS_SANDBOX=true
 AI_API_KEY=
 REDIS_URL=
-CLIENT_URL=
 ```
+
+`DATABASE_URL` uses the **session-mode pooler** (`:5432`): the direct `db.[project-ref].supabase.co`
+host publishes only an AAAA record and does not resolve on IPv4-only machines, and the transaction
+pooler (`:6543`) cannot run prepared statements. Percent-encode the password (`#` → `%23`,
+`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `DATABASE_URL`,
+`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`; the rest arrive with
+their phases (Cloudinary §4.13, payments §4.6, AI §4.12, Redis §4.15). There are no
+`SUPABASE_*` variables — the Supabase client was replaced by TypeORM + `pg`, so nothing reads a
+Supabase URL or key.
 
 **Folder structure (NestJS)**
 

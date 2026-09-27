@@ -46,7 +46,7 @@ npm run lint && npm run typecheck
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT secrets, etc.
+cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
 npm run start:dev
 ```
 

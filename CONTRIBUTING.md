@@ -43,8 +43,7 @@ npm run dev
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT secrets, etc.
-npx supabase db push   # apply backend/supabase/migrations to your Supabase project
+cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
 npm run start:dev
 ```
 
