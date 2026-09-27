@@ -15,9 +15,10 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## Response envelope (success)
 
 ```json
-{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
+{ "success": true, "message": "Signed in successfully", "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
 ```
 
+- `message` is a human-readable summary of what `data` carries. A route sets its own with `@ResponseMessage('…')`; without one the interceptor falls back to a method default (`GET` → "Data retrieved", `POST` → "Request processed", `PATCH`/`PUT` → "Resource updated", `DELETE` → "Resource deleted")
 - Single resource → `data` is an object; lists → `data` is an array + `meta` pagination
 - Pagination is `meta { page, limit, total }`; **`limit` defaults to 10**, `page` to 1
 - `meta` omitted when not paginated
@@ -25,9 +26,14 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## Error envelope
 
 ```json
-{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] } }
+{
+  "success": false,
+  "message": "Invoice not found",
+  "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] }
+}
 ```
 
+- The top-level `message` repeats `error.message` — the actual thrown message — so a client reads one field for either outcome
 - `code`: `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`)
 - `details` is a `string[]` of **field names**, present on the 400 validation codes; the full catalogue of the mock's 60 codes is in `Access.md` §4
 - Codes: 200 OK · 201 Created · 400 Validation · 401 Unauthenticated · 403 Forbidden · 404 Not Found · 409 Conflict · 429 Rate Limited · 500 Server Error

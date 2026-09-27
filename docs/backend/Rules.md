@@ -9,7 +9,7 @@
 - Postgres enums (or CHECK constraints) for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
 - JSONB documents (e.g. `schools.settings`) are validated by their DTO against the unions in `Design.md`/`PRD.md` — Postgres constrains the column, not its keys — and a `PATCH` **merges** so a partial write never drops a key it did not send
 - `@Roles()` + `RolesGuard` for the coarse role check, then `@RequirePermission()` + `PermissionsGuard` against `user_permissions` for a fine-grained grant; tenant scope (`schoolId`) applied in every query
-- Response envelope + error envelope via global interceptor/filter — services throw `HttpException` subclasses, never shape responses manually
+- Response envelope + error envelope via global interceptor/filter, both carrying a top-level `message` — a success route sets it with `@ResponseMessage('…')` (method default otherwise), an error repeats the thrown message — services throw `HttpException` subclasses, never shape responses manually
 - `Cache-Control` on every response, set by the global `CacheControlInterceptor` from the `@Public()` marker — `public, max-age=60` for a public route, `private, max-age=5` for an authenticated one; never set per route
 - `@nestjs/throttler` on auth/OTP/AI endpoints
 - Log through the global pipeline, never `console.log`: `LoggingInterceptor` emits the success line on response `finish` (skipping `>= 400`), and `AllExceptionsFilter` emits every error line with the thrown exception class, `code` and `message` (`warn` for `4xx`, `error` + stack for `5xx`) — each line carries the HTTP method, path and status reason phrase

@@ -605,17 +605,23 @@ No HTTP endpoints — this module is called by the other services and by the sch
 **Response envelope** (via global response interceptor)
 
 ```json
-{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
+{ "success": true, "message": "Signed in successfully", "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
 ```
 
+- `message` is a human-readable summary of what `data` carries: a route sets its own with `@ResponseMessage('…')`, otherwise the interceptor falls back to a method default (`GET` → "Data retrieved", `POST` → "Request processed", `PATCH`/`PUT` → "Resource updated", `DELETE` → "Resource deleted").
 - Lists paginate with `meta { page, limit, total }`; **`limit` defaults to 10** and `page` to 1. `meta` is omitted on a single-resource read.
 
 **Error envelope** (via global exception filter)
 
 ```json
-{ "success": false, "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] } }
+{
+  "success": false,
+  "message": "Invoice not found",
+  "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] }
+}
 ```
 
+- The top-level `message` repeats `error.message` — the actual thrown message — so a client reads one field for either outcome.
 - `code` is `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`). **`details` is a `string[]` of field names**, present on the 400 validation codes and omitted otherwise; the full 60-code catalogue is [`Access.md`](./Access.md) §4.
 
 **Response headers** (via global response interceptor) — every response carries `Cache-Control`, chosen from the route's `@Public()` marker: public routes get `public, max-age=60`; authenticated routes get `private, max-age=5`, so per-user payloads never enter a shared cache. The header is written before the handler runs, so error responses carry it too.

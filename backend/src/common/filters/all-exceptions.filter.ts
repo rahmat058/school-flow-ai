@@ -48,7 +48,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.warn(line);
     }
 
-    response.status(status).json({ success: false, error: body });
+    response
+      .status(status)
+      .json({ success: false, message: body.message, error: body });
   }
 
   private exceptionName(exception: unknown): string {

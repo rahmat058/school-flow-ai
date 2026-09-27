@@ -332,8 +332,8 @@ the school, a student their class, a guardian their children's classes.
 
 Every `SCREAMING_SNAKE` code the mock can return, with its HTTP status and the condition that raises
 it, grouped by domain. Codes carried in the error envelope
-`{ success: false, error: { code, message, details? } }`; `details` is a field-message array on the
-400 validation codes only.
+`{ success: false, message, error: { code, message, details? } }` — the top-level `message` repeats
+`error.message`; `details` is a field-message array on the 400 validation codes only.
 
 ### Auth and session
 
