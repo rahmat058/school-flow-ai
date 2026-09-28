@@ -17,7 +17,7 @@ async function bootstrap() {
     origin: config.get<string>('CLIENT_URL') ?? true,
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
 
   setupSwagger(app, config);
 

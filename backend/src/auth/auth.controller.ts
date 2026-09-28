@@ -10,14 +10,15 @@ import {
   CurrentUser,
   type AuthenticatedUser,
 } from '../common/decorators/current-user.decorator.js';
+
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
-import { VerifyEmailDto } from '../registration/dto/verify-email.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
-import { ResendVerificationDto } from '../registration/dto/resend-verification.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
-import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
+import { VerifyEmailDto } from '../registration/dto/verify-email.dto.js';
 import { RegistrationService } from '../registration/registration.service.js';
+import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
+import { ResendVerificationDto } from '../registration/dto/resend-verification.dto.js';
 
 @Controller('auth')
 export class AuthController {
@@ -67,7 +68,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @ResponseMessage('Profile loaded')
+  @ResponseMessage('User Profile loaded')
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.me(user);
   }

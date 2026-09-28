@@ -3,16 +3,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
-import { IsNull, Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import type { LoginDto } from './dto/login.dto.js';
-import { School } from '../database/entities/school.entity.js';
-import { User } from '../database/entities/user.entity.js';
-import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
-import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
 import type {
   AccessTokenPayload,
   AuthProfile,
@@ -20,6 +10,17 @@ import type {
   AuthUser,
   LogoutResult,
 } from './auth.interface.js';
+
+import bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { IsNull, Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import type { LoginDto } from './dto/login.dto.js';
+import { User } from '../database/entities/user.entity.js';
+import { School } from '../database/entities/school.entity.js';
+import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
 
 export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;       // eg: 7d
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;     // eg: 7d
