@@ -5,8 +5,8 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## URL conventions
 
 - Global prefix `/api/v1`; plural, kebab-case resources: `/fees/structures`, `/report-cards`
-- Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`, `/schools/current/backup`
-- A resource the caller **is** addresses itself as `current` (the tenant: `/schools/current` and its `settings`/`backup` sub-resources) or `me` (a person's own slice: `/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`) rather than carrying an id, because the caller comes from the session — with an optional `?studentId=` where a guardian may pick one of their own children
+- Nested actions as sub-resources: `/homework/:id/submit`, `/exams/:id/publish`, `/schools/:id/backup`
+- The tenant resource carries its id (`/schools/:id` and its `settings`/`backup` sub-resources) and the service refuses a school that is not the caller's own; a person-addressed resource uses `me` (a person's own slice: `/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`) rather than carrying an id, because the caller comes from the session — with an optional `?studentId=` where a guardian may pick one of their own children
 - Filters via query params: `?classId=&from=&to=&status=`
 - Report families are one route per report rather than a `?type=`: `/fees/reports/day-book`,
   `/fees/reports/class`, `/fees/reports/defaulters`, `/fees/reports/student-ledger`

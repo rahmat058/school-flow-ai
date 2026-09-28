@@ -117,13 +117,13 @@ session. It is the one `intended only` route whose gap is authentication rather 
 
 ### School
 
-| Method | Path                        | Roles   | 403 — code + condition | Enforced?     | Query params |
-| ------ | --------------------------- | ------- | ---------------------- | ------------- | ------------ |
-| POST   | `/schools/register`         | public  | —                      | standard      | —            |
-| GET    | `/schools/current`          | `ADMIN` | —                      | intended only | —            |
-| PATCH  | `/schools/current`          | `ADMIN` | —                      | intended only | —            |
-| PATCH  | `/schools/current/settings` | `ADMIN` | —                      | intended only | —            |
-| POST   | `/schools/current/backup`   | `ADMIN` | —                      | intended only | —            |
+| Method | Path                    | Roles   | 403 — code + condition | Enforced?     | Query params |
+| ------ | ----------------------- | ------- | ---------------------- | ------------- | ------------ |
+| POST   | `/schools/register`     | public  | —                      | standard      | —            |
+| GET    | `/schools/:id`          | `ADMIN` | —                      | intended only | —            |
+| PATCH  | `/schools/:id`          | `ADMIN` | —                      | intended only | —            |
+| PATCH  | `/schools/:id/settings` | `ADMIN` | —                      | intended only | —            |
+| POST   | `/schools/:id/backup`   | `ADMIN` | —                      | intended only | —            |
 
 ### Users
 
@@ -364,11 +364,11 @@ it, grouped by domain. Codes carried in the error envelope
 
 ### School and settings
 
-| Code                 | Status | Raised when                                                          |
-| -------------------- | ------ | -------------------------------------------------------------------- |
-| `SCHOOL_EMAIL_TAKEN` | 409    | `POST /schools/register` with an email already registered.           |
-| `SCHOOL_INVALID`     | 400    | `PATCH /schools/current` with a blank name.                          |
-| `SETTINGS_INVALID`   | 400    | `PATCH /schools/current/settings` with an unsupported/invalid field. |
+| Code                 | Status | Raised when                                                      |
+| -------------------- | ------ | ---------------------------------------------------------------- |
+| `SCHOOL_EMAIL_TAKEN` | 409    | `POST /schools/register` with an email already registered.       |
+| `SCHOOL_INVALID`     | 400    | `PATCH /schools/:id` with a blank name.                          |
+| `SETTINGS_INVALID`   | 400    | `PATCH /schools/:id/settings` with an unsupported/invalid field. |
 
 ### Users and permissions
 

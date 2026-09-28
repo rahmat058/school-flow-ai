@@ -13,20 +13,19 @@
 - [ ] NestJS scaffold, config module, global pipes/filters/interceptors, helmet, CORS, throttler
 - [ ] TypeORM DataSource module (`database/`) with entities (`schools`, `users` incl. the email-verification columns, `teachers`/`students`/`parents`) — schema applied by hand, `synchronize` off
 - [x] Email-verified school registration — `POST /schools/register` (transactional create + emailed verification link), `POST /registration/verify-email`, `POST /registration/resend-verification` (single-use SHA-256-hashed token, 24-hour expiry)
-- [ ] School settings — `GET`/`PATCH /schools/current` (profile), `PATCH /schools/current/settings` (academic · notifications · security) and `POST /schools/current/backup`
+- [x] School settings — `GET`/`PATCH /schools/:id` (profile), `PATCH /schools/:id/settings` (academic · notifications · security) and `POST /schools/:id/backup`
 - [ ] MailModule (Resend) with React Email templates (`src/mail/templates/`) for the verification-link + credentials messages
 - [x] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [ ] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password`
-- [ ] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard
+- [x] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard — both guards registered globally (`APP_GUARD`); tenant scope is applied inside the services rather than by a separate guard
 - [ ] Permissions — `GET /permissions` (the catalogue), `GET /permissions/staff`, `GET`/`PUT /users/:userId/permissions`, plus `@RequirePermission()` + `PermissionsGuard`; a new account's grants are seeded from the PRD §2 role matrix
 
 > **Live (2026-09-27):** school registration + emailed verification, login/refresh/logout, `GET /auth/me`,
 > the global `JwtAuthGuard`, the response interceptor + exception filter, helmet/CORS and the health
 > route are built and covered by `test/auth/` and `test/health/` — see `PRD.md` §4.1, §4.2 and §4.16 for
 > the per-endpoint ticks. Still open in this phase: `@nestjs/throttler`, the `teachers`/`students`/
-> `parents` entities, school settings, password recovery, the unwired `RolesGuard`/tenant guard and
-> permissions. The MailModule carries the verification-link template only; the invite/credentials
-> messages land with Phase 2.
+> `parents` entities, password recovery and permissions. The MailModule carries the verification-link
+> template only; the invite/credentials messages land with Phase 2.
 
 **Done when:** a school registers and verifies by email link, the admin logs in, and a protected route rejects wrong roles.
 

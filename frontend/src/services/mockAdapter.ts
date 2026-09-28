@@ -3319,11 +3319,19 @@ const routes: Route[] = [
       return ok({ verified: true })
     },
   },
-  { method: 'GET', path: '/schools/current', handler: () => ok(activeSchool) },
+  // The school is addressed by id; the demo holds one, so any other id is not found.
+  {
+    method: 'GET',
+    path: '/schools/:id',
+    handler: ({ params }) =>
+      String(params.id) === activeSchool.id ? ok(activeSchool) : fail(404, 'SCHOOL_NOT_FOUND', 'School not found'),
+  },
   {
     method: 'PATCH',
-    path: '/schools/current',
-    handler: ({ body }) => {
+    path: '/schools/:id',
+    handler: ({ params, body }) => {
+      if (String(params.id) !== activeSchool.id) return fail(404, 'SCHOOL_NOT_FOUND', 'School not found')
+
       // The School Profile tab writes the school's own columns. The slug is deliberately left alone —
       // it is generated once at registration so a rename never breaks a stored link.
       if (body.name !== undefined) {
@@ -3342,8 +3350,10 @@ const routes: Route[] = [
   },
   {
     method: 'PATCH',
-    path: '/schools/current/settings',
-    handler: ({ body }) => {
+    path: '/schools/:id/settings',
+    handler: ({ params, body }) => {
+      if (String(params.id) !== activeSchool.id) return fail(404, 'SCHOOL_NOT_FOUND', 'School not found')
+
       // Merges only the keys sent, so the Academic, Notifications and Security tabs never overwrite
       // one another — the same partial-`PATCH` rule the rest of the contract follows. The whole patch
       // is validated before anything is written, so a rejected field leaves no half-applied document.
@@ -3403,14 +3413,16 @@ const routes: Route[] = [
   },
   {
     method: 'POST',
-    path: '/schools/current/backup',
-    handler: () =>
-      created<BackupJob>({
-        id: `bkp_${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        sizeBytes: 24 * 1024 * 1024,
-        status: 'READY',
-      }),
+    path: '/schools/:id/backup',
+    handler: ({ params }) =>
+      String(params.id) === activeSchool.id
+        ? created<BackupJob>({
+            id: `bkp_${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            sizeBytes: 24 * 1024 * 1024,
+            status: 'READY',
+          })
+        : fail(404, 'SCHOOL_NOT_FOUND', 'School not found'),
   },
   {
     method: 'GET',

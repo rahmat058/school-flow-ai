@@ -85,11 +85,10 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - [x] `POST /api/v1/registration/verify-email` — confirm the emailed link token, activating the account `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
 - [x] `POST /api/v1/registration/resend-verification` — reissue the verification link for an unverified account `(public)`
 - [x] `GET /api/v1/schools` — paginated list (`?page=&limit=&search=`); `data` is the page, `meta` the pagination + links `(token)`
-- [x] `GET /api/v1/schools/:id` — one school, with `data.links` `(token)` — 404 `SCHOOL_NOT_FOUND`
-- [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
-- [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
-- [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
-- [ ] `POST /api/v1/schools/current/backup` — request a manual backup of the school's data; `201` with the job record `(token)`
+- [x] `GET /api/v1/schools/:id` — one school, with `data.links` `(token)` — 404 `SCHOOL_NOT_FOUND`, 403 `AUTH_FORBIDDEN` for another school's id
+- [x] `PATCH /api/v1/schools/:id` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
+- [x] `PATCH /api/v1/schools/:id/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
+- [x] `POST /api/v1/schools/:id/backup` — request a manual backup of the school's data; `201` with the job record `(token)`
 
 **Behavior**
 
@@ -97,10 +96,10 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - `POST /schools/register` runs in a database transaction (school + admin user + verification token)
 - Unique school slug auto-generated at registration; a rename leaves it alone so stored links keep working
 - **OTP is deferred.** Registration previously used a 6-digit OTP (bcrypt-hashed in the planned `otps` table); that table and the `otp_purpose` enum stay planned (`Schema.md` §16) and OTP is a **future** re-introduction, not part of the current contract
-- **Settings are addressable by tab, not as one document.** The Settings screen's four tabs map onto one `schools.settings` JSONB: School Profile writes the school's own **columns** (`PATCH /schools/current`), while Academic writes `academicYear`/`gradingScale`/`termStructure`/`passPercentage`, Notifications writes the `notifications` object and Security writes the `security` object — all through `PATCH …/settings`, which **merges only the keys sent** so the tabs cannot overwrite one another
+- **Settings are addressable by tab, not as one document.** The Settings screen's four tabs map onto one `schools.settings` JSONB: School Profile writes the school's own **columns** (`PATCH /schools/:id`), while Academic writes `academicYear`/`gradingScale`/`termStructure`/`passPercentage`, Notifications writes the `notifications` object and Security writes the `security` object — all through `PATCH /schools/:id/settings`, which **merges only the keys sent** so the tabs cannot overwrite one another
 - Settings unions are contract-level, not DB enums (they live in JSONB): `gradingScale` ∈ `PERCENTAGE | LETTER | GPA`, `termStructure` ∈ `SEMESTER | TRIMESTER | ANNUAL`, `passPercentage` an integer `0–100`, `security.sessionTimeoutMinutes` `5–240`, `security.maxLoginAttempts` `1–10` — anything else is `400 SETTINGS_INVALID` with the offending fields in `details`
-- **No settings route carries a school id** — the screen edits the caller's own school, so the tenant comes from the session, not the path. The earlier `GET`/`PATCH /schools/:id/settings` pair is superseded by the `current`-scoped routes
-- `POST …/backup` answers `201` with `{ id, createdAt, sizeBytes, status }`; the demo returns `READY` at once, while a real deployment enqueues a BullMQ job and returns `PENDING`, so the client reads `status` rather than assuming the snapshot exists
+- **The school id is in the path, and the caller may only reach their own.** `/schools/:id`, `/schools/:id/settings` and `/schools/:id/backup` address the school named by the id; the service loads that row and refuses one that is not the caller's own with `403 AUTH_FORBIDDEN` (404 `SCHOOL_NOT_FOUND` when no such row exists), so the tenant boundary holds even though the id is in the path
+- `POST /schools/:id/backup` answers `201` with `{ id, createdAt, sizeBytes, status }`; the demo returns `READY` at once, while a real deployment enqueues a BullMQ job and returns `PENDING`, so the client reads `status` rather than assuming the snapshot exists
 
 ### 4.2 Authentication & RBAC (`AuthModule`)
 
@@ -130,9 +129,11 @@ Each module lists the routes the mock actually serves as a **checklist — build
 > the `jsonwebtoken` failure instead of collapsing every case into `AUTH_UNAUTHENTICATED`
 > ([`Access.md`](./Access.md) §4). **Two behaviours still lag this contract:** `refresh` re-signs from
 > the refresh JWT without rotating a server-stored token, and `logout` acknowledges without revoking —
-> both wait on the planned `refresh_tokens` table (§3). `RolesGuard` + `@Roles()` exist in `common/`
-> but are not registered globally yet, so protected routes are bearer-token only; `forgot-password`,
-> `reset-password`, `verify-invite` and the four permission routes are unbuilt.
+> both wait on the planned `refresh_tokens` table (§3). `RolesGuard` + `@Roles()` are registered
+> **globally** (both `APP_GUARD`s in `app.module.ts`, `JwtAuthGuard` first), so `@Roles(Role.ADMIN)` is
+> enforced on the school routes; the tenant boundary is applied inside the services rather than by a
+> separate guard, and `forgot-password`, `reset-password`, `verify-invite` and the four permission
+> routes are unbuilt.
 
 **Behavior**
 
@@ -607,7 +608,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 
 **Methods** — `GET` reads; `POST` creates or triggers an action; `PATCH` for partial updates (send only the fields you change — the default for every update route); `PUT` only where the body replaces a whole sub-resource (`PUT /timetables/:id` replaces its `periods`); `DELETE` removes.
 
-**Base path** — every route sits under `/api/v1`. A tenant-addressed resource is `current` (`/schools/current` and its `settings`/`backup` sub-resources); a person-addressed resource is `me` (`/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`), optionally scoped with `?studentId=` so a guardian may pick one of their own children.
+**Base path** — every route sits under `/api/v1`. A tenant-addressed resource carries the school id (`/schools/:id` and its `settings`/`backup` sub-resources); a person-addressed resource is `me` (`/attendance/me`, `/fees/me`, `/exams/me`, `/timetables/me`, `/progress/me`), optionally scoped with `?studentId=` so a guardian may pick one of their own children.
 
 **Response envelope** (via global response interceptor)
 

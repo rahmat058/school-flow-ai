@@ -22,7 +22,7 @@ interface SchoolProfileTabProps {
   school: School
 }
 
-/** The school's own columns — written by `PATCH /schools/current`, not `settings`. */
+/** The school's own columns — written by `PATCH /schools/:id`, not `settings`. */
 export function SchoolProfileTab({ formId, school }: SchoolProfileTabProps) {
   const { toast } = useToast()
   const updateProfile = useUpdateSchoolProfile()
