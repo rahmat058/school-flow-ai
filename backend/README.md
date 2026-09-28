@@ -27,6 +27,10 @@ cp .env.example .env   # fill in DATABASE_URL, JWT secrets, etc.
 npm run start:dev
 ```
 
+Once it is up, the API docs are at <http://localhost:5000/docs> — the raw OpenAPI document at
+<http://localhost:5000/docs/json>. Click **Authorize** in the UI to send a bearer access token from
+`POST /api/v1/auth/login`. Set `SWAGGER_ENABLED=false` to turn the docs off (e.g. in production).
+
 The schema is **not** ORM-managed. There are no migrations and `synchronize` is off, so the
 entities in `src/database/entities/` only map onto the tables — create and change the schema by
 hand in the Supabase SQL editor ([`Schema.md`](../docs/backend/Schema.md) is the per-table
@@ -45,8 +49,9 @@ npm run lint && npm run build
 ```text
 backend/
 ├── src/
-│   ├── main.ts               # bootstrap: /api/v1 prefix, pipes, filters, helmet, CORS
+│   ├── main.ts               # bootstrap: /api/v1 prefix, pipes, filters, helmet, CORS, Swagger
 │   ├── app.module.ts
+│   ├── swagger/              # OpenAPI document builder + Swagger UI setup (/docs)
 │   ├── database/             # TypeORM DataSource (global) + entities
 │   │   ├── data-source-options.ts  # the one place the connection is declared
 │   │   └── entities/               # *.entity.ts — the mapping onto the tables
@@ -105,6 +110,7 @@ same internal layout:
 - [Passport.js + JWT](https://www.passportjs.org/) — access (7d) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
+- [Swagger / OpenAPI](https://docs.nestjs.com/openapi/introduction) (`@nestjs/swagger`) — the API docs, generated from the controllers and DTOs and served at `/docs` (raw JSON at `/docs/json`); bearer JWT auth is declared so the UI can call protected routes
 - [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
 - [Stripe](https://stripe.com/) (international) + [SSLCommerz](https://sslcommerz.com/) (Bangladesh) — payments; [Resend](https://resend.com/) — transactional email ([React Email](https://react.email/) templates in `src/mail/templates/`); [Cloudinary](https://cloudinary.com/) — file storage
 - `@nestjs/throttler` — rate limiting; `helmet` — security headers
