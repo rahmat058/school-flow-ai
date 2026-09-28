@@ -18,7 +18,9 @@ const SWAGGER_TAGS: { name: string; description: string }[] = [
 ];
 
 /** Builds the base OpenAPI document (title, servers, tags, bearer security). */
-export function buildSwaggerConfig(): Omit<OpenAPIObject, 'paths'> {
+export function buildSwaggerConfig(
+  serverUrl: string,
+): Omit<OpenAPIObject, 'paths'> {
   const builder = new DocumentBuilder()
     .setTitle('School Flow AI API')
     .setDescription(
@@ -33,6 +35,7 @@ export function buildSwaggerConfig(): Omit<OpenAPIObject, 'paths'> {
     )
     .setVersion('1.0')
     .setLicense('MIT', 'https://opensource.org/license/mit')
+    .addServer(serverUrl, 'Current server')
     .addBearerAuth(
       {
         type: 'http',

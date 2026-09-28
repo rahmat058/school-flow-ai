@@ -673,6 +673,7 @@ must stay identical.
 PORT=5000
 CLIENT_URL=http://localhost:5173
 SWAGGER_ENABLED=true
+# SWAGGER_SERVER_URL=https://api.example.com
 DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
@@ -693,9 +694,10 @@ REDIS_URL=
 `DATABASE_URL` uses the **session-mode pooler** (`:5432`): the direct `db.[project-ref].supabase.co`
 host publishes only an AAAA record and does not resolve on IPv4-only machines, and the transaction
 pooler (`:6543`) cannot run prepared statements. Percent-encode the password (`#` → `%23`,
-`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `SWAGGER_ENABLED`, `DATABASE_URL`,
-`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`; the rest arrive with
-their phases (Cloudinary §4.13, payments §4.6, AI §4.12, Redis §4.15). There are no
+`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `SWAGGER_ENABLED`,
+`SWAGGER_SERVER_URL` (optional — the base URL Swagger UI shows, defaulting to `http://localhost:$PORT`),
+`DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`; the rest
+arrive with their phases (Cloudinary §4.13, payments §4.6, AI §4.12, Redis §4.15). There are no
 `SUPABASE_*` variables — the Supabase client was replaced by TypeORM + `pg`, so nothing reads a
 Supabase URL or key.
 

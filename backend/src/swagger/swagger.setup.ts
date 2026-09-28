@@ -22,14 +22,23 @@ export function setupSwagger(
     return;
   }
 
-  const document = SwaggerModule.createDocument(app, buildSwaggerConfig());
+  const port = config.get<string>('PORT') ?? '3000';
+  // The server is the origin only — every generated path already carries `/api/v1`
+  // (the document is built after `setGlobalPrefix`). Overridable for a deployed host.
+  const serverUrl =
+    config.get<string>('SWAGGER_SERVER_URL') ?? `http://localhost:${port}`;
+
+  const document = SwaggerModule.createDocument(
+    app,
+    buildSwaggerConfig(serverUrl),
+  );
   SwaggerModule.setup(SWAGGER_PATH, app, document, {
     jsonDocumentUrl: SWAGGER_JSON_PATH,
     swaggerOptions: { persistAuthorization: true },
   });
 
   Logger.log(
-    `Swagger UI at /${SWAGGER_PATH} — OpenAPI JSON at /${SWAGGER_JSON_PATH}`,
+    `Swagger UI at /${SWAGGER_PATH} — OpenAPI JSON at /${SWAGGER_JSON_PATH} — server ${serverUrl}`,
     'Swagger',
   );
 }

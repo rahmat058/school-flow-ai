@@ -111,7 +111,7 @@ The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns
 - **Passport.js + JWT** — access (7d) + refresh (7d) auth
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe
-- **`@nestjs/swagger`** — the OpenAPI document is generated from the controllers and DTOs and served with the Swagger UI at `/docs` (raw JSON at `/docs/json`); `src/swagger/` builds the document (title, tags, bearer JWT security) and `main.ts` mounts it after the global prefix, so the generated paths carry `/api/v1`. Toggled off with `SWAGGER_ENABLED=false`
+- **`@nestjs/swagger`** — the OpenAPI document is generated from the controllers and DTOs and served with the Swagger UI at `/docs` (raw JSON at `/docs/json`); `src/swagger/` builds the document (title, server, tags, bearer JWT security) and `main.ts` mounts it after the global prefix, so the generated paths carry `/api/v1`. The `servers` entry is the origin only (Swagger UI's "Servers" box and "Try it out" target), `SWAGGER_SERVER_URL` overriding the `http://localhost:$PORT` default. Toggled off with `SWAGGER_ENABLED=false`
 - **BullMQ + Redis** — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
 - **Stripe** (international) + **SSLCommerz** (Bangladesh) — payments; **Resend** — transactional email; **Cloudinary** — file storage
 - **React Email** (`react-email`) — email templates written as `.tsx` components in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend; live preview with the `email dev` CLI
