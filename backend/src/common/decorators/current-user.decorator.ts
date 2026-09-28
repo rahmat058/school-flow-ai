@@ -1,5 +1,5 @@
-import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import type { Role } from '../enums/role.enum.js';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 export interface AuthenticatedUser {
   id: string;
