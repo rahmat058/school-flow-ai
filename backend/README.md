@@ -31,6 +31,11 @@ Once it is up, the API docs are at <http://localhost:5000/docs> — the raw Open
 <http://localhost:5000/docs/json>. Click **Authorize** in the UI to send a bearer access token from
 `POST /api/v1/auth/login`. Set `SWAGGER_ENABLED=false` to turn the docs off (e.g. in production).
 
+Monitoring runs on **Observe**: put the app's key and secret in `OBSERVE_APP_KEY` /
+`OBSERVE_APP_SECRET` (from <https://www.observe.nestjs.com>), and the API's traces, correlated logs,
+request/job metrics and errors show up on <https://www.observe.nestjs.com/dashboard> under the
+`school-flow-ai` service.
+
 The schema is **not** ORM-managed. There are no migrations and `synchronize` is off, so the
 entities in `src/database/entities/` only map onto the tables — create and change the schema by
 hand in the Supabase SQL editor ([`Schema.md`](../docs/backend/Schema.md) is the per-table
@@ -112,6 +117,7 @@ same internal layout:
 - [Socket.io](https://socket.io/) — chat and notifications over the same HTTP server
 - [class-validator / class-transformer](https://github.com/typestack/class-validator) — DTO validation via a global `ValidationPipe`
 - [Swagger / OpenAPI](https://docs.nestjs.com/openapi/introduction) (`@nestjs/swagger`) — the API docs, generated from the controllers and DTOs and served at `/docs` (raw JSON at `/docs/json`); bearer JWT auth is declared so the UI can call protected routes
+- [Observe](https://www.observe.nestjs.com/) (`@nestjs/observe`) — monitoring: distributed traces, auto-correlated logs, request/job metrics and error telemetry, wired in `app.module.ts`/`main.ts` from `OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET` (dashboard at <https://www.observe.nestjs.com/dashboard>)
 - [BullMQ + Redis](https://docs.bullmq.io/) — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
 - [Stripe](https://stripe.com/) (international) + [SSLCommerz](https://sslcommerz.com/) (Bangladesh) — payments; [Resend](https://resend.com/) — transactional email ([React Email](https://react.email/) templates in `src/mail/templates/`); [Cloudinary](https://cloudinary.com/) — file storage
 - `@nestjs/throttler` — rate limiting; `helmet` — security headers
@@ -159,6 +165,7 @@ same internal layout:
   otherwise) and `LoggingInterceptor` logs each request — services throw
   `HttpException` subclasses and never build HTTP responses.
 - **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.
+- **Monitoring:** `@nestjs/observe` is wired once in `app.module.ts` (`ObserveModule.forRoot()`) and `main.ts` (`instrument: ObserveInstrument`) and reads `OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET` from env — the app key/secret are never inlined or committed; traces, logs and metrics land on the Observe dashboard.
 - **Money:** store as integer paise, never floats.
 - **Emails:** templates are React Email (`.tsx`) components in `src/mail/templates/`,
   rendered to HTML with `render()` and sent through Resend — no hand-written HTML.

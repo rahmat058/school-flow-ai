@@ -24,6 +24,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | AI           | LLM API (e.g., OpenAI/Gemini)                                                   |
 | Validation   | class-validator + class-transformer (DTOs)                                      |
 | API Docs     | Swagger / OpenAPI (`@nestjs/swagger`) — UI at `/docs`, JSON at `/docs/json`     |
+| Monitoring   | Observe (`@nestjs/observe`) — tracing, logs, metrics + error telemetry          |
 | Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                              |
 | Deployment   | Render (API), Supabase (DB), Cloudinary                                         |
 
@@ -33,6 +34,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 - Global TypeORM `DataSource` in a shared `database/` module; services inject `Repository<Entity>` classes — all DB access goes through them
 - RESTful APIs versioned via `app.setGlobalPrefix('api/v1')` or NestJS URI versioning
 - **API documentation**: `@nestjs/swagger` generates the OpenAPI document from the controllers and DTOs and serves the UI at `/docs` (raw JSON at `/docs/json`); bearer JWT auth is declared so the UI can call protected routes. Configured in `src/swagger/`, toggled with `SWAGGER_ENABLED`
+- **Observability**: `@nestjs/observe` instruments the app through `createObserveModule()` in `app.module.ts` (`appKey`/`appSecret` from `OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET`, `serviceId` `school-flow-ai`) and `instrument: ObserveInstrument` in `main.ts` — distributed tracing, correlated logs, request/job metrics and error telemetry. Dashboard at <https://www.observe.nestjs.com/dashboard>
 - Multi-tenant: every table carries a `schoolId` foreign key; a global tenant guard scopes all queries
 - Socket.io via NestJS `@WebSocketGateway()` on the same HTTP server
 - Role-Based Access Control (RBAC): `ADMIN | TEACHER | STUDENT | PARENT` as a Postgres enum, enforced with `@Roles()` decorator + `RolesGuard`
@@ -672,6 +674,8 @@ must stay identical.
 ```
 PORT=5000
 CLIENT_URL=http://localhost:5173
+OBSERVE_APP_KEY=
+OBSERVE_APP_SECRET=
 SWAGGER_ENABLED=true
 # SWAGGER_SERVER_URL=https://api.example.com
 DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
@@ -694,7 +698,9 @@ REDIS_URL=
 `DATABASE_URL` uses the **session-mode pooler** (`:5432`): the direct `db.[project-ref].supabase.co`
 host publishes only an AAAA record and does not resolve on IPv4-only machines, and the transaction
 pooler (`:6543`) cannot run prepared statements. Percent-encode the password (`#` → `%23`,
-`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `SWAGGER_ENABLED`,
+`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `OBSERVE_APP_KEY`,
+`OBSERVE_APP_SECRET` (the Observe app credentials — dashboard at
+<https://www.observe.nestjs.com/dashboard>), `SWAGGER_ENABLED`,
 `SWAGGER_SERVER_URL` (optional — the base URL Swagger UI shows, defaulting to `http://localhost:$PORT`),
 `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`; the rest
 arrive with their phases (Cloudinary §4.13, payments §4.6, AI §4.12, Redis §4.15). There are no

@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/NestJS_12-E0234E?style=for-the-badge&logo=nestjs&logoColor=white">
   <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white">
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white">
+  <img src="https://img.shields.io/badge/Observe-monitoring-8B5CF6?style=for-the-badge&logo=nestjs&logoColor=white">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge">
 </div>
 
@@ -58,7 +59,7 @@ Validate before finishing work:
 npm run lint && npm run build
 ```
 
-The frontend calls the backend at `/api/v1` per [docs/backend/Design.md](./docs/backend/Design.md) (response envelopes, naming, money in paise). The backend serves its generated API docs at `/docs` (raw OpenAPI JSON at `/docs/json`).
+The frontend calls the backend at `/api/v1` per [docs/backend/Design.md](./docs/backend/Design.md) (response envelopes, naming, money in paise). The backend serves its generated API docs at `/docs` (raw OpenAPI JSON at `/docs/json`) and is monitored on **Observe** — set `OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET` and its traces, logs, metrics and errors land at [observe.nestjs.com/dashboard](https://www.observe.nestjs.com/dashboard).
 
 ---
 
@@ -107,6 +108,7 @@ Per-side guides: **[frontend/README.md](./frontend/README.md)** · **[backend/RE
 - [Passport.js + JWT](https://www.passportjs.org/) — access (7d) + refresh (7d) auth
 - [Socket.io](https://socket.io/) — real-time chat and notifications
 - [BullMQ + Redis](https://docs.bullmq.io/) — email and notification queues
+- [Observe](https://www.observe.nestjs.com/) (`@nestjs/observe`) — API monitoring: traces, correlated logs, request/job metrics and error telemetry
 - [ESLint](https://eslint.org/) · [Prettier](https://prettier.io/) · [Husky](https://typicode.github.io/husky/) · [Commitlint](https://commitlint.js.org/)
 
 ---
