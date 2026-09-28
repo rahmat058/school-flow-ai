@@ -229,7 +229,7 @@ describe('Auth flow (e2e)', () => {
     it('flips the account to verified and clears the token columns', async () => {
       const token = tokenFrom(sent[0].link);
       const res = await api()
-        .post('/api/v1/auth/verify-email')
+        .post('/api/v1/registration/verify-email')
         .send({ token });
 
       expect(res.status).toBe(200);
@@ -247,7 +247,7 @@ describe('Auth flow (e2e)', () => {
 
     it('rejects a reused or unknown token', async () => {
       const res = await api()
-        .post('/api/v1/auth/verify-email')
+        .post('/api/v1/registration/verify-email')
         .send({ token: tokenFrom(sent[0].link) });
 
       expect(res.status).toBe(400);
@@ -378,7 +378,7 @@ describe('Auth flow (e2e)', () => {
 
     it('issues a new token and invalidates the previous link', async () => {
       const res = await api()
-        .post('/api/v1/auth/resend-verification')
+        .post('/api/v1/registration/resend-verification')
         .send({ email: rotator.email });
 
       expect(res.status).toBe(200);
@@ -391,13 +391,13 @@ describe('Auth flow (e2e)', () => {
       expect(newToken).not.toBe(oldToken);
 
       const stale = await api()
-        .post('/api/v1/auth/verify-email')
+        .post('/api/v1/registration/verify-email')
         .send({ token: oldToken });
       expect(stale.status).toBe(400);
       expect(stale.body.error.code).toBe('AUTH_VERIFY_TOKEN_INVALID');
 
       const fresh = await api()
-        .post('/api/v1/auth/verify-email')
+        .post('/api/v1/registration/verify-email')
         .send({ token: newToken });
       expect(fresh.status).toBe(200);
       expect(fresh.body.data).toEqual({ email: rotator.email, verified: true });
@@ -405,7 +405,7 @@ describe('Auth flow (e2e)', () => {
 
     it('does not reveal whether an unknown address has an account', async () => {
       const res = await api()
-        .post('/api/v1/auth/resend-verification')
+        .post('/api/v1/registration/resend-verification')
         .send({ email: `nobody.${suffix}@schoolflow.test` });
 
       expect(res.status).toBe(200);

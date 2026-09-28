@@ -15,33 +15,11 @@ import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
-import { VerifyEmailDto } from '../registration/dto/verify-email.dto.js';
-import { RegistrationService } from '../registration/registration.service.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
-import { ResendVerificationDto } from '../registration/dto/resend-verification.dto.js';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly registrationService: RegistrationService,
-  ) {}
-
-  @Public()
-  @Post('verify-email')
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Email verified — you can sign in now')
-  verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.registrationService.verifyEmail(dto);
-  }
-
-  @Public()
-  @Post('resend-verification')
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage('Verification email sent')
-  resendVerification(@Body() dto: ResendVerificationDto) {
-    return this.registrationService.resendVerification(dto);
-  }
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('login')

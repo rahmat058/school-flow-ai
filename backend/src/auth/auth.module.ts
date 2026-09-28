@@ -7,7 +7,6 @@ import { School } from '../database/entities/school.entity.js';
 import { User } from '../database/entities/user.entity.js';
 import { AuthController } from './auth.controller.js';
 import { ACCESS_TTL_SECONDS, AuthService } from './auth.service.js';
-import { RegistrationModule } from '../registration/registration.module.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
 @Module({
@@ -21,7 +20,6 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
         signOptions: { expiresIn: ACCESS_TTL_SECONDS },
       }),
     }),
-    RegistrationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { RegistrationModule } from './registration/registration.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor.js';
@@ -27,6 +28,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     DatabaseModule,
     MailModule,
     AuthModule,
+    RegistrationModule,
     HealthModule,
   ],
   providers: [

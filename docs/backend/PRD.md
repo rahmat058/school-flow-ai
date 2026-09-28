@@ -82,8 +82,8 @@ Each module lists the routes the mock actually serves as a **checklist — build
 **Endpoints**
 
 - [x] `POST /api/v1/schools/register` — create school + admin user, then email a verification link `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
-- [x] `POST /api/v1/auth/verify-email` — confirm the emailed link token, activating the account (route listed in §4.2) `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
-- [x] `POST /api/v1/auth/resend-verification` — reissue the verification link for an unverified account (route listed in §4.2) `(public)`
+- [x] `POST /api/v1/registration/verify-email` — confirm the emailed link token, activating the account `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
+- [x] `POST /api/v1/registration/resend-verification` — reissue the verification link for an unverified account `(public)`
 - [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
 - [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
 - [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
@@ -107,8 +107,6 @@ Each module lists the routes the mock actually serves as a **checklist — build
 **Endpoints**
 
 - [x] `POST /api/v1/auth/login` — JWT (access 7d + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
-- [x] `POST /api/v1/auth/verify-email` — confirm the emailed verification link token, activating the account; the token is single-use and lives 24h `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
-- [x] `POST /api/v1/auth/resend-verification` — reissue the verification link for an _unverified_ account; always `200`, so an unknown address is never revealed `(public)`
 - [x] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
 - [x] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
 - [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
@@ -123,8 +121,9 @@ Each module lists the routes the mock actually serves as a **checklist — build
 > **Built (2026-09-27):** `login`, `verify-email`, `resend-verification`, `refresh`, `logout` and `me`
 > are live in `backend/src/` — `AuthController`/`AuthService` (`auth/`) for login, refresh, logout and
 > `me`, and a self-contained `RegistrationModule` (`backend/src/registration/` —
-> `RegistrationController`, `RegistrationService` and its own `dto/`) for school sign-up and the
-> emailed verification flow — covered by `backend/test/auth/auth.e2e-spec.ts` (23 tests). `GET /auth/me`
+> `RegistrationController`, `RegistrationVerificationController`, `RegistrationService` and its own `dto/`) for
+> school sign-up and the emailed verification flow — covered by `backend/test/auth/auth.e2e-spec.ts`
+> (23 tests). `GET /auth/me`
 > additionally answers `401 AUTH_TOKEN_EXPIRED` / `AUTH_TOKEN_INVALID` from `JwtAuthGuard`, which reads
 > the `jsonwebtoken` failure instead of collapsing every case into `AUTH_UNAUTHENTICATED`
 > ([`Access.md`](./Access.md) §4). **Two behaviours still lag this contract:** `refresh` re-signs from

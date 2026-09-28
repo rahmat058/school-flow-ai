@@ -12,7 +12,7 @@
 
 - [ ] NestJS scaffold, config module, global pipes/filters/interceptors, helmet, CORS, throttler
 - [ ] TypeORM DataSource module (`database/`) with entities (`schools`, `users` incl. the email-verification columns, `teachers`/`students`/`parents`) — schema applied by hand, `synchronize` off
-- [x] Email-verified school registration — `POST /schools/register` (transactional create + emailed verification link), `POST /auth/verify-email`, `POST /auth/resend-verification` (single-use SHA-256-hashed token, 24-hour expiry)
+- [x] Email-verified school registration — `POST /schools/register` (transactional create + emailed verification link), `POST /registration/verify-email`, `POST /registration/resend-verification` (single-use SHA-256-hashed token, 24-hour expiry)
 - [ ] School settings — `GET`/`PATCH /schools/current` (profile), `PATCH /schools/current/settings` (academic · notifications · security) and `POST /schools/current/backup`
 - [ ] MailModule (Resend) with React Email templates (`src/mail/templates/`) for the verification-link + credentials messages
 - [x] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`

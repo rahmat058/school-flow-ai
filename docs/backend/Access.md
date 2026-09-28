@@ -90,17 +90,15 @@ params each handler reads (`page`/`limit` are read by the `paginate` helper).
 
 ### Auth
 
-| Method | Path                        | Roles              | 403 — code + condition                                               | Enforced?     | Query params |
-| ------ | --------------------------- | ------------------ | -------------------------------------------------------------------- | ------------- | ------------ |
-| POST   | `/auth/login`               | public             | `AUTH_NOT_VERIFIED` — the account exists but its email is unverified | standard      | —            |
-| POST   | `/auth/verify-email`        | public             | —                                                                    | standard      | —            |
-| POST   | `/auth/resend-verification` | public             | —                                                                    | standard      | —            |
-| POST   | `/auth/refresh`             | public             | —                                                                    | standard      | —            |
-| POST   | `/auth/logout`              | session (contract) | —                                                                    | intended only | —            |
-| GET    | `/auth/me`                  | any authenticated  | —                                                                    | standard      | —            |
-| POST   | `/auth/forgot-password`     | public             | —                                                                    | standard      | —            |
-| POST   | `/auth/reset-password`      | public             | —                                                                    | standard      | —            |
-| POST   | `/auth/verify-invite`       | public             | —                                                                    | standard      | —            |
+| Method | Path                    | Roles              | 403 — code + condition                                               | Enforced?     | Query params |
+| ------ | ----------------------- | ------------------ | -------------------------------------------------------------------- | ------------- | ------------ |
+| POST   | `/auth/login`           | public             | `AUTH_NOT_VERIFIED` — the account exists but its email is unverified | standard      | —            |
+| POST   | `/auth/refresh`         | public             | —                                                                    | standard      | —            |
+| POST   | `/auth/logout`          | session (contract) | —                                                                    | intended only | —            |
+| GET    | `/auth/me`              | any authenticated  | —                                                                    | standard      | —            |
+| POST   | `/auth/forgot-password` | public             | —                                                                    | standard      | —            |
+| POST   | `/auth/reset-password`  | public             | —                                                                    | standard      | —            |
+| POST   | `/auth/verify-invite`   | public             | —                                                                    | standard      | —            |
 
 `/auth/logout` is in the mock's `PUBLIC_PATHS` — it needs no token although the contract requires a
 session. It is the one `intended only` route whose gap is authentication rather than a role.
@@ -109,6 +107,13 @@ session. It is the one `intended only` route whose gap is authentication rather 
 > **verification link** in the contract (`PRD.md` §4.1–§4.2). `frontend/src/services/mockAdapter.ts`
 > still serves `/schools/verify-otp` + `/schools/resend-otp` and returns `AUTH_OTP_INVALID`; the
 > route tables below describe the target contract, and the mock is pending an update to match.
+
+### Registration
+
+| Method | Path                                | Roles  | 403 — code + condition | Enforced? | Query params |
+| ------ | ----------------------------------- | ------ | ---------------------- | --------- | ------------ |
+| POST   | `/registration/verify-email`        | public | —                      | standard  | —            |
+| POST   | `/registration/resend-verification` | public | —                      | standard  | —            |
 
 ### School
 
@@ -315,7 +320,7 @@ the school, a student their class, a guardian their children's classes.
 ### Route-access totals
 
 - **Total routes: 109.**
-- **Public (no token): 9** — `POST /auth/login`, `/auth/verify-email`, `/auth/resend-verification`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-invite`, `/schools/register`.
+- **Public (no token): 9** — `POST /auth/login`, `/registration/verify-email`, `/registration/resend-verification`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-invite`, `/schools/register`.
 - **Token required: 100.** Of these, **10 are role-gated** and **90 are token-only**.
 - **Role-gated (the mock refuses the wrong role): 10** — `GET /dashboard/student`, `GET /dashboard/parent`, `GET /attendance/me`, `GET /attendance/monthly`, `GET /attendance`, `POST /attendance`, `GET /fees/me`, `POST /fees/me/payments`, `GET /exams/me`, `GET /progress/me`.
 - **`intended only`: 79** — 78 token-only routes that the contract scopes to a strict subset of roles, plus `/auth/logout` (which the contract gates on a session but the mock serves publicly).
@@ -346,7 +351,7 @@ it, grouped by domain. Codes carried in the error envelope
 | `AUTH_TOKEN_EXPIRED`        | 401    | A non-public route whose bearer **access** token is past its `exp`.                                        |
 | `AUTH_TOKEN_INVALID`        | 401    | A non-public route whose bearer token is malformed, tampered with, or signed with a different secret.      |
 | `AUTH_RESET_TOKEN_INVALID`  | 400    | `POST /auth/reset-password` with a token equal to `expired`.                                               |
-| `AUTH_VERIFY_TOKEN_INVALID` | 400    | `POST /auth/verify-email` with an unknown, expired or already-used link token.                             |
+| `AUTH_VERIFY_TOKEN_INVALID` | 400    | `POST /registration/verify-email` with an unknown, expired or already-used link token.                     |
 | `AUTH_OTP_INVALID`          | 400    | **Deferred** — `POST /schools/verify-otp` with a code other than the demo OTP; still returned by the mock. |
 | `INVITE_NOT_FOUND`          | 404    | `POST /auth/verify-invite` for an email with no account.                                                   |
 | `INVITE_INVALID`            | 400    | `POST /auth/verify-invite` with a code other than the demo OTP.                                            |
