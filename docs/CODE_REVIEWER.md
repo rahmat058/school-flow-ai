@@ -24,6 +24,7 @@ Apply this checklist to every change before it is considered done. Review the **
 - [ ] Multi-write operations run in a database transaction
 - [ ] Schema changes come with a migration — never `db push` to shared DBs
 - [ ] Responses use the envelope from `docs/backend/Design.md`; errors use domain codes (`FEE_NOT_FOUND`)
+- [ ] Lists paginate through `meta` (`page`/`limit`/`totalItems`/`totalPage`/`links`); resource responses carry `data.links`; error bodies carry a top-level `statusCode`
 - [ ] Money is integer paise; dates ISO-8601; IDs UUID; enums `SCREAMING_SNAKE`
 - [ ] Emails built from React Email components in `src/mail/templates/` (rendered to HTML with `render()`) — no hand-written HTML strings or Handlebars
 - [ ] Observability stays centralized: `@nestjs/observe` is configured from env (`OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET`, no inline credentials) and app logs go through the global pipeline — never `console.log`

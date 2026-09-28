@@ -42,7 +42,7 @@ export function NoticesPage() {
   const notices = useNotices({ page, limit: PAGE_SIZE, search: debouncedSearch })
   const deleteNotice = useDeleteNotice()
 
-  const total = notices.data?.meta.total ?? 0
+  const total = notices.data?.meta.totalItems ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const items = notices.data?.items ?? []
   const hasSearch = debouncedSearch.length > 0

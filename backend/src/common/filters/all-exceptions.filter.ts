@@ -50,7 +50,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response
       .status(status)
-      .json({ success: false, message: body.message, error: body });
+      .json({ success: false, statusCode: status, message: body.message, error: body });
   }
 
   private exceptionName(exception: unknown): string {

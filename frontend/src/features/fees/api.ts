@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { get, patch, post, remove } from '@/services/apiClient'
+import { get, patch, post, remove, paginationMeta } from '@/services/apiClient'
 import type { Paginated } from '@/types/api'
 import type {
   ClassFeeStatusRow,
@@ -100,7 +100,7 @@ export function usePendingInvoices(query: PendingInvoiceQuery) {
         limit: query.limit,
       })
 
-      return { items: data, meta: meta ?? { page: query.page, limit: query.limit, total: data.length } }
+      return { items: data, meta: meta ?? paginationMeta('/fees/pending', query.page, query.limit, data.length) }
     },
     placeholderData: keepPreviousData,
   })
@@ -139,7 +139,10 @@ export function useCollectStudents(query: FeeCollectStudentsQuery) {
         status: query.status || undefined,
       })
 
-      return { items: data, meta: meta ?? { page: query.page, limit: query.limit, total: data.length } }
+      return {
+        items: data,
+        meta: meta ?? paginationMeta('/fees/collect/students', query.page, query.limit, data.length),
+      }
     },
     placeholderData: keepPreviousData,
   })

@@ -30,7 +30,7 @@ export function CollectFeeTab() {
   const summary = useCollectSummary({ classId, status })
   const students = useCollectStudents({ page, limit: PAGE_SIZE, classId, status })
 
-  const total = students.data?.meta.total ?? 0
+  const total = students.data?.meta.totalItems ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const classSelectOptions = [
@@ -93,7 +93,7 @@ export function CollectFeeTab() {
     <div className="space-y-5">
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {summary.isPending ? (
-          Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-[92px] rounded-xl" />)
+          Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-23 rounded-xl" />)
         ) : (
           <>
             <SummaryTile
@@ -124,7 +124,7 @@ export function CollectFeeTab() {
         )}
       </section>
 
-      <div className="border-line bg-surface space-y-4 rounded-xl border p-5 shadow-[var(--shadow-card)]">
+      <div className="border-line bg-surface space-y-4 rounded-xl border p-5 shadow-(--shadow-card)">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-ink text-[18px] font-semibold tracking-[-0.03em]">
@@ -135,7 +135,7 @@ export function CollectFeeTab() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Select
-              className="max-w-[200px]"
+              className="max-w-50"
               options={classSelectOptions}
               value={classId}
               onValueChange={(value) => {
@@ -145,7 +145,7 @@ export function CollectFeeTab() {
               aria-label="Filter by class"
             />
             <Select
-              className="max-w-[180px]"
+              className="max-w-45"
               options={invoiceStatusOptions}
               value={status}
               onValueChange={(value) => {

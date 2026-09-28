@@ -25,7 +25,7 @@ export function FeeDashboardTab() {
   const dashboard = useFeeDashboard()
   const pending = usePendingInvoices({ page, limit: PAGE_SIZE })
 
-  const total = pending.data?.meta.total ?? 0
+  const total = pending.data?.meta.totalItems ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const columns: Array<DataTableColumn<PendingInvoiceRow>> = [
@@ -84,7 +84,7 @@ export function FeeDashboardTab() {
 
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {summary.isPending ? (
-          Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-[104px] rounded-xl" />)
+          Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-26 rounded-xl" />)
         ) : (
           <>
             <StatCard
@@ -120,13 +120,13 @@ export function FeeDashboardTab() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)] lg:p-6">
+        <article className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card) lg:p-6">
           <h2 className="font-display text-ink text-[18px] font-semibold tracking-[-0.03em]">
             Monthly collection trend
           </h2>
           <p className="text-ink-muted mt-1 text-[13px]">Collected against pending, over twelve months</p>
 
-          <div className="mt-5 h-[260px] w-full">
+          <div className="mt-5 h-65 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dashboard.data?.collectionTrend ?? []} barCategoryGap="28%">
                 <CartesianGrid vertical={false} stroke="#E8E8EC" strokeDasharray="4 4" />
@@ -166,12 +166,12 @@ export function FeeDashboardTab() {
           </div>
         </article>
 
-        <article className="border-line bg-surface rounded-xl border p-5 shadow-[var(--shadow-card)] lg:p-6">
+        <article className="border-line bg-surface rounded-xl border p-5 shadow-(--shadow-card) lg:p-6">
           <h2 className="font-display text-ink text-[18px] font-semibold tracking-[-0.03em]">Class-wise collection</h2>
           <p className="text-ink-muted mt-1 text-[13px]">Collected per class, all structures</p>
 
-          <div className="mt-5 h-[260px] w-full overflow-x-auto">
-            <div className="h-full min-w-[640px]">
+          <div className="mt-5 h-65 w-full overflow-x-auto">
+            <div className="h-full min-w-160">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dashboard.data?.classCollection ?? []} barCategoryGap="30%">
                   <CartesianGrid vertical={false} stroke="#E8E8EC" strokeDasharray="4 4" />

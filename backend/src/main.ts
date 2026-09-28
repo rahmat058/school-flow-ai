@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule, ObserveInstrument } from './app.module.js';
 import { setupSwagger } from './swagger/swagger.setup.js';
+import { API_PREFIX } from './common/constants.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -11,7 +12,7 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(API_PREFIX);
   app.use(helmet());
   app.enableCors({
     origin: config.get<string>('CLIENT_URL') ?? true,

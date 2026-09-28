@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { get, patch, post, remove } from '@/services/apiClient'
+import { get, patch, post, remove, paginationMeta } from '@/services/apiClient'
 import type { Paginated } from '@/types/api'
 import type { Notice, NoticeInput } from '@/types/communication'
 
@@ -24,7 +24,7 @@ export function useNotices(query: NoticeListQuery) {
         search: query.search,
       })
 
-      return { items: data, meta: meta ?? { page: query.page, limit: query.limit, total: data.length } }
+      return { items: data, meta: meta ?? paginationMeta('/notices', query.page, query.limit, data.length) }
     },
     placeholderData: keepPreviousData,
   })

@@ -16,25 +16,42 @@ The backend's "visual language" is its API contract — consistent shapes the fr
 ## Response envelope (success)
 
 ```json
-{ "success": true, "message": "Signed in successfully", "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
+{ "success": true, "message": "Schools retrieved", "data": { ... }, "meta": { "page": 1, "limit": 10, "totalItems": 42, "totalPage": 5, "links": { "self": "/schools?page=1&limit=10", "first": "/schools?page=1&limit=10", "last": "/schools?page=5&limit=10", "prev": null, "next": "/schools?page=2&limit=10" } } }
 ```
 
 - `message` is a human-readable summary of what `data` carries. A route sets its own with `@ResponseMessage('…')`; without one the interceptor falls back to a method default (`GET` → "Data retrieved", `POST` → "Request processed", `PATCH`/`PUT` → "Resource updated", `DELETE` → "Resource deleted")
 - Single resource → `data` is an object; lists → `data` is an array + `meta` pagination
-- Pagination is `meta { page, limit, total }`; **`limit` defaults to 10**, `page` to 1
-- `meta` omitted when not paginated
+- `meta` is omitted when not paginated, and carries **no** `links` on a single-resource read
+
+## Pagination & links
+
+- A list paginates through `meta`: **`limit` defaults to 10** and `page` to 1; `totalItems` is the full row count (not the page length) and `totalPage` is `max(1, ceil(totalItems / limit))`
+- `meta.links.self`/`first`/`last`/`prev`/`next` are **API-relative** (no `/api/v1`) and keep the filters the request carried, overriding only `page`/`limit`; `prev`/`next` are `null` at the ends
+- A single-resource response (get / create / update on a resource route) carries `links` **inside `data`** — `self` (the collection), `get`/`update`/`delete` (the item) — added by the interceptor for a controller marked `@Resource('<base>')`:
+
+```json
+{
+  "id": "…",
+  "name": "…",
+  "links": { "self": "/schools", "get": "/schools/…", "update": "/schools/…", "delete": "/schools/…" }
+}
+```
+
+- Auth, health and registration responses carry neither `meta` nor `links`
 
 ## Error envelope
 
 ```json
 {
   "success": false,
+  "statusCode": 404,
   "message": "Invoice not found",
   "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] }
 }
 ```
 
 - The top-level `message` repeats `error.message` — the actual thrown message — so a client reads one field for either outcome
+- `statusCode` carries the numeric HTTP status in the body as well as on the response, so a client can read it without inspecting the transport
 - `code`: `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`)
 - `details` is a `string[]` of **field names**, present on the 400 validation codes; the full catalogue of the mock's 60 codes is in `Access.md` §4
 - Codes: 200 OK · 201 Created · 400 Validation · 401 Unauthenticated · 403 Forbidden · 404 Not Found · 409 Conflict · 429 Rate Limited · 500 Server Error

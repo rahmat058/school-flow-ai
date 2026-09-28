@@ -84,6 +84,8 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - [x] `POST /api/v1/schools/register` — create school + admin user, then email a verification link `(public)` — 409 `SCHOOL_EMAIL_TAKEN`
 - [x] `POST /api/v1/registration/verify-email` — confirm the emailed link token, activating the account `(public)` — 400 `AUTH_VERIFY_TOKEN_INVALID`
 - [x] `POST /api/v1/registration/resend-verification` — reissue the verification link for an unverified account `(public)`
+- [x] `GET /api/v1/schools` — paginated list (`?page=&limit=&search=`); `data` is the page, `meta` the pagination + links `(token)`
+- [x] `GET /api/v1/schools/:id` — one school, with `data.links` `(token)` — 404 `SCHOOL_NOT_FOUND`
 - [ ] `GET /api/v1/schools/current` — the caller's own school: profile columns + the whole `settings` document `(token)` — the frontend already calls this
 - [ ] `PATCH /api/v1/schools/current` — update the school profile (`name`, `contactEmail`, `contactPhone`, `address`, `logoUrl`); a blank contact field clears to `null` and the slug is **not** regenerated `(token)` — 400 `SCHOOL_INVALID` on a blank name
 - [ ] `PATCH /api/v1/schools/current/settings` — merge a partial patch into `schools.settings`; each tab of the Settings screen sends only its own slice `(token)` — 400 `SETTINGS_INVALID`, the offending fields in `details`
@@ -610,23 +612,25 @@ No HTTP endpoints — this module is called by the other services and by the sch
 **Response envelope** (via global response interceptor)
 
 ```json
-{ "success": true, "message": "Signed in successfully", "data": { ... }, "meta": { "page": 1, "limit": 10, "total": 42 } }
+{ "success": true, "message": "Schools retrieved", "data": { ... }, "meta": { "page": 1, "limit": 10, "totalItems": 42, "totalPage": 5, "links": { "self": "/schools?page=1&limit=10", "first": "/schools?page=1&limit=10", "last": "/schools?page=5&limit=10", "prev": null, "next": "/schools?page=2&limit=10" } } }
 ```
 
 - `message` is a human-readable summary of what `data` carries: a route sets its own with `@ResponseMessage('…')`, otherwise the interceptor falls back to a method default (`GET` → "Data retrieved", `POST` → "Request processed", `PATCH`/`PUT` → "Resource updated", `DELETE` → "Resource deleted").
-- Lists paginate with `meta { page, limit, total }`; **`limit` defaults to 10** and `page` to 1. `meta` is omitted on a single-resource read.
+- Lists paginate with `meta { page, limit, totalItems, totalPage, links }`; **`limit` defaults to 10** and `page` to 1, `totalItems` is the full count, and the links are API-relative (`/schools?page=2&limit=10`). `meta` is omitted on a single-resource read.
+- A single-resource response (get / create / update) carries `links` inside `data` — `self`/`get`/`update`/`delete` — on a controller marked `@Resource('<base>')`; auth, health and registration responses carry neither `meta` nor `links`.
 
 **Error envelope** (via global exception filter)
 
 ```json
 {
   "success": false,
+  "statusCode": 404,
   "message": "Invoice not found",
   "error": { "code": "FEE_NOT_FOUND", "message": "Invoice not found", "details": ["amountPaise"] }
 }
 ```
 
-- The top-level `message` repeats `error.message` — the actual thrown message — so a client reads one field for either outcome.
+- The top-level `message` repeats `error.message` — the actual thrown message — so a client reads one field for either outcome, and `statusCode` carries the numeric HTTP status in the body.
 - `code` is `SCREAMING_SNAKE`, namespaced by domain (`AUTH_*`, `FEE_*`, `ATTENDANCE_*`). **`details` is a `string[]` of field names**, present on the 400 validation codes and omitted otherwise; the full 60-code catalogue is [`Access.md`](./Access.md) §4.
 
 **Response headers** (via global response interceptor) — every response carries `Cache-Control`, chosen from the route's `@Public()` marker: public routes get `public, max-age=60`; authenticated routes get `private, max-age=5`, so per-user payloads never enter a shared cache. The header is written before the handler runs, so error responses carry it too.

@@ -40,6 +40,29 @@ function unwrap<T>(envelope: ApiEnvelope<T>): ApiResult<T> {
   return { data: envelope.data, meta: envelope.meta }
 }
 
+/**
+ * A page's metadata when a response omits `meta` — the payload is treated as one page of itself.
+ * Mirrors the shape the backend's pagination emits, links included.
+ */
+export function paginationMeta(basePath: string, page: number, limit: number, totalItems: number): PaginationMeta {
+  const totalPage = Math.max(1, Math.ceil(totalItems / limit))
+  const link = (target: number) => `${basePath}?page=${target}&limit=${limit}`
+
+  return {
+    page,
+    limit,
+    totalItems,
+    totalPage,
+    links: {
+      self: link(page),
+      first: link(1),
+      last: link(totalPage),
+      prev: page > 1 ? link(page - 1) : null,
+      next: page < totalPage ? link(page + 1) : null,
+    },
+  }
+}
+
 function buildClient(): AxiosInstance {
   const instance = axios.create({
     baseURL: env.apiUrl,

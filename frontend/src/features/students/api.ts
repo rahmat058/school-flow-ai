@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { get, patch, post, remove } from '@/services/apiClient'
+import { get, patch, post, remove, paginationMeta } from '@/services/apiClient'
 import type { Paginated } from '@/types/api'
 import type {
   FeeStanding,
@@ -45,7 +45,7 @@ export function useStudents(query: StudentListQuery) {
         feeStanding: query.feeStanding || undefined,
       })
 
-      return { items: data, meta: meta ?? { page: query.page, limit: query.limit, total: data.length } }
+      return { items: data, meta: meta ?? paginationMeta('/students', query.page, query.limit, data.length) }
     },
     // Keeps the current page on screen while the next one loads, instead of flashing a skeleton.
     placeholderData: keepPreviousData,

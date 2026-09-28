@@ -62,13 +62,14 @@ backend/
 │   │   └── entities/               # *.entity.ts — the mapping onto the tables
 │   ├── common/
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
-│   │   ├── decorators/       # @Public, @ResponseMessage, @Roles, @RequirePermission, @CurrentUser, @SchoolId
+│   │   ├── decorators/       # @Public, @ResponseMessage, @Resource, @Roles, @RequirePermission, @CurrentUser, @SchoolId
 │   │   ├── filters/          # global exception filter (logs every error)
-│   │   ├── interceptors/     # response envelope, cache-control, logging
-│   │   ├── utils/            # shared helpers (verification-token.util.ts, …)
+│   │   ├── interceptors/     # response envelope (+ pagination & links), cache-control, logging
+│   │   ├── utils/            # shared helpers (pagination.util.ts, verification-token.util.ts, …)
 │   │   └── pipes/            # validation helpers
 │   ├── auth/                 # strategies, guards, dto + login/refresh/logout/me
 │   ├── registration/         # school sign-up + emailed verification (RegistrationModule)
+│   ├── school/               # paginated school list + detail (SchoolModule)
 │   ├── schools/              # OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes, the subject catalogue + class-subject assignments
@@ -163,7 +164,10 @@ same internal layout:
   the error `message` repeats the thrown message. `CacheControlInterceptor` sets
   `Cache-Control` (`public, max-age=60` on a `@Public()` route, `private, max-age=5`
   otherwise) and `LoggingInterceptor` logs each request — services throw
-  `HttpException` subclasses and never build HTTP responses.
+  `HttpException` subclasses and never build HTTP responses. A list returns
+  `Paginated<T>` and the interceptor adds `meta` (`page`/`limit`/`totalItems`/`totalPage`/`links`);
+  a controller marked `@Resource('<base>')` gets `links` on a single-resource response; the filter
+  adds a top-level `statusCode` to errors.
 - **Secrets:** never return `passwordHash` or OTPs; keep `.env` out of git.
 - **Monitoring:** `@nestjs/observe` is wired once in `app.module.ts` (`ObserveModule.forRoot()`) and `main.ts` (`instrument: ObserveInstrument`) and reads `OBSERVE_APP_KEY`/`OBSERVE_APP_SECRET` from env — the app key/secret are never inlined or committed; traces, logs and metrics land on the Observe dashboard.
 - **Money:** store as integer paise, never floats.

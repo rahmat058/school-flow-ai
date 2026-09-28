@@ -57,7 +57,7 @@ export function StudentsPage() {
   const classOptions = useClassOptions()
   const deleteStudent = useDeleteStudent()
 
-  const total = students.data?.meta.total ?? 0
+  const total = students.data?.meta.totalItems ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const classSelectOptions = [
     { value: '', label: 'All classes' },

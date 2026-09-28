@@ -12,6 +12,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor.js';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
+import { SchoolModule } from './school/school.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -30,6 +31,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     RegistrationModule,
     HealthModule,
+    SchoolModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

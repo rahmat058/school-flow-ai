@@ -6,7 +6,7 @@ React client → `api/v1` REST (NestJS controllers) → guards (`JwtAuthGuard` �
 
 Layers: **Controller → Service → TypeORM repository → PostgreSQL**. Controllers never contain business logic; services never touch HTTP objects.
 
-Global concerns are registered once on `AppModule` rather than per controller: `ObserveModule.forRoot()` (Observe tracing, logs and metrics), `JwtAuthGuard` (token check), **`LoggingInterceptor`** (success log line), `ResponseInterceptor` (success envelope — `{ success, message, data }`, the `message` from `@ResponseMessage()` or a method default), **`CacheControlInterceptor`**, which sets `Cache-Control` on every response — reading the same `@Public()` metadata the guard does, so a public route gets `public, max-age=60` and an authenticated one `private, max-age=5`, before the handler runs (error responses carry it too) — and `AllExceptionsFilter` (error envelope + error log line). Per-user data therefore never enters a shared cache.
+Global concerns are registered once on `AppModule` rather than per controller: `ObserveModule.forRoot()` (Observe tracing, logs and metrics), `JwtAuthGuard` (token check), **`LoggingInterceptor`** (success log line), `ResponseInterceptor` (success envelope — `{ success, message, data }`, plus `meta` pagination + `links`; the `message` from `@ResponseMessage()` or a method default), **`CacheControlInterceptor`**, which sets `Cache-Control` on every response — reading the same `@Public()` metadata the guard does, so a public route gets `public, max-age=60` and an authenticated one `private, max-age=5`, before the handler runs (error responses carry it too) — and `AllExceptionsFilter` (error envelope + error log line). Per-user data therefore never enters a shared cache.
 
 ## Request logging
 
@@ -47,12 +47,13 @@ backend/
 │   │   └── entities/               # *.entity.ts — the mapping onto the tables
 │   ├── common/               # guards, decorators, filters, interceptors, utils, pipes
 │   │   ├── guards/           # jwt-auth, roles, permissions, tenant
-│   │   ├── decorators/       # @Roles, @RequirePermission, @CurrentUser, @SchoolId
-│   │   ├── filters/          # global exception filter (logs every error)
-│   │   ├── interceptors/     # response envelope, cache-control, logging
-│   │   └── utils/            # DI-free shared helpers (verification-token.util.ts)
+│   │   ├── decorators/       # @Public, @ResponseMessage, @Resource, @Roles, @RequirePermission, @CurrentUser, @SchoolId
+│   │   ├── filters/          # global exception filter (logs every error, adds statusCode)
+│   │   ├── interceptors/     # response envelope (+ pagination & links), cache-control, logging
+│   │   └── utils/            # DI-free shared helpers (pagination.util.ts, verification-token.util.ts)
 │   ├── auth/                 # strategies, guards, dto + login/refresh/logout/me
 │   ├── registration/         # school sign-up + emailed verification (RegistrationModule)
+│   ├── school/               # paginated school list + detail (SchoolModule)
 │   ├── schools/              # OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes, the subject catalogue + class-subject assignments
@@ -81,6 +82,7 @@ Each routing domain and the module that owns it, with the tables the module read
 | ------------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
 | auth         | AuthModule         | `users`, `permissions`, `user_permissions` (`refresh_tokens` planned)                                      |
 | registration | RegistrationModule | `schools`, `users` — school sign-up + emailed verification                                                 |
+| school       | SchoolModule       | `schools` — the paginated list + detail (`GET /schools`, `GET /schools/:id`)                               |
 | school       | SchoolsModule      | `schools`, `users` (`otps` planned)                                                                        |
 | users        | AuthModule         | `users`, `permissions`, `user_permissions` — the `/users/:userId/permissions` routes                       |
 | teachers     | UsersModule        | `teachers`, `users`, `teacher_classes`                                                                     |

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { AxiosError } from 'axios'
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import type { ApiEnvelope, PaginationMeta } from '@/types/api'
+import type { PaginationMeta } from '@/types/api'
 import type { AuthSession, AuthUser, OtpChallenge } from '@/types/auth'
 import type {
   AttendanceDay,
@@ -253,9 +253,11 @@ interface Route {
   handler: RouteHandler
 }
 
-function ok<T>(data: T, meta?: PaginationMeta): MockResult {
-  const envelope: ApiEnvelope<T> = meta ? { success: true, data, meta } : { success: true, data }
-  return { status: 200, body: envelope }
+/** What `paginate` produces — the adapter fills in `links` from the request. */
+type PaginationSeed = Omit<PaginationMeta, 'links'>
+
+function ok<T>(data: T, meta?: PaginationSeed): MockResult {
+  return { status: 200, body: meta ? { success: true, data, meta } : { success: true, data } }
 }
 
 function created<T>(data: T): MockResult {
@@ -263,7 +265,85 @@ function created<T>(data: T): MockResult {
 }
 
 function fail(status: number, code: string, message: string, details?: string[]): MockResult {
-  return { status, body: { success: false, error: { code, message, ...(details ? { details } : {}) } } }
+  return {
+    status,
+    body: { success: false, statusCode: status, error: { code, message, ...(details ? { details } : {}) } },
+  }
+}
+
+/** REST domains whose single-resource responses carry `links`. */
+const RESOURCE_PREFIXES = new Set([
+  'schools',
+  'users',
+  'teachers',
+  'students',
+  'parents',
+  'classes',
+  'subjects',
+  'attendance',
+  'homework',
+  'materials',
+  'timetables',
+  'exams',
+  'notices',
+  'fees',
+])
+
+/** `/<resource>` or `/<resource>/:id` for a real resource — never a read-model or auth route. */
+function resourceBase(pattern: string): string | null {
+  const match = /^\/([a-z-]+)(?:\/:[A-Za-z]+)?$/.exec(pattern)
+  return match && RESOURCE_PREFIXES.has(match[1]) ? `/${match[1]}` : null
+}
+
+function resourceLinks(base: string, id: string) {
+  const item = `${base}/${id}`
+  return { self: base, get: item, update: item, delete: item }
+}
+
+function pageLink(path: string, params: Record<string, unknown>, page: number, limit: number): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'page' || key === 'limit') continue
+    for (const entry of Array.isArray(value) ? value : [value]) {
+      if (entry === undefined || entry === null) continue
+      search.append(key, String(entry))
+    }
+  }
+  search.set('page', String(page))
+  search.set('limit', String(limit))
+  return `${path}?${search.toString()}`
+}
+
+/** Mirrors the backend envelope: `meta.links` on a page, `data.links` on a single resource. */
+function decorate(body: unknown, pattern: string, path: string, params: Record<string, unknown>): unknown {
+  if (typeof body !== 'object' || body === null) return body
+  const envelope = body as { success?: boolean; data?: unknown; meta?: PaginationSeed }
+  if (envelope.success !== true) return body
+
+  const next: { success: true; data: unknown; meta?: PaginationMeta } = { success: true, data: envelope.data }
+
+  const meta = envelope.meta
+  if (meta) {
+    const link = (target: number) => pageLink(path, params, target, meta.limit)
+    next.meta = {
+      ...meta,
+      links: {
+        self: link(meta.page),
+        first: link(1),
+        last: link(meta.totalPage),
+        prev: meta.page > 1 ? link(meta.page - 1) : null,
+        next: meta.page < meta.totalPage ? link(meta.page + 1) : null,
+      },
+    }
+  }
+
+  const base = resourceBase(pattern)
+  const data = envelope.data
+  if (base && typeof data === 'object' && data !== null && typeof (data as { id?: unknown }).id === 'string') {
+    next.data = { ...(data as Record<string, unknown>), links: resourceLinks(base, (data as { id: string }).id) }
+  }
+
+  return next
 }
 
 function normalizePath(config: InternalAxiosRequestConfig): string {
@@ -326,11 +406,14 @@ function delayFor(path: string): Promise<void> {
 // ---------------------------------------------------------------------------------------------
 // query helpers
 // ---------------------------------------------------------------------------------------------
-function paginate<T>(items: T[], params: Record<string, unknown>): { items: T[]; meta: PaginationMeta } {
+function paginate<T>(items: T[], params: Record<string, unknown>): { items: T[]; meta: PaginationSeed } {
   const page = Math.max(1, Number(params.page ?? 1))
   const limit = Math.max(1, Number(params.limit ?? 10))
   const start = (page - 1) * limit
-  return { items: items.slice(start, start + limit), meta: { page, limit, total: items.length } }
+  return {
+    items: items.slice(start, start + limit),
+    meta: { page, limit, totalItems: items.length, totalPage: Math.max(1, Math.ceil(items.length / limit)) },
+  }
 }
 
 function searchTerm(params: Record<string, unknown>): string {
@@ -5568,17 +5651,19 @@ export function createMockAdapter(): AxiosAdapter {
       throw buildError(config, fail(401, 'AUTH_UNAUTHENTICATED', 'Missing or invalid access token'))
     }
 
+    // Path params win over query params of the same name.
+    const handlerParams = { ...params, ...route.pathParams }
+
     const result = route.route.handler({
       method,
       path,
       body: parseBody(config),
-      // Path params win over query params of the same name.
-      params: { ...params, ...route.pathParams },
+      params: handlerParams,
       userId,
     })
     if (result.status >= 400) throw buildError(config, result)
 
-    return buildResponse(config, result.status, result.body)
+    return buildResponse(config, result.status, decorate(result.body, route.route.path, path, handlerParams))
   }
 }
 
