@@ -39,8 +39,9 @@ Today that chain runs against the **in-repo mock adapter** (`frontend/src/servic
 ```
 backend/
 ├── src/
-│   ├── main.ts               # Bootstrap: prefix, pipes, filters, helmet, CORS
+│   ├── main.ts               # Bootstrap: prefix, pipes, filters, helmet, CORS, Swagger
 │   ├── app.module.ts
+│   ├── swagger/              # OpenAPI document builder + Swagger UI setup (mounted at /docs)
 │   ├── database/             # TypeORM DataSource (global) + entities
 │   │   ├── data-source-options.ts  # the one place the connection is declared
 │   │   └── entities/               # *.entity.ts — the mapping onto the tables
@@ -108,6 +109,7 @@ The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns
 - **Passport.js + JWT** — access (7d) + refresh (7d) auth
 - **Socket.io** (`@WebSocketGateway`) — chat and notifications
 - **class-validator / class-transformer** — DTO validation via global ValidationPipe
+- **`@nestjs/swagger`** — the OpenAPI document is generated from the controllers and DTOs and served with the Swagger UI at `/docs` (raw JSON at `/docs/json`); `src/swagger/` builds the document (title, tags, bearer JWT security) and `main.ts` mounts it after the global prefix, so the generated paths carry `/api/v1`. Toggled off with `SWAGGER_ENABLED=false`
 - **BullMQ + Redis** — email/notification queues; `@nestjs/schedule` for cron (fee reminders)
 - **Stripe** (international) + **SSLCommerz** (Bangladesh) — payments; **Resend** — transactional email; **Cloudinary** — file storage
 - **React Email** (`react-email`) — email templates written as `.tsx` components in `src/mail/templates/`, rendered to HTML with `render()` and sent through Resend; live preview with the `email dev` CLI

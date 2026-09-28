@@ -58,7 +58,7 @@ Validate before finishing work:
 npm run lint && npm run build
 ```
 
-The frontend calls the backend at `/api/v1` per [docs/backend/Design.md](./docs/backend/Design.md) (response envelopes, naming, money in paise).
+The frontend calls the backend at `/api/v1` per [docs/backend/Design.md](./docs/backend/Design.md) (response envelopes, naming, money in paise). The backend serves its generated API docs at `/docs` (raw OpenAPI JSON at `/docs/json`).
 
 ---
 
@@ -79,7 +79,8 @@ school-flow-ai/
 ├── backend/                     # NestJS 12 + Supabase (PostgreSQL)
 │   ├── supabase/                # DB schema + migrations (Supabase project)
 │   └── src/
-│       ├── main.ts              # Prefix /api/v1, pipes, filters, helmet, CORS
+│       ├── main.ts              # Prefix /api/v1, pipes, filters, helmet, CORS, Swagger
+│       ├── swagger/             # OpenAPI document builder + Swagger UI (/docs)
 │       ├── database/            # Supabase client module (global)
 │       ├── common/              # guards, decorators, filters, interceptors
 │       └── <feature modules>    # auth, schools, users, classes, attendance,

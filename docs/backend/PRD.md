@@ -23,6 +23,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 | Payments     | Stripe (international) + SSLCommerz (Bangladesh)                                |
 | AI           | LLM API (e.g., OpenAI/Gemini)                                                   |
 | Validation   | class-validator + class-transformer (DTOs)                                      |
+| API Docs     | Swagger / OpenAPI (`@nestjs/swagger`) — UI at `/docs`, JSON at `/docs/json`     |
 | Queue/Jobs   | BullMQ (Redis) or @nestjs/schedule                                              |
 | Deployment   | Render (API), Supabase (DB), Cloudinary                                         |
 
@@ -31,6 +32,7 @@ Build the complete backend for a multi-role School Management System using **Nes
 - **NestJS modular structure**: one module per domain (`auth/`, `schools/`, `users/`, `attendance/`, `fees/`, `homework/`, `timetables/`, `exams/`, `chat/`, `notices/`, `ai/`, `materials/`, `reports/`), each with `*.module.ts`, `*.controller.ts`, `*.service.ts`, and `dto/`
 - Global TypeORM `DataSource` in a shared `database/` module; services inject `Repository<Entity>` classes — all DB access goes through them
 - RESTful APIs versioned via `app.setGlobalPrefix('api/v1')` or NestJS URI versioning
+- **API documentation**: `@nestjs/swagger` generates the OpenAPI document from the controllers and DTOs and serves the UI at `/docs` (raw JSON at `/docs/json`); bearer JWT auth is declared so the UI can call protected routes. Configured in `src/swagger/`, toggled with `SWAGGER_ENABLED`
 - Multi-tenant: every table carries a `schoolId` foreign key; a global tenant guard scopes all queries
 - Socket.io via NestJS `@WebSocketGateway()` on the same HTTP server
 - Role-Based Access Control (RBAC): `ADMIN | TEACHER | STUDENT | PARENT` as a Postgres enum, enforced with `@Roles()` decorator + `RolesGuard`
@@ -668,6 +670,7 @@ must stay identical.
 ```
 PORT=5000
 CLIENT_URL=http://localhost:5173
+SWAGGER_ENABLED=true
 DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
@@ -688,7 +691,7 @@ REDIS_URL=
 `DATABASE_URL` uses the **session-mode pooler** (`:5432`): the direct `db.[project-ref].supabase.co`
 host publishes only an AAAA record and does not resolve on IPv4-only machines, and the transaction
 pooler (`:6543`) cannot run prepared statements. Percent-encode the password (`#` → `%23`,
-`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `DATABASE_URL`,
+`$` → `%24`). **Consumed today** by `src/`: `PORT`, `CLIENT_URL`, `SWAGGER_ENABLED`, `DATABASE_URL`,
 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`; the rest arrive with
 their phases (Cloudinary §4.13, payments §4.6, AI §4.12, Redis §4.15). There are no
 `SUPABASE_*` variables — the Supabase client was replaced by TypeORM + `pg`, so nothing reads a
@@ -701,6 +704,7 @@ backend/
 ├── src/
 │   ├── main.ts
 │   ├── app.module.ts
+│   ├── swagger/            # OpenAPI document builder + UI setup (/docs)
 │   ├── database/           # TypeORM DataSource (global) + entities
 │   ├── common/             # guards, decorators, filters, interceptors, pipes
 │   ├── auth/               # strategies, guards, dto
