@@ -119,8 +119,10 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - [ ] `PUT /api/v1/users/:userId/permissions` — replace that account's grant set (the body carries the whole set, so a role default can be turned off) `(token)` — 404 `USER_NOT_FOUND`, 400 `PERMISSION_INVALID`
 
 > **Built (2026-09-27):** `login`, `verify-email`, `resend-verification`, `refresh`, `logout` and `me`
-> are live in `backend/src/auth/` (`AuthController`, `RegistrationController`, `AuthService`,
-> `RegistrationService`) and covered by `backend/test/auth/auth.e2e-spec.ts` (23 tests). `GET /auth/me`
+> are live in `backend/src/` — `AuthController`/`AuthService` (`auth/`) for login, refresh, logout and
+> `me`, and a self-contained `RegistrationModule` (`backend/src/registration/` —
+> `RegistrationController`, `RegistrationService` and its own `dto/`) for school sign-up and the
+> emailed verification flow — covered by `backend/test/auth/auth.e2e-spec.ts` (23 tests). `GET /auth/me`
 > additionally answers `401 AUTH_TOKEN_EXPIRED` / `AUTH_TOKEN_INVALID` from `JwtAuthGuard`, which reads
 > the `jsonwebtoken` failure instead of collapsing every case into `AUTH_UNAUTHENTICATED`
 > ([`Access.md`](./Access.md) §4). **Two behaviours still lag this contract:** `refresh` re-signs from
@@ -707,7 +709,8 @@ backend/
 │   ├── swagger/            # OpenAPI document builder + UI setup (/docs)
 │   ├── database/           # TypeORM DataSource (global) + entities
 │   ├── common/             # guards, decorators, filters, interceptors, pipes
-│   ├── auth/               # strategies, guards, dto
+│   ├── auth/               # strategies, guards, dto + login/refresh/logout/me
+│   ├── registration/       # school sign-up + emailed verification (RegistrationModule)
 │   ├── schools/
 │   ├── users/
 │   ├── classes/

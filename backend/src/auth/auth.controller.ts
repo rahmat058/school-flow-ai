@@ -12,12 +12,12 @@ import {
 } from '../common/decorators/current-user.decorator.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
-import { VerifyEmailDto } from './dto/verify-email.dto.js';
+import { VerifyEmailDto } from '../registration/dto/verify-email.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
-import { ResendVerificationDto } from './dto/resend-verification.dto.js';
+import { ResendVerificationDto } from '../registration/dto/resend-verification.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
-import { RegistrationService } from './registration.service.js';
+import { RegistrationService } from '../registration/registration.service.js';
 
 @Controller('auth')
 export class AuthController {

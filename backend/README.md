@@ -62,8 +62,9 @@ backend/
 │   │   ├── interceptors/     # response envelope, cache-control, logging
 │   │   ├── utils/            # shared helpers (verification-token.util.ts, …)
 │   │   └── pipes/            # validation helpers
-│   ├── auth/                 # strategies, guards, dto + the RBAC catalogue and per-user grants
-│   ├── schools/              # registration, OTP, school profile + settings, backup
+│   ├── auth/                 # strategies, guards, dto + login/refresh/logout/me
+│   ├── registration/         # school sign-up + emailed verification (RegistrationModule)
+│   ├── schools/              # OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes, the subject catalogue + class-subject assignments
 │   ├── attendance/

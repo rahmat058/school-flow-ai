@@ -51,8 +51,9 @@ backend/
 │   │   ├── filters/          # global exception filter (logs every error)
 │   │   ├── interceptors/     # response envelope, cache-control, logging
 │   │   └── utils/            # DI-free shared helpers (verification-token.util.ts)
-│   ├── auth/                 # strategies, guards, dto + the RBAC catalogue & per-user grants
-│   ├── schools/              # registration, OTP, school profile + settings, backup
+│   ├── auth/                 # strategies, guards, dto + login/refresh/logout/me
+│   ├── registration/         # school sign-up + emailed verification (RegistrationModule)
+│   ├── schools/              # OTP, school profile + settings, backup
 │   ├── users/                # teachers, students, parents
 │   ├── classes/              # classes, the subject catalogue + class-subject assignments
 │   ├── attendance/
@@ -76,29 +77,30 @@ backend/
 
 Each routing domain and the module that owns it, with the tables the module reads or writes — derived from [`Schema.md`](./Schema.md) §14. `(planned)` marks a table the design target adds; the mock keeps that relationship inline (`Schema.md` §15).
 
-| Domain      | Module           | Tables touched                                                                                             |
-| ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| auth        | AuthModule       | `users`, `permissions`, `user_permissions` (`refresh_tokens` planned)                                      |
-| school      | SchoolsModule    | `schools`, `users` (`otps` planned)                                                                        |
-| users       | AuthModule       | `users`, `permissions`, `user_permissions` — the `/users/:userId/permissions` routes                       |
-| teachers    | UsersModule      | `teachers`, `users`, `teacher_classes`                                                                     |
-| students    | UsersModule      | `students`, `users`, `classes`, `parent_students`                                                          |
-| parents     | UsersModule      | `parents`, `users`, `parent_students`                                                                      |
-| classes     | ClassesModule    | `classes`, `students`, `class_subjects`, `teacher_classes`                                                 |
-| subjects    | ClassesModule    | `subjects`, `class_subjects`                                                                               |
-| attendance  | AttendanceModule | `attendance`, `classes`, `students`                                                                        |
-| homework    | HomeworkModule   | `homework`, `homework_submissions`                                                                         |
-| materials   | MaterialsModule  | `study_materials`                                                                                          |
-| timetable   | TimetablesModule | `timetables`, `periods`                                                                                    |
-| exams       | ExamsModule      | `exams`, `exam_subjects`, `results`, `report_cards`                                                        |
-| fees        | FeesModule       | `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions` (`receipt_sequences` planned) |
-| notices     | NoticesModule    | `notices`, `events` (`notice_classes` planned)                                                             |
-| chat        | ChatModule       | `conversations`, `messages` (`conversation_participants` planned)                                          |
-| ai          | AiModule         | `ai_conversations`                                                                                         |
-| reports     | ReportsModule    | none — aggregates over the modules that own tables                                                         |
-| progress    | ReportsModule    | none — a projection over `exams`, `exam_subjects`, `results`, `report_cards`                               |
-| dashboard   | ReportsModule    | none — aggregates over attendance, fees, exams, classes and people                                         |
-| permissions | AuthModule       | `permissions`, `user_permissions`, `users`                                                                 |
+| Domain       | Module             | Tables touched                                                                                             |
+| ------------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| auth         | AuthModule         | `users`, `permissions`, `user_permissions` (`refresh_tokens` planned)                                      |
+| registration | RegistrationModule | `schools`, `users` — school sign-up + emailed verification                                                 |
+| school       | SchoolsModule      | `schools`, `users` (`otps` planned)                                                                        |
+| users        | AuthModule         | `users`, `permissions`, `user_permissions` — the `/users/:userId/permissions` routes                       |
+| teachers     | UsersModule        | `teachers`, `users`, `teacher_classes`                                                                     |
+| students     | UsersModule        | `students`, `users`, `classes`, `parent_students`                                                          |
+| parents      | UsersModule        | `parents`, `users`, `parent_students`                                                                      |
+| classes      | ClassesModule      | `classes`, `students`, `class_subjects`, `teacher_classes`                                                 |
+| subjects     | ClassesModule      | `subjects`, `class_subjects`                                                                               |
+| attendance   | AttendanceModule   | `attendance`, `classes`, `students`                                                                        |
+| homework     | HomeworkModule     | `homework`, `homework_submissions`                                                                         |
+| materials    | MaterialsModule    | `study_materials`                                                                                          |
+| timetable    | TimetablesModule   | `timetables`, `periods`                                                                                    |
+| exams        | ExamsModule        | `exams`, `exam_subjects`, `results`, `report_cards`                                                        |
+| fees         | FeesModule         | `fee_structures`, `fee_heads`, `fee_invoices`, `fee_payments`, `concessions` (`receipt_sequences` planned) |
+| notices      | NoticesModule      | `notices`, `events` (`notice_classes` planned)                                                             |
+| chat         | ChatModule         | `conversations`, `messages` (`conversation_participants` planned)                                          |
+| ai           | AiModule           | `ai_conversations`                                                                                         |
+| reports      | ReportsModule      | none — aggregates over the modules that own tables                                                         |
+| progress     | ReportsModule      | none — a projection over `exams`, `exam_subjects`, `results`, `report_cards`                               |
+| dashboard    | ReportsModule      | none — aggregates over attendance, fees, exams, classes and people                                         |
+| permissions  | AuthModule         | `permissions`, `user_permissions`, `users`                                                                 |
 
 The full entity relationships are in [`Erd.md`](./Erd.md); the per-table columns, keys, indexes and constraints in [`Schema.md`](./Schema.md).
 

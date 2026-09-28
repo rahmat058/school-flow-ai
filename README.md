@@ -83,7 +83,7 @@ school-flow-ai/
 │       ├── swagger/             # OpenAPI document builder + Swagger UI (/docs)
 │       ├── database/            # Supabase client module (global)
 │       ├── common/              # guards, decorators, filters, interceptors
-│       └── <feature modules>    # auth, schools, users, classes, attendance,
+│       └── <feature modules>    # auth, registration, schools, users, classes, attendance,
 │                                # fees, homework, exams, chat, notices, ai, …
 ├── docs/                        # PRD, Architecture, Rules, Phases, Design, Memory
 ├── scripts/                     # commit tooling (Commitizen emoji prompt)

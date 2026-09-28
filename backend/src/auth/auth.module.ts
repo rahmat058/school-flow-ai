@@ -5,17 +5,14 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { School } from '../database/entities/school.entity.js';
 import { User } from '../database/entities/user.entity.js';
-import { MailModule } from '../mail/mail.module.js';
 import { AuthController } from './auth.controller.js';
 import { ACCESS_TTL_SECONDS, AuthService } from './auth.service.js';
-import { RegistrationController } from './registration.controller.js';
-import { RegistrationService } from './registration.service.js';
+import { RegistrationModule } from '../registration/registration.module.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
 @Module({
   imports: [
     PassportModule,
-    MailModule,
     TypeOrmModule.forFeature([School, User]),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -24,9 +21,10 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
         signOptions: { expiresIn: ACCESS_TTL_SECONDS },
       }),
     }),
+    RegistrationModule,
   ],
-  controllers: [AuthController, RegistrationController],
-  providers: [AuthService, RegistrationService, JwtStrategy],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
