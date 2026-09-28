@@ -3,6 +3,7 @@ import { render } from 'react-email';
 import { ConfigService } from '@nestjs/config';
 import { Injectable, Logger } from '@nestjs/common';
 import { VerifyEmail } from './templates/verify-email.js';
+import { ResetPassword } from './templates/reset-password.js';
 
 @Injectable()
 export class MailService {
@@ -33,6 +34,27 @@ export class MailService {
       from: this.from,
       to,
       subject: 'Verify your School Flow AI email',
+      html,
+    });
+  }
+
+  async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    link: string,
+  ): Promise<void> {
+    if (!this.resend) {
+      this.logger.warn(
+        `RESEND_API_KEY is not set — password reset link for ${to}: ${link}`,
+      );
+      return;
+    }
+
+    const html = await render(ResetPassword({ name, link }));
+    await this.resend.emails.send({
+      from: this.from,
+      to,
+      subject: 'Reset your School Flow AI password',
       html,
     });
   }

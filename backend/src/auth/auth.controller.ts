@@ -14,6 +14,9 @@ import {
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { VerifyInviteDto } from './dto/verify-invite.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { ResponseMessage } from '../common/decorators/response-message.decorator.js';
 
@@ -43,6 +46,30 @@ export class AuthController {
   @ResponseMessage('Signed out')
   logout() {
     return this.authService.logout();
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('If an account exists, a reset link is on its way')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Password updated — sign in with your new password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
+  }
+
+  @Public()
+  @Post('verify-invite')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Invite confirmed — you can sign in now')
+  verifyInvite(@Body() dto: VerifyInviteDto) {
+    return this.authService.verifyInvite(dto);
   }
 
   @Get('me')

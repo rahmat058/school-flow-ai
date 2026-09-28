@@ -15,6 +15,9 @@ import { Role } from '../../common/enums/role.enum.js';
 @Index('idx_users_verification_token_hash', ['verificationTokenHash'], {
   where: 'verification_token_hash is not null',
 })
+@Index('idx_users_password_reset_token_hash', ['passwordResetTokenHash'], {
+  where: 'password_reset_token_hash is not null',
+})
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -46,6 +49,16 @@ export class User {
     nullable: true,
   })
   verificationTokenExpiresAt!: Date | null;
+
+  @Column({ name: 'password_reset_token_hash', type: 'text', nullable: true })
+  passwordResetTokenHash!: string | null;
+
+  @Column({
+    name: 'password_reset_token_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  passwordResetTokenExpiresAt!: Date | null;
 
   @Column({ name: 'profile_id', type: 'uuid', nullable: true })
   profileId!: string | null;

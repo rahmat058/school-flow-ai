@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type {
@@ -8,7 +10,10 @@ import type {
   AuthProfile,
   AuthSession,
   AuthUser,
+  InviteVerified,
   LogoutResult,
+  PasswordReset,
+  PasswordResetRequested,
 } from './auth.interface.js';
 
 import bcrypt from 'bcrypt';
@@ -20,7 +25,17 @@ import type { LoginDto } from './dto/login.dto.js';
 import { User } from '../database/entities/user.entity.js';
 import { School } from '../database/entities/school.entity.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import type { ForgotPasswordDto } from './dto/forgot-password.dto.js';
+import type { ResetPasswordDto } from './dto/reset-password.dto.js';
+import type { VerifyInviteDto } from './dto/verify-invite.dto.js';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator.js';
+import { MailService } from '../mail/mail.service.js';
+import {
+  createVerificationToken,
+  hashToken,
+  isExpired,
+} from '../common/utils/verification-token.util.js';
+import { passwordResetExpiry } from '../common/utils/password-reset-token.util.js';
 
 export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;       // eg: 7d
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;     // eg: 7d
@@ -34,6 +49,7 @@ export class AuthService {
     private readonly schools: Repository<School>,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   async login(dto: LoginDto): Promise<AuthSession> {
@@ -96,6 +112,109 @@ export class AuthService {
     });
 
     return { ...this.toAuthUser(user), school };
+  }
+
+  async forgotPassword(
+    dto: ForgotPasswordDto,
+  ): Promise<PasswordResetRequested> {
+    const expiresAt = passwordResetExpiry();
+    const user = await this.findByEmail(dto.email);
+
+    if (user) {
+      const token = createVerificationToken();
+      await this.users.update(
+        { id: user.id },
+        {
+          passwordResetTokenHash: hashToken(token),
+          passwordResetTokenExpiresAt: expiresAt,
+        },
+      );
+      await this.sendPasswordResetLink(user, token);
+    }
+
+    return { email: dto.email, expiresAt: expiresAt.toISOString() };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<PasswordReset> {
+    const user = await this.users.findOne({
+      where: {
+        passwordResetTokenHash: hashToken(dto.token),
+        deletedAt: IsNull(),
+      },
+    });
+
+    if (
+      !user ||
+      isExpired(user.passwordResetTokenExpiresAt?.toISOString() ?? null)
+    ) {
+      throw new BadRequestException({
+        code: 'AUTH_RESET_TOKEN_INVALID',
+        message: 'This reset link has expired',
+      });
+    }
+
+    await this.users.update(
+      { id: user.id },
+      {
+        passwordHash: await bcrypt.hash(dto.password, 12),
+        passwordResetTokenHash: null,
+        passwordResetTokenExpiresAt: null,
+      },
+    );
+
+    return { reset: true };
+  }
+
+  async verifyInvite(dto: VerifyInviteDto): Promise<InviteVerified> {
+    const user = await this.findByEmail(dto.email);
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'INVITE_NOT_FOUND',
+        message: 'No invite for that address',
+        details: ['email'],
+      });
+    }
+
+    if (user.isVerified) {
+      return { verified: true };
+    }
+
+    if (
+      !user.verificationTokenHash ||
+      user.verificationTokenHash !== hashToken(dto.code)
+    ) {
+      throw new BadRequestException({
+        code: 'INVITE_INVALID',
+        message: 'That invite code is not correct',
+      });
+    }
+
+    await this.users.update(
+      { id: user.id },
+      {
+        isVerified: true,
+        emailVerifiedAt: new Date(),
+        verificationTokenHash: null,
+        verificationTokenExpiresAt: null,
+      },
+    );
+
+    return { verified: true };
+  }
+
+  private async sendPasswordResetLink(
+    user: User,
+    token: string,
+  ): Promise<void> {
+    const clientUrl =
+      this.config.get<string>('CLIENT_URL') ?? 'http://localhost:5173';
+    const name = `${user.firstName} ${user.lastName}`.trim();
+    await this.mail.sendPasswordResetEmail(
+      user.email,
+      name,
+      `${clientUrl}/reset-password?token=${token}`,
+    );
   }
 
   private issueSession(user: User): AuthSession {

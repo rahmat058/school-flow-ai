@@ -110,9 +110,9 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - [x] `POST /api/v1/auth/login` — JWT (access 7d + refresh 7d) `(public)` — 401 `AUTH_INVALID_CREDENTIALS`, 403 `AUTH_NOT_VERIFIED`
 - [x] `POST /api/v1/auth/refresh` — rotate the refresh token `(public)` — 401 `AUTH_SESSION_EXPIRED`
 - [x] `POST /api/v1/auth/logout` — revoke the stored refresh token `(public)`
-- [ ] `POST /api/v1/auth/forgot-password` — email the reset token `(public)`
-- [ ] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)` — 400 `AUTH_RESET_TOKEN_INVALID`, 400 `VALIDATION_ERROR`
-- [ ] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code (an OTP of purpose `INVITE`), flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)` — 404 `INVITE_NOT_FOUND`, 400 `INVITE_INVALID`
+- [x] `POST /api/v1/auth/forgot-password` — email the reset token `(public)` — a 30-minute single-use link token, always `200` so it never reveals whether the address exists
+- [x] `POST /api/v1/auth/reset-password` — set a new password from the reset token `(public)` — 400 `AUTH_RESET_TOKEN_INVALID`, 400 `VALIDATION_ERROR`
+- [x] `POST /api/v1/auth/verify-invite` — confirm an invite with the emailed one-time code, flipping the login to verified. Confirming twice succeeds rather than erroring, because an emailed link can be opened twice `(public)` — 404 `INVITE_NOT_FOUND`, 400 `INVITE_INVALID`
 - [x] `GET /api/v1/auth/me` — current user + school + role `(token)` — 401 `AUTH_UNAUTHENTICATED`
 - [ ] `GET /api/v1/permissions` — the assignable catalogue, grouped and ordered for the editor `(token)`
 - [ ] `GET /api/v1/permissions/staff` — the staff picker: every active teacher with their grant count `(token)`
@@ -132,8 +132,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 > both wait on the planned `refresh_tokens` table (§3). `RolesGuard` + `@Roles()` are registered
 > **globally** (both `APP_GUARD`s in `app.module.ts`, `JwtAuthGuard` first), so `@Roles(Role.ADMIN)` is
 > enforced on the school routes; the tenant boundary is applied inside the services rather than by a
-> separate guard, and `forgot-password`, `reset-password`, `verify-invite` and the four permission
-> routes are unbuilt.
+> separate guard; the four permission routes are unbuilt.
 
 **Behavior**
 
@@ -146,7 +145,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - bcrypt hashing (12 rounds)
 - Refresh token rotation; hashed refresh tokens stored server-side
 - Teachers/students/parents receive auto-generated credentials via email on creation
-- Registration verification is by **email link**, not OTP: the token is single-use, stored only as a SHA-256 hash with a 24-hour expiry (`users.verification_token_hash` / `verification_token_expires_at`), and confirming it flips `users.is_verified` and stamps `email_verified_at`. `POST /auth/verify-invite`, `POST /auth/forgot-password` and `POST /auth/reset-password` still use the **deferred** OTP mechanism (`otp_purpose` `INVITE` / `RESET_PASSWORD`)
+- Registration verification is by **email link**, not OTP: the token is single-use, stored only as a SHA-256 hash with a 24-hour expiry (`users.verification_token_hash` / `verification_token_expires_at`), and confirming it flips `users.is_verified` and stamps `email_verified_at`. `POST /auth/forgot-password` and `POST /auth/reset-password` reuse the same **link-token** idea on `users.password_reset_token_hash` / `password_reset_token_expires_at` with a 30-minute expiry, and `POST /auth/verify-invite` matches its code against `users.verification_token_hash` — so all three are link/code-based on `users`, not the still-planned `otps` OTP mechanism
 
 ### 4.3 User Management (`UsersModule` — Admin only)
 

@@ -39,3 +39,16 @@ export interface AuthProfile extends AuthUser {
 export interface LogoutResult {
   loggedOut: true;
 }
+
+export interface PasswordResetRequested {
+  email: string;
+  expiresAt: string;
+}
+
+export interface PasswordReset {
+  reset: true;
+}
+
+export interface InviteVerified {
+  verified: true;
+}

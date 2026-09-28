@@ -140,29 +140,31 @@ erDiagram
 
 Authentication identity for all four roles. One row per login — the demo school has 45 (`usr_admin_1`, eight `usr_tch_n`, 24 `usr_std_n`, twelve `usr_par_n`). `password_hash` (bcrypt) must never appear in a response.
 
-| Column                          | Type        | Null | Default | Notes                                                      |
-| ------------------------------- | ----------- | ---- | ------- | ---------------------------------------------------------- |
-| `id`                            | uuid        | no   | —       | PK                                                         |
-| `school_id`                     | uuid        | no   | —       | → `schools.id`                                             |
-| `email`                         | text        | no   | —       | globally unique; the login                                 |
-| `password_hash`                 | text        | no   | —       | bcrypt                                                     |
-| `role`                          | `role`      | no   | —       | `ADMIN`…`PARENT`                                           |
-| `is_verified`                   | boolean     | no   | `false` | gates login until the email is verified                    |
-| `email_verified_at`             | timestamptz | yes  | —       | stamped when the emailed link is confirmed                 |
-| `verification_token_hash`       | text        | yes  | —       | SHA-256 of the current single-use link token               |
-| `verification_token_expires_at` | timestamptz | yes  | —       | link TTL — 24 hours                                        |
-| `profile_id`                    | uuid        | yes  | —       | forward pointer at the profile row; null for admins        |
-| `first_name`                    | text        | no   | —       | denormalised from the profile (the mock keeps it here too) |
-| `last_name`                     | text        | no   | —       | denormalised from the profile                              |
-| `class_id`                      | uuid        | yes  | —       | the student's own class label; null for staff, see below   |
-| `last_login_at`                 | timestamptz | yes  | —       |                                                            |
-| `created_at`                    | timestamptz | no   | `now()` |                                                            |
-| `updated_at`                    | timestamptz | no   | —       |                                                            |
-| `deleted_at`                    | timestamptz | yes  | —       | soft delete                                                |
+| Column                            | Type        | Null | Default | Notes                                                      |
+| --------------------------------- | ----------- | ---- | ------- | ---------------------------------------------------------- |
+| `id`                              | uuid        | no   | —       | PK                                                         |
+| `school_id`                       | uuid        | no   | —       | → `schools.id`                                             |
+| `email`                           | text        | no   | —       | globally unique; the login                                 |
+| `password_hash`                   | text        | no   | —       | bcrypt                                                     |
+| `role`                            | `role`      | no   | —       | `ADMIN`…`PARENT`                                           |
+| `is_verified`                     | boolean     | no   | `false` | gates login until the email is verified                    |
+| `email_verified_at`               | timestamptz | yes  | —       | stamped when the emailed link is confirmed                 |
+| `verification_token_hash`         | text        | yes  | —       | SHA-256 of the current single-use link token               |
+| `verification_token_expires_at`   | timestamptz | yes  | —       | link TTL — 24 hours                                        |
+| `password_reset_token_hash`       | text        | yes  | —       | SHA-256 of the current single-use reset token              |
+| `password_reset_token_expires_at` | timestamptz | yes  | —       | reset link TTL — 30 minutes; both cleared once used        |
+| `profile_id`                      | uuid        | yes  | —       | forward pointer at the profile row; null for admins        |
+| `first_name`                      | text        | no   | —       | denormalised from the profile (the mock keeps it here too) |
+| `last_name`                       | text        | no   | —       | denormalised from the profile                              |
+| `class_id`                        | uuid        | yes  | —       | the student's own class label; null for staff, see below   |
+| `last_login_at`                   | timestamptz | yes  | —       |                                                            |
+| `created_at`                      | timestamptz | no   | `now()` |                                                            |
+| `updated_at`                      | timestamptz | no   | —       |                                                            |
+| `deleted_at`                      | timestamptz | yes  | —       | soft delete                                                |
 
 **Keys** — PK `id` · FK `school_id` → `schools.id` (restrict) · `unique (email)`.
 
-**Indexes** — `idx_users_email` (`unique`), `idx_users_school_id_role`, `idx_users_verification_token_hash` (partial, `where verification_token_hash is not null`).
+**Indexes** — `idx_users_email` (`unique`), `idx_users_school_id_role`, `idx_users_verification_token_hash` (partial, `where verification_token_hash is not null`), `idx_users_password_reset_token_hash` (partial, `where password_reset_token_hash is not null`).
 
 **Constraints** — `email` is globally unique: the mock refuses a second account on the same address with 409 `STUDENT_EMAIL_TAKEN` / `TEACHER_EMAIL_TAKEN`. `profile_id` is **not** a single-table FK — it may point at `teachers.id`, `students.id` or `parents.id`, so it is a plain `uuid` whose target table is decided by `role`. `class_id` is the mock's convenience mirror of `students.class_id`; it is not an FK here, because a `users` row is not the owner of a class. `verification_token_hash` stores a SHA-256 digest of the emailed link token — deterministic, so a link token can be looked up by hash; both token columns and `email_verified_at` describe the registration email-verification flow (PRD §4.1) and the token columns are cleared once the account is verified.
 

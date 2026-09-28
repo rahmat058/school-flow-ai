@@ -350,11 +350,11 @@ it, grouped by domain. Codes carried in the error envelope
 | `AUTH_UNAUTHENTICATED`      | 401    | A non-public route with **no** bearer token, or one the guard cannot attribute to a user.                  |
 | `AUTH_TOKEN_EXPIRED`        | 401    | A non-public route whose bearer **access** token is past its `exp`.                                        |
 | `AUTH_TOKEN_INVALID`        | 401    | A non-public route whose bearer token is malformed, tampered with, or signed with a different secret.      |
-| `AUTH_RESET_TOKEN_INVALID`  | 400    | `POST /auth/reset-password` with a token equal to `expired`.                                               |
+| `AUTH_RESET_TOKEN_INVALID`  | 400    | `POST /auth/reset-password` with a reset token that is unknown, expired (30-minute TTL) or already used.   |
 | `AUTH_VERIFY_TOKEN_INVALID` | 400    | `POST /registration/verify-email` with an unknown, expired or already-used link token.                     |
 | `AUTH_OTP_INVALID`          | 400    | **Deferred** — `POST /schools/verify-otp` with a code other than the demo OTP; still returned by the mock. |
 | `INVITE_NOT_FOUND`          | 404    | `POST /auth/verify-invite` for an email with no account.                                                   |
-| `INVITE_INVALID`            | 400    | `POST /auth/verify-invite` with a code other than the demo OTP.                                            |
+| `INVITE_INVALID`            | 400    | `POST /auth/verify-invite` with a code that does not match the account's stored verification-token hash.   |
 | `VALIDATION_ERROR`          | 400    | `POST /auth/reset-password` where the new password is under 8 characters.                                  |
 
 > **Backend-only codes (2026-09-27):** `AUTH_TOKEN_EXPIRED` and `AUTH_TOKEN_INVALID` come from the real
