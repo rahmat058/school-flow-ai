@@ -14,6 +14,8 @@ export const paths = {
   dashboard: '/',
   students: '/students',
   parents: '/parents',
+  /** Pattern for a parent's profile; build links with `parentProfilePath()`. */
+  parentDetail: '/parents/:id',
   teachers: '/teachers',
   subjects: '/subjects',
   /** Pattern for a student's profile; build links with `studentProfilePath()`. */
@@ -50,6 +52,11 @@ export function childPath(path: string): string {
 /** `/students/std_1` — the profile route for one student. */
 export function studentProfilePath(id: string): string {
   return paths.studentDetail.replace(':id', id)
+}
+
+/** `/parents/par_1` — the profile route for one parent. */
+export function parentProfilePath(id: string): string {
+  return paths.parentDetail.replace(':id', id)
 }
 
 /** `/fees/collect/std_1` — the collect view for one student. */

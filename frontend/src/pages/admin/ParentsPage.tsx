@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -13,12 +14,14 @@ import { useToast } from '@/hooks/useToast'
 import { ApiError } from '@/services/apiClient'
 import { useDeleteParent, useParents } from '@/features/parents/api'
 import { ParentFormSheet } from '@/features/parents/components/admin/ParentFormSheet'
+import { parentProfilePath } from '@/routes/paths'
 import type { ParentListItem } from '@/types/people'
 
 const PAGE_SIZE = 10
 
 export function ParentsPage() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -132,6 +135,7 @@ export function ParentsPage() {
             triggerLabel={`Actions for ${row.firstName} ${row.lastName}`}
             trigger={<MoreHorizontal className="size-4" strokeWidth={1.75} />}
             items={[
+              { id: 'view', label: 'View', icon: Eye, onSelect: () => navigate(parentProfilePath(row.id)) },
               { id: 'edit', label: 'Edit', icon: Pencil, onSelect: () => openEdit(row) },
               {
                 id: 'delete',

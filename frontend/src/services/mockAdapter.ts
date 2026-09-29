@@ -4023,7 +4023,11 @@ const routes: Route[] = [
         return fail(409, 'PARENT_EMAIL_TAKEN', 'That email already has an account', ['email'])
       }
 
+      // A guardian is only meaningful with a student, so a parent cannot be created without one.
       const links = Array.isArray(body.links) ? (body.links as ParentStudentInput[]) : []
+      if (links.length === 0) {
+        return fail(400, 'PARENT_INVALID', 'Link at least one student', ['links'])
+      }
       if (links.some((link) => !students.some((student) => student.id === link.studentId))) {
         return fail(400, 'PARENT_INVALID', 'One of the linked students does not exist', ['links'])
       }
@@ -4101,10 +4105,13 @@ const routes: Route[] = [
         }
       }
 
-      // An absent `links` key leaves the linked set alone; a present one replaces it.
+      // An absent `links` key leaves the linked set alone; a present one replaces it and must not be empty.
       if (body.links !== undefined) {
         const links = Array.isArray(body.links) ? (body.links as ParentStudentInput[]) : []
 
+        if (links.length === 0) {
+          return fail(400, 'PARENT_INVALID', 'Link at least one student', ['links'])
+        }
         if (links.some((link) => !students.some((student) => student.id === link.studentId))) {
           return fail(400, 'PARENT_INVALID', 'One of the linked students does not exist', ['links'])
         }

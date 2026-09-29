@@ -33,6 +33,15 @@ export function useParents(query: ParentListQuery) {
   })
 }
 
+/** One parent with its linked children — the detail screen's read. */
+export function useParent(id: string) {
+  return useQuery({
+    queryKey: parentKeys.detail(id),
+    queryFn: async () => (await get<ParentListItem>(`/parents/${id}`)).data,
+    enabled: id.length > 0,
+  })
+}
+
 /**
  * Every write refreshes the parents list **and** the roster: a parent's links are the source of the
  * guardian each student row reads, so linking or unlinking changes both screens.

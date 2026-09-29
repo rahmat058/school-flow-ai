@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Switch } from '@/components/ui/Switch'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
+import { cn } from '@/lib/cn'
 import { env } from '@/lib/env'
 import { parentRelationOptions, recordStatusOptions } from '@/lib/options'
 import { emailRules, phoneRules } from '@/lib/validation'
@@ -66,6 +67,8 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
       isPrimary: child.isPrimary,
     })) ?? [],
   )
+  // A guardian is only meaningful with a student, so the link is required — the error sits with the picker.
+  const [linkError, setLinkError] = useState<string | null>(null)
 
   const {
     control,
@@ -90,6 +93,7 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
     if (links.some((link) => link.studentId === studentId)) return
 
     const option = (students.data ?? []).find((item) => item.value === studentId)
+    setLinkError(null)
     setLinks((current) => [
       ...current,
       { studentId, label: option?.label ?? studentId, relation: 'GUARDIAN', isPrimary: false },
@@ -105,6 +109,11 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
   }
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
+    if (links.length === 0) {
+      setLinkError('Link at least one student')
+      return
+    }
+
     const input: ParentInput = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
@@ -241,7 +250,7 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
           <div>
             <h3 className="text-ink text-[14px] font-medium">Linked students</h3>
             <p className="text-ink-muted mt-0.5 text-[12px]">
-              Search the roster and add each student this guardian is responsible for.
+              Search the roster and add at least one student this guardian is responsible for.
             </p>
           </div>
 
@@ -282,7 +291,9 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
               ))}
             </ul>
           ) : (
-            <p className="text-ink-subtle text-[12.5px]">No students linked yet.</p>
+            <p className={cn('text-[12.5px]', linkError ? 'text-error' : 'text-ink-subtle')}>
+              {linkError ?? 'No students linked yet.'}
+            </p>
           )}
         </div>
       </form>

@@ -167,10 +167,12 @@ session. It is the one `intended only` route whose gap is authentication rather 
 
 A parent is the one write path for `parent_students`: the create and update bodies carry a **`links`**
 set (each entry a `studentId`, `relation`, `isPrimary`) that **replaces** the linked children, while a
-`PATCH` with **no** `links` key leaves them alone. At most one parent is primary per student, so a
-primary link clears the others on that child. Each row of `GET /parents` carries its linked children
-(id, name, class label, relation, primary). Errors: `400 PARENT_INVALID`, `409 PARENT_EMAIL_TAKEN`,
-`404 PARENT_NOT_FOUND`.
+`PATCH` with **no** `links` key leaves them alone. **A guardian is only meaningful with a student, so
+at least one link is required** — a `POST` with an empty set, and a `PATCH` whose `links` is present but
+empty, are both `400 PARENT_INVALID`. At most one parent is primary per student, so a primary link clears
+the others on that child. Each row of `GET /parents` — and the `GET /parents/:id` detail read — carries
+its linked children (id, name, class label, relation, primary). Errors: `400 PARENT_INVALID`,
+`409 PARENT_EMAIL_TAKEN`, `404 PARENT_NOT_FOUND`.
 
 ### Classes
 

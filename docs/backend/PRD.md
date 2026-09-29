@@ -163,16 +163,16 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist — 404 `STUDENT_NOT_FOUND`
 - [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in, and an **email change is re-checked for uniqueness** (it moves that account's login) — 404 `STUDENT_NOT_FOUND`, 400 `STUDENT_INVALID`, 409 `STUDENT_ROLL_TAKEN`, 409 `STUDENT_EMAIL_TAKEN`
 - [ ] `DELETE /api/v1/students/:id` — soft delete — 404 `STUDENT_NOT_FOUND`
-- [ ] `POST /api/v1/parents` — create a guardian; takes first/last name, **email** (the login — provisioned unverified with its invite; 409 `PARENT_EMAIL_TAKEN`) and the **`links` set** — each entry a `studentId`, a `relation` (`FATHER`/`MOTHER`/`GUARDIAN`) and an `isPrimary` flag — plus optional phone/address/occupation and a status. The links are written through `parent_students`, where **at most one parent is primary per student** — 400 `PARENT_INVALID`
+- [ ] `POST /api/v1/parents` — create a guardian; takes first/last name, **email** (the login — provisioned unverified with its invite; 409 `PARENT_EMAIL_TAKEN`) and the **`links` set** — each entry a `studentId`, a `relation` (`FATHER`/`MOTHER`/`GUARDIAN`) and an `isPrimary` flag — plus optional phone/address/occupation and a status. **A guardian is only meaningful with a student, so at least one link is required**; the links are written through `parent_students`, where **at most one parent is primary per student** — 400 `PARENT_INVALID`
 - [ ] `GET /api/v1/parents` — paginated; search name/email/phone/child name; each row carries the **linked children** (id, name, class label, relation, primary)
-- [ ] `GET /api/v1/parents/:id` — the parent with its linked children — 404 `PARENT_NOT_FOUND`
-- [ ] `PATCH /api/v1/parents/:id` — partial update; an email change is re-checked for uniqueness, and a **`links` set replaces the linked children** while an **absent `links` key leaves them alone** — 404 `PARENT_NOT_FOUND`, 400 `PARENT_INVALID`, 409 `PARENT_EMAIL_TAKEN`
+- [ ] `GET /api/v1/parents/:id` — the parent with its linked children; backs the admin detail screen — 404 `PARENT_NOT_FOUND`
+- [ ] `PATCH /api/v1/parents/:id` — partial update; an email change is re-checked for uniqueness, and a **present `links` set must hold at least one student and replaces the linked children**, while an **absent `links` key leaves them alone** — 404 `PARENT_NOT_FOUND`, 400 `PARENT_INVALID`, 409 `PARENT_EMAIL_TAKEN`
 - [ ] `DELETE /api/v1/parents/:id` — soft delete via `deletedAt`; the links are kept for history — 404 `PARENT_NOT_FOUND`
 
 **Planned, not yet in the mock** — the contract keeps these; no mock route serves them:
 
 - [ ] `GET /api/v1/teachers/:id` — teacher profile read
-- [ ] `GET /api/v1/parents/:id/students` — linked children (the list row already carries them; this read exists for a detail screen)
+- [ ] `GET /api/v1/parents/:id/students` — linked children (already returned by `GET /parents/:id`; kept as the explicit sub-resource)
 - [ ] `POST /api/v1/parents/:id/link-student` — link one student through `parent_students` (the form sends the whole set instead)
 - [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink one student
 - [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch

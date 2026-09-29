@@ -23,6 +23,9 @@ export const ResetPasswordPage = lazy(async () => ({
 export const DashboardPage = lazy(async () => ({ default: (await import('@/pages/DashboardPage')).DashboardPage }))
 export const StudentsPage = lazy(async () => ({ default: (await import('@/pages/admin/StudentsPage')).StudentsPage }))
 export const ParentsPage = lazy(async () => ({ default: (await import('@/pages/admin/ParentsPage')).ParentsPage }))
+export const ParentProfilePage = lazy(async () => ({
+  default: (await import('@/pages/admin/ParentProfilePage')).ParentProfilePage,
+}))
 export const TeachersPage = lazy(async () => ({ default: (await import('@/pages/admin/TeachersPage')).TeachersPage }))
 export const StudentProfilePage = lazy(async () => ({
   default: (await import('@/pages/admin/StudentProfilePage')).StudentProfilePage,

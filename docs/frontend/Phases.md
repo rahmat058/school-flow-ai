@@ -19,7 +19,7 @@
 - [x] Student dashboard (own timetable, attendance, fees, exams and notices)
 - [x] Parent dashboard (the guardian's chosen child — attendance, fees, marks, homework, exams and notices)
 - [ ] Students / Teachers management tables + forms against the live API
-- [x] Parents management — the admin-only list + create/edit form, with the student-link picker (relation + primary)
+- [x] Parents management — the admin-only list + create/edit form (student-link picker with relation + primary, at least one required) and a parent detail page (Overview / Linked students) reached from the table's View action
 - [x] Classes & subjects management
 - [x] School settings page
 

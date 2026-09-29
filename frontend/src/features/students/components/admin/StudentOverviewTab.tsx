@@ -1,6 +1,6 @@
 import { formatDate } from '@/lib/format'
 import { statCardShell, statGradientStyles } from '@/lib/statTone'
-import { StudentDetail, StudentPanel } from '@/features/students/components/admin/StudentPanel'
+import { Panel, PanelField } from '@/components/ui/Panel'
 import type { IconTone } from '@/types/dashboard'
 import type { StudentProfile } from '@/types/people'
 
@@ -23,35 +23,35 @@ export function StudentOverviewTab({ profile }: StudentOverviewTabProps) {
         />
       </section>
 
-      <StudentPanel title="Student details">
+      <Panel title="Student details">
         <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
-          <StudentDetail label="Student ID" value={profile.admissionNo} />
-          <StudentDetail label="Class" value={profile.className} />
-          <StudentDetail label="Roll number" value={String(profile.rollNo)} />
-          <StudentDetail label="Gender" value={profile.gender ? profile.gender.toLowerCase() : '—'} />
-          <StudentDetail label="Blood group" value={profile.bloodGroup ?? '—'} />
-          <StudentDetail label="Date of birth" value={profile.dateOfBirth ? formatDate(profile.dateOfBirth) : '—'} />
-          <StudentDetail label="Class teacher" value={profile.classTeacherName ?? 'Not assigned'} />
-          <StudentDetail label="Home address" value={profile.guardian?.address ?? '—'} />
-          <StudentDetail label="Fee status" value={profile.feeStanding.toLowerCase()} />
+          <PanelField label="Student ID" value={profile.admissionNo} />
+          <PanelField label="Class" value={profile.className} />
+          <PanelField label="Roll number" value={String(profile.rollNo)} />
+          <PanelField label="Gender" value={profile.gender ? profile.gender.toLowerCase() : '—'} />
+          <PanelField label="Blood group" value={profile.bloodGroup ?? '—'} />
+          <PanelField label="Date of birth" value={profile.dateOfBirth ? formatDate(profile.dateOfBirth) : '—'} />
+          <PanelField label="Class teacher" value={profile.classTeacherName ?? 'Not assigned'} />
+          <PanelField label="Home address" value={profile.guardian?.address ?? '—'} />
+          <PanelField label="Fee status" value={profile.feeStanding.toLowerCase()} />
         </dl>
-      </StudentPanel>
+      </Panel>
 
-      <StudentPanel title="Parent / Guardian">
+      <Panel title="Parent / Guardian">
         {profile.guardian ? (
           <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
-            <StudentDetail label="Name" value={profile.guardian.name} />
-            <StudentDetail
+            <PanelField label="Name" value={profile.guardian.name} />
+            <PanelField
               label="Relation"
               value={profile.guardian.relation ? profile.guardian.relation.toLowerCase() : '—'}
             />
-            <StudentDetail label="Phone" value={profile.guardian.phone ?? '—'} />
-            <StudentDetail label="Email" value={profile.guardian.email ?? '—'} />
+            <PanelField label="Phone" value={profile.guardian.phone ?? '—'} />
+            <PanelField label="Email" value={profile.guardian.email ?? '—'} />
           </dl>
         ) : (
           <p className="text-ink-subtle text-[13px]">No guardian on record.</p>
         )}
-      </StudentPanel>
+      </Panel>
     </div>
   )
 }
