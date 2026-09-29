@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -8,6 +9,7 @@ import {
 
 export class RegisterSchoolDto {
   @IsString()
+  @IsNotEmpty()
   @MinLength(2)
   @MaxLength(120)
   schoolName!: string;
@@ -18,6 +20,7 @@ export class RegisterSchoolDto {
   address?: string;
 
   @IsEmail()
+  @IsNotEmpty()
   contactEmail!: string;
 
   @IsOptional()
@@ -26,19 +29,23 @@ export class RegisterSchoolDto {
   contactPhone?: string;
 
   @IsString()
+  @IsNotEmpty()
   @MinLength(1)
   @MaxLength(80)
   adminFirstName!: string;
 
   @IsString()
+  @IsNotEmpty()
   @MinLength(1)
   @MaxLength(80)
   adminLastName!: string;
 
   @IsEmail()
+  @IsNotEmpty()
   email!: string;
 
   @IsString()
+  @IsNotEmpty()
   @MinLength(8)
   @MaxLength(72)
   password!: string;

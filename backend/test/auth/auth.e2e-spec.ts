@@ -354,6 +354,15 @@ describe('Auth flow (e2e)', () => {
       expect(res.body.data.user.email).toBe(admin.email);
     });
 
+    it('rejects an empty refresh token with VALIDATION_ERROR', async () => {
+      const res = await api()
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
     it('rejects a garbage refresh token', async () => {
       const res = await api()
         .post('/api/v1/auth/refresh')

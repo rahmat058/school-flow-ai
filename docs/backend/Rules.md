@@ -3,7 +3,7 @@
 ## Use
 
 - NestJS conventions: one module per domain, controllers thin, services hold business logic
-- DTO + `class-validator` for every request body/query — no untyped `req.body` access
+- DTO + `class-validator` for every request body/query — no untyped `req.body` access; a mandatory field carries `@IsNotEmpty()` alongside its type/length rules (a required field is never satisfied by a blank string), and an optional one carries `@IsOptional()`
 - TypeORM repositories (`@InjectRepository(Entity)`) for all DB access; multi-write operations (registration, payment confirmation, result publishing) run in a `DataSource` transaction
 - Entities in `src/database/entities/` declare the schema in code — every `@Column` carries an explicit `name:` so DB identifiers stay `snake_case` while properties are `camelCase`; `synchronize` is **off**, always
 - Postgres enums (or CHECK constraints) for fixed value sets (`Role`, `AttendanceStatus`, `PaymentStatus`, …)
