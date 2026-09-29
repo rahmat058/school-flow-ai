@@ -1,5 +1,5 @@
-import { useId, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useId } from 'react'
+import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import type { SubmitHandler } from 'react-hook-form'
 import { X } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
@@ -12,7 +12,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Switch } from '@/components/ui/Switch'
 import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
-import { cn } from '@/lib/cn'
 import { env } from '@/lib/env'
 import { parentRelationOptions, recordStatusOptions } from '@/lib/options'
 import { emailRules, phoneRules } from '@/lib/validation'
@@ -29,6 +28,14 @@ interface ParentFormSheetProps {
   parent: ParentListItem | null
 }
 
+/** One child held in the form before the parent is saved — the student picker's own working shape. */
+interface LinkDraft {
+  studentId: string
+  label: string
+  relation: ParentRelation
+  isPrimary: boolean
+}
+
 interface FormValues {
   firstName: string
   lastName: string
@@ -37,14 +44,7 @@ interface FormValues {
   address: string
   occupation: string
   status: string
-}
-
-/** One child held in the form before the parent is saved — the student picker's own working shape. */
-interface LinkDraft {
-  studentId: string
-  label: string
-  relation: ParentRelation
-  isPrimary: boolean
+  links: LinkDraft[]
 }
 
 /**
@@ -59,22 +59,13 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
   const updateParent = useUpdateParent()
   const editing = parent !== null
 
-  const [links, setLinks] = useState<LinkDraft[]>(
-    parent?.children.map((child) => ({
-      studentId: child.id,
-      label: `${child.name} (${child.className})`,
-      relation: child.relation,
-      isPrimary: child.isPrimary,
-    })) ?? [],
-  )
-  // A guardian is only meaningful with a student, so the link is required — the error sits with the picker.
-  const [linkError, setLinkError] = useState<string | null>(null)
-
   const {
     control,
     register,
     handleSubmit,
     setError,
+    getValues,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -85,35 +76,41 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
       address: parent?.address ?? '',
       occupation: parent?.occupation ?? '',
       status: parent?.status ?? 'ACTIVE',
+      links:
+        parent?.children.map((child) => ({
+          studentId: child.id,
+          label: `${child.name} (${child.className})`,
+          relation: child.relation,
+          isPrimary: child.isPrimary,
+        })) ?? [],
     },
     mode: 'onTouched',
   })
 
+  const { fields, append, remove, update } = useFieldArray({
+    control,
+    name: 'links',
+    rules: { validate: (value) => value.length > 0 || 'Link at least one student' },
+  })
+
   function addStudent(studentId: string) {
-    if (links.some((link) => link.studentId === studentId)) return
+    if (fields.some((link) => link.studentId === studentId)) return
 
     const option = (students.data ?? []).find((item) => item.value === studentId)
-    setLinkError(null)
-    setLinks((current) => [
-      ...current,
-      { studentId, label: option?.label ?? studentId, relation: 'GUARDIAN', isPrimary: false },
-    ])
+    append({ studentId, label: option?.label ?? studentId, relation: 'GUARDIAN', isPrimary: false })
+    trigger('links')
   }
 
-  function updateLink(studentId: string, patch: Partial<LinkDraft>) {
-    setLinks((current) => current.map((link) => (link.studentId === studentId ? { ...link, ...patch } : link)))
+  function updateLink(index: number, patch: Partial<Pick<LinkDraft, 'relation' | 'isPrimary'>>) {
+    update(index, { ...getValues(`links.${index}` as const), ...patch })
   }
 
-  function removeLink(studentId: string) {
-    setLinks((current) => current.filter((link) => link.studentId !== studentId))
+  function removeLink(index: number) {
+    remove(index)
+    trigger('links')
   }
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
-    if (links.length === 0) {
-      setLinkError('Link at least one student')
-      return
-    }
-
     const input: ParentInput = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
@@ -122,7 +119,7 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
       address: values.address.trim() || null,
       occupation: values.occupation.trim() || null,
       status: values.status as RecordStatus,
-      links: links.map((link) => ({
+      links: values.links.map((link) => ({
         studentId: link.studentId,
         relation: link.relation,
         isPrimary: link.isPrimary,
@@ -254,35 +251,39 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
             </p>
           </div>
 
-          <StudentSearchInput label="Add a student" onSelect={addStudent} />
+          <StudentSearchInput
+            label="Add a student"
+            onSelect={addStudent}
+            error={fields.length === 0 ? errors.links?.root?.message : undefined}
+          />
 
-          {links.length > 0 ? (
+          {fields.length > 0 ? (
             <ul className="space-y-2.5">
-              {links.map((link) => (
+              {fields.map((field, index) => (
                 <li
-                  key={link.studentId}
+                  key={field.id}
                   className="border-line bg-canvas/40 flex flex-wrap items-center gap-3 rounded-lg border p-3">
-                  <span className="text-ink min-w-0 flex-1 truncate text-[14px]">{link.label}</span>
+                  <span className="text-ink min-w-0 flex-1 truncate text-[14px]">{field.label}</span>
 
                   <div className="w-32 shrink-0">
                     <Select
                       options={parentRelationOptions}
-                      value={link.relation}
-                      onValueChange={(value) => updateLink(link.studentId, { relation: value as ParentRelation })}
+                      value={field.relation}
+                      onValueChange={(value) => updateLink(index, { relation: value as ParentRelation })}
                     />
                   </div>
 
                   <Switch
                     size="sm"
-                    checked={link.isPrimary}
-                    onCheckedChange={(checked) => updateLink(link.studentId, { isPrimary: checked })}
+                    checked={field.isPrimary}
+                    onCheckedChange={(checked) => updateLink(index, { isPrimary: checked })}
                     label="Primary"
                   />
 
                   <button
                     type="button"
-                    onClick={() => removeLink(link.studentId)}
-                    aria-label={`Remove ${link.label}`}
+                    onClick={() => removeLink(index)}
+                    aria-label={`Remove ${field.label}`}
                     title="Remove"
                     className="text-ink-muted hover:bg-error-soft hover:text-error inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors">
                     <X className="size-4" strokeWidth={1.75} />
@@ -290,10 +291,8 @@ export function ParentFormSheet({ open, onClose, parent }: ParentFormSheetProps)
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className={cn('text-[12.5px]', linkError ? 'text-error' : 'text-ink-subtle')}>
-              {linkError ?? 'No students linked yet.'}
-            </p>
+          ) : errors.links?.root?.message ? null : (
+            <p className="text-ink-subtle text-[12.5px]">No students linked yet.</p>
           )}
         </div>
       </form>

@@ -7,6 +7,7 @@ interface StudentSearchInputProps {
   onSelect: (studentId: string) => void
   label?: string
   placeholder?: string
+  error?: string
 }
 
 /** Type-ahead over the roster — the collect flow's way into one student's page. */
@@ -14,6 +15,7 @@ export function StudentSearchInput({
   onSelect,
   label,
   placeholder = 'Type at least 2 characters…',
+  error,
 }: StudentSearchInputProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -36,6 +38,7 @@ export function StudentSearchInput({
         type="search"
         placeholder={placeholder}
         aria-label="Search student"
+        error={error}
         value={query}
         onFocus={() => setOpen(true)}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
