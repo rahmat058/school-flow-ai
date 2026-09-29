@@ -14,7 +14,7 @@
 - [ ] TypeORM DataSource module (`database/`) with entities (`schools`, `users` incl. the email-verification columns, `teachers`/`students`/`parents`) — schema applied by hand, `synchronize` off
 - [x] Email-verified school registration — `POST /schools/register` (transactional create + emailed verification link), `POST /registration/verify-email`, `POST /registration/resend-verification` (single-use SHA-256-hashed token, 24-hour expiry)
 - [x] School settings — `GET`/`PATCH /schools/:id` (profile), `PATCH /schools/:id/settings` (academic · notifications · security) and `POST /schools/:id/backup`
-- [x] MailModule (Resend) with React Email templates (`src/mail/templates/`) — the verification-link and password-reset messages; the credentials/invite messages land with Phase 2
+- [x] MailModule (Resend) with React Email templates (`src/mail/templates/`) — the verification-link, password-reset and account-invite messages; the bulk credentials message lands with Phase 2
 - [x] JWT login/refresh/logout — `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
 - [x] Password recovery — `POST /auth/forgot-password`, `POST /auth/reset-password` (30-minute single-use SHA-256-hashed link token on `users`) and `POST /auth/verify-invite`
 - [x] `GET /auth/me` plus `JwtAuthGuard`, `RolesGuard`, `@Roles()` decorator and the tenant guard — both guards registered globally (`APP_GUARD`); tenant scope is applied inside the services rather than by a separate guard
@@ -24,8 +24,9 @@
 > the global `JwtAuthGuard`, the response interceptor + exception filter, helmet/CORS and the health
 > route are built and covered by `test/auth/` and `test/health/` — see `PRD.md` §4.1, §4.2 and §4.16 for
 > the per-endpoint ticks. Still open in this phase: `@nestjs/throttler`, the `teachers`/`students`/
-> `parents` entities and permissions. The MailModule carries the verification-link and password-reset
-> templates; the invite/credentials messages land with Phase 2.
+> `parents` entities and permissions. The MailModule carries the verification-link, password-reset and
+> invite templates (the invite sender `AuthService.sendInvite`, wired when the create routes land);
+> the credentials message lands with Phase 2.
 
 **Done when:** a school registers and verifies by email link, the admin logs in, and a protected route rejects wrong roles.
 

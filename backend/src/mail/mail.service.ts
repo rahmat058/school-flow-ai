@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Injectable, Logger } from '@nestjs/common';
 import { VerifyEmail } from './templates/verify-email.js';
 import { ResetPassword } from './templates/reset-password.js';
+import { InviteAccount } from './templates/invite-account.js';
 
 @Injectable()
 export class MailService {
@@ -55,6 +56,31 @@ export class MailService {
       from: this.from,
       to,
       subject: 'Reset your School Flow AI password',
+      html,
+    });
+  }
+
+  async sendInviteEmail(
+    to: string,
+    details: {
+      name: string;
+      email: string;
+      password: string;
+      code: string;
+    },
+  ): Promise<void> {
+    if (!this.resend) {
+      this.logger.warn(
+        `RESEND_API_KEY is not set — invite for ${to}: code ${details.code}`,
+      );
+      return;
+    }
+
+    const html = await render(InviteAccount(details));
+    await this.resend.emails.send({
+      from: this.from,
+      to,
+      subject: 'Your School Flow AI invite',
       html,
     });
   }

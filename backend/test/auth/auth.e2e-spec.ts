@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { createHash } from 'node:crypto';
 import { AppModule } from '../../src/app.module.js';
+import { AuthService } from '../../src/auth/auth.service.js';
 import { MailService } from '../../src/mail/mail.service.js';
 import { DataSource } from 'typeorm';
 import { School } from '../../src/database/entities/school.entity.js';
@@ -17,6 +18,14 @@ interface SentMail {
   to: string;
   name: string;
   link: string;
+}
+
+interface InviteMail {
+  to: string;
+  name: string;
+  email: string;
+  password: string;
+  code: string;
 }
 
 const tokenFrom = (link: string): string => {
@@ -46,6 +55,7 @@ describe('Auth flow (e2e)', () => {
 
   const sent: SentMail[] = [];
   const resetSent: SentMail[] = [];
+  const inviteSent: InviteMail[] = [];
   const password = 'FlowTest123!';
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
@@ -88,6 +98,15 @@ describe('Auth flow (e2e)', () => {
     vi.spyOn(mail, 'sendPasswordResetEmail').mockImplementation(
       async (to: string, name: string, link: string) => {
         resetSent.push({ to, name, link });
+      },
+    );
+
+    vi.spyOn(mail, 'sendInviteEmail').mockImplementation(
+      async (
+        to: string,
+        details: { name: string; email: string; password: string; code: string },
+      ) => {
+        inviteSent.push({ to, ...details });
       },
     );
 
@@ -540,8 +559,9 @@ describe('Auth flow (e2e)', () => {
       adminLastName: 'Admin',
       email: `invite.admin.${suffix}@schoolflow.test`,
     };
+    let invitePassword: string;
     let inviteSchoolId: string;
-    let inviteToken: string;
+    let inviteCode: string;
 
     afterAll(async () => {
       if (!inviteSchoolId) return;
@@ -550,37 +570,63 @@ describe('Auth flow (e2e)', () => {
     });
 
     it('registers an unverified account for the invite flow', async () => {
-      const before = sent.length;
       const res = await register({ ...invite, password });
 
       expect(res.status, JSON.stringify(res.body)).toBe(201);
       inviteSchoolId = res.body.data.schoolId;
-      expect(sent).toHaveLength(before + 1);
-      inviteToken = tokenFrom(sent[sent.length - 1].link);
+    });
+
+    it('issues an invite code and stores only its hash', async () => {
+      const user = await dataSource
+        .getRepository(User)
+        .findOne({ where: { email: invite.email } });
+      if (!user) throw new Error('invite account was not created');
+
+      const result = await app.get(AuthService).sendInvite(user);
+
+      expect(result.email).toBe(invite.email);
+      expect(inviteSent).toHaveLength(1);
+      expect(inviteSent[0].to).toBe(invite.email);
+      expect(inviteSent[0].name).toBe('Invite Admin');
+      expect(inviteSent[0].email).toBe(invite.email);
+      expect(inviteSent[0].password).toHaveLength(12);
+      expect(inviteSent[0].code).toMatch(/^\d{6}$/);
+      invitePassword = inviteSent[0].password;
+      inviteCode = inviteSent[0].code;
+
+      const stored = await dataSource
+        .getRepository(User)
+        .findOne({ where: { id: user.id } });
+      expect(stored?.verificationTokenHash).toBe(sha256(inviteCode));
+      expect(stored?.verificationTokenExpiresAt).toBeTruthy();
+      expect(
+        await bcrypt.compare(invitePassword, stored?.passwordHash ?? ''),
+      ).toBe(true);
     });
 
     it('refuses an unknown address with INVITE_NOT_FOUND', async () => {
       const res = await api()
         .post('/api/v1/auth/verify-invite')
-        .send({ email: `nobody.${suffix}@schoolflow.test`, code: inviteToken });
+        .send({ email: `nobody.${suffix}@schoolflow.test`, code: inviteCode });
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('INVITE_NOT_FOUND');
     });
 
     it('refuses a wrong code with INVITE_INVALID', async () => {
+      const wrong = inviteCode === '000000' ? '111111' : '000000';
       const res = await api()
         .post('/api/v1/auth/verify-invite')
-        .send({ email: invite.email, code: 'not-the-code' });
+        .send({ email: invite.email, code: wrong });
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('INVITE_INVALID');
     });
 
-    it('confirms the invite and lets the account sign in', async () => {
+    it('confirms the invite and lets the invited credentials sign in', async () => {
       const res = await api()
         .post('/api/v1/auth/verify-invite')
-        .send({ email: invite.email, code: inviteToken });
+        .send({ email: invite.email, code: inviteCode });
 
       expect(res.status, JSON.stringify(res.body)).toBe(200);
       expect(res.body.data).toEqual({ verified: true });
@@ -593,14 +639,14 @@ describe('Auth flow (e2e)', () => {
       expect(user?.verificationTokenHash).toBeNull();
       expect(user?.verificationTokenExpiresAt).toBeNull();
 
-      const loginRes = await login(invite.email, password);
+      const loginRes = await login(invite.email, invitePassword);
       expect(loginRes.status).toBe(200);
     });
 
     it('treats a second confirmation as success', async () => {
       const res = await api()
         .post('/api/v1/auth/verify-invite')
-        .send({ email: invite.email, code: inviteToken });
+        .send({ email: invite.email, code: inviteCode });
 
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({ verified: true });

@@ -145,7 +145,7 @@ Each module lists the routes the mock actually serves as a **checklist — build
 - bcrypt hashing (12 rounds)
 - Refresh token rotation; hashed refresh tokens stored server-side
 - Teachers/students/parents receive auto-generated credentials via email on creation
-- Registration verification is by **email link**, not OTP: the token is single-use, stored only as a SHA-256 hash with a 24-hour expiry (`users.verification_token_hash` / `verification_token_expires_at`), and confirming it flips `users.is_verified` and stamps `email_verified_at`. `POST /auth/forgot-password` and `POST /auth/reset-password` reuse the same **link-token** idea on `users.password_reset_token_hash` / `password_reset_token_expires_at` with a 30-minute expiry, and `POST /auth/verify-invite` matches its code against `users.verification_token_hash` — so all three are link/code-based on `users`, not the still-planned `otps` OTP mechanism
+- Registration verification is by **email link**, not OTP: the token is single-use, stored only as a SHA-256 hash with a 24-hour expiry (`users.verification_token_hash` / `verification_token_expires_at`), and confirming it flips `users.is_verified` and stamps `email_verified_at`. `POST /auth/forgot-password` and `POST /auth/reset-password` reuse the same **link-token** idea on `users.password_reset_token_hash` / `password_reset_token_expires_at` with a 30-minute expiry, and `POST /auth/verify-invite` matches its **6-digit code** against `users.verification_token_hash` — the code is minted by `AuthService.sendInvite`, which also generates and stores a temporary password and emails both — so the three routes are link/code-based on `users`, not the still-planned `otps` OTP mechanism
 
 ### 4.3 User Management (`UsersModule` — Admin only)
 
@@ -581,7 +581,7 @@ No HTTP endpoints — this module is called by the other services and by the sch
 **Templates & triggers**
 
 - [ ] Email verification link (registration) — the single-use token from §4.1
-- [ ] Student invite — the verification link plus the generated login password
+- [x] Account invite — the generated login password plus the one-time code (`AuthService.sendInvite` → `MailService.sendInviteEmail`); the create routes that trigger it land with the teacher/student modules
 - [ ] Teacher/student/parent login credentials on creation
 - [ ] Fee reminders (manual trigger + `@nestjs/schedule` cron)
 - [ ] Result publication alerts

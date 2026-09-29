@@ -52,3 +52,8 @@ export interface PasswordReset {
 export interface InviteVerified {
   verified: true;
 }
+
+export interface InviteSent {
+  email: string;
+  expiresAt: string;
+}

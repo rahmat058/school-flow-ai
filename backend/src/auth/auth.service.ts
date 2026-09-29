@@ -10,6 +10,7 @@ import type {
   AuthProfile,
   AuthSession,
   AuthUser,
+  InviteSent,
   InviteVerified,
   LogoutResult,
   PasswordReset,
@@ -34,8 +35,13 @@ import {
   createVerificationToken,
   hashToken,
   isExpired,
+  verificationExpiry,
 } from '../common/utils/verification-token.util.js';
 import { passwordResetExpiry } from '../common/utils/password-reset-token.util.js';
+import {
+  createInviteCode,
+  createTemporaryPassword,
+} from '../common/utils/invite.util.js';
 
 export const ACCESS_TTL_SECONDS = 7 * 24 * 60 * 60;       // eg: 7d
 export const REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;     // eg: 7d
@@ -201,6 +207,37 @@ export class AuthService {
     );
 
     return { verified: true };
+  }
+
+  /**
+   * Issues an invite to a freshly created login: generates a temporary
+   * password and a 6-digit code, stores the password hash and only the code's
+   * hash, then emails the login address, the password and the code. The
+   * account-creation routes (teachers/students, Phase 2) call this;
+   * {@link verifyInvite} is its other half.
+   */
+  async sendInvite(user: User): Promise<InviteSent> {
+    const code = createInviteCode();
+    const password = createTemporaryPassword();
+    const expiresAt = verificationExpiry();
+
+    await this.users.update(
+      { id: user.id },
+      {
+        passwordHash: await bcrypt.hash(password, 12),
+        verificationTokenHash: hashToken(code),
+        verificationTokenExpiresAt: expiresAt,
+      },
+    );
+
+    await this.mail.sendInviteEmail(user.email, {
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email,
+      password,
+      code,
+    });
+
+    return { email: user.email, expiresAt: expiresAt.toISOString() };
   }
 
   private async sendPasswordResetLink(
