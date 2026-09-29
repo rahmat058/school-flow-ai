@@ -49,7 +49,7 @@ export function StudentSearchInput({
       />
 
       {open && matches.length > 0 ? (
-        <ul className="border-line bg-surface absolute z-40 mt-1 w-full overflow-hidden rounded-lg border p-1 shadow-[var(--shadow-hover)]">
+        <ul className="border-line bg-surface absolute z-40 mt-1 w-full overflow-hidden rounded-lg border p-1 shadow-(--shadow-hover)">
           {matches.map((option) => (
             <li key={option.value}>
               <button
