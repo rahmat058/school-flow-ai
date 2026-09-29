@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
-import { useStudentOptions } from '@/features/fees/api'
+import { useStudentOptions } from '@/features/students/api'
 
 interface StudentSearchInputProps {
   onSelect: (studentId: string) => void

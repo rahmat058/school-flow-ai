@@ -151,38 +151,38 @@ Each module lists the routes the mock actually serves as a **checklist — build
 
 **Tables:** `teachers`, `students`, `parents`, `parent_students` · Database.md §3
 
-**Endpoints** — build `/teachers` end to end first, then repeat the same routes for `/students`; the mock has no `/parents` route (see the planned list). Every route below is `(token)`.
+**Endpoints** — build `/teachers` end to end first, then repeat the same routes for `/students` and `/parents`. Every route below is `(token)`; the mock serves all three.
 
 - [ ] `POST /api/v1/teachers` — create; takes **full name**, **subject**, **email** and the **assigned classes**, plus optional phone, qualification and years of experience. The login is created **unverified** with a generated password emailed alongside a verification link — the same invite rule as an enrolment — and 409 `TEACHER_EMAIL_TAKEN` guards the login email — 400 `TEACHER_INVALID`
 - [ ] `GET /api/v1/teachers` — search by name/subject/email; each row carries the login email and the classes the teacher is assigned to (from `teacher_classes`)
 - [ ] `PATCH /api/v1/teachers/:id` — partial update of the same fields; `classIds` **replaces** the assignment set rather than merging, and an email change is re-checked for uniqueness — 404 `TEACHER_NOT_FOUND`, 400 `TEACHER_INVALID`, 409 `TEACHER_EMAIL_TAKEN`
 - [ ] `DELETE /api/v1/teachers/:id` — soft delete via `deletedAt` — 404 `TEACHER_NOT_FOUND`
-- [ ] `POST /api/v1/students` — create + admission number; takes the **student's own email** (which becomes their login — the address the form collects, never a generated one; 409 `STUDENT_EMAIL_TAKEN` guards it), the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used) and the **guardian** block — name, email, phone, address — reusing an existing parent with that email rather than duplicating. Date of birth, gender and **blood group** are required on the profile. **Two logins are provisioned, both unverified**: the student's own email and the guardian's email, each emailed its invite with a verification link; the response carries the student's invite, never a password itself — 400 `STUDENT_INVALID`
+- [ ] `POST /api/v1/students` — create + admission number; takes the **student's own email** (which becomes their login — the address the form collects, never a generated one; 409 `STUDENT_EMAIL_TAKEN` guards it) and the **roll number** (next free in the class when omitted; 409 `STUDENT_ROLL_TAKEN` if already used). Date of birth, gender and **blood group** are required on the profile. **One login is provisioned** — the student's own, created unverified, with its invite (password + verification link) emailed; the response carries that invite, never a password itself. A guardian is **not** created here: parents are their own resource (below) and are linked to students separately — 400 `STUDENT_INVALID`
 - [ ] `GET /api/v1/students` — paginated; search name/roll/admission no./guardian; filter by class and fee standing; every row carries its class label, **roll number**, **attendance share**, **fee standing** and the **primary guardian's contact** (the admin roster and its profile panel read these straight off the list)
 - [ ] `GET /api/v1/students/:id` — the profile: the roster row plus homeroom teacher, days present/absent and the current attendance streak — 404 `STUDENT_NOT_FOUND`
 - [ ] `GET /api/v1/students/:id/documents` — files held against the student; an empty list until uploads exist — 404 `STUDENT_NOT_FOUND`
 - [ ] `PATCH /api/v1/students/:id` — partial update of the same fields; a roll change is validated against the class the student ends up in, and an **email change is re-checked for uniqueness** (it moves that account's login) — 404 `STUDENT_NOT_FOUND`, 400 `STUDENT_INVALID`, 409 `STUDENT_ROLL_TAKEN`, 409 `STUDENT_EMAIL_TAKEN`
 - [ ] `DELETE /api/v1/students/:id` — soft delete — 404 `STUDENT_NOT_FOUND`
+- [ ] `POST /api/v1/parents` — create a guardian; takes first/last name, **email** (the login — provisioned unverified with its invite; 409 `PARENT_EMAIL_TAKEN`) and the **`links` set** — each entry a `studentId`, a `relation` (`FATHER`/`MOTHER`/`GUARDIAN`) and an `isPrimary` flag — plus optional phone/address/occupation and a status. The links are written through `parent_students`, where **at most one parent is primary per student** — 400 `PARENT_INVALID`
+- [ ] `GET /api/v1/parents` — paginated; search name/email/phone/child name; each row carries the **linked children** (id, name, class label, relation, primary)
+- [ ] `GET /api/v1/parents/:id` — the parent with its linked children — 404 `PARENT_NOT_FOUND`
+- [ ] `PATCH /api/v1/parents/:id` — partial update; an email change is re-checked for uniqueness, and a **`links` set replaces the linked children** while an **absent `links` key leaves them alone** — 404 `PARENT_NOT_FOUND`, 400 `PARENT_INVALID`, 409 `PARENT_EMAIL_TAKEN`
+- [ ] `DELETE /api/v1/parents/:id` — soft delete via `deletedAt`; the links are kept for history — 404 `PARENT_NOT_FOUND`
 
 **Planned, not yet in the mock** — the contract keeps these; no mock route serves them:
 
 - [ ] `GET /api/v1/teachers/:id` — teacher profile read
-- [ ] `POST /api/v1/parents` — create + email credentials
-- [ ] `GET /api/v1/parents` — paginated, search
-- [ ] `GET /api/v1/parents/:id`
-- [ ] `PATCH /api/v1/parents/:id`
-- [ ] `DELETE /api/v1/parents/:id` — soft delete
-- [ ] `GET /api/v1/parents/:id/students` — linked children
-- [ ] `POST /api/v1/parents/:id/link-student` — link through `parent_students`
-- [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink
+- [ ] `GET /api/v1/parents/:id/students` — linked children (the list row already carries them; this read exists for a detail screen)
+- [ ] `POST /api/v1/parents/:id/link-student` — link one student through `parent_students` (the form sends the whole set instead)
+- [ ] `DELETE /api/v1/parents/:id/link-student/:studentId` — unlink one student
 - [ ] `POST /api/v1/students/bulk-import` — CSV, validated row-by-row, transaction per batch
 
 **Behavior**
 
 - Auto-generated admission/employee numbers (per-school sequence)
-- Enrolment invites: creating a student provisions **two** logins — the student's own email and the guardian's — each created immediately but left **unverified**, with a password and a verification link (`otp_purpose = INVITE`) sent to that address. The email the form collects **is** the login, so the password that arrives is the one the account holds; sign-in is refused with 403 `AUTH_NOT_VERIFIED` until the link is confirmed, so a mistyped address can never become a live account. A teacher or a parent created on its own follows the same rule.
+- Enrolment invites: creating a student provisions **one** login — the student's own email — created immediately but left **unverified**, with a password and a verification link (`otp_purpose = INVITE`) sent to that address. The email the form collects **is** the login, so the password that arrives is the one the account holds; sign-in is refused with 403 `AUTH_NOT_VERIFIED` until the link is confirmed, so a mistyped address can never become a live account. A teacher or a parent created on its own follows the same rule.
 - Credentials emailed on account creation
-- Parent ↔ student linking via `ParentStudent` join table
+- **Parent ↔ student linking is its own write, not a side-effect of enrolment.** A parent is created and edited through `/parents` with a `links` set, written to the `parent_students` join — many guardians per student, many students per guardian, each link carrying a `relation` and a per-student **primary** flag. The roster's guardian column is a **read** of that join, so it stays correct however the link was made.
 
 ### 4.4 Class & Subject Management (`ClassesModule`)
 

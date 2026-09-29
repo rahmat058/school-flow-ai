@@ -113,7 +113,10 @@ import type {
 } from '@/types/timetable'
 import type {
   BloodGroup,
-  Guardian,
+  Parent,
+  ParentListItem,
+  ParentStudentInput,
+  RecordStatus,
   StudentAttendance,
   StudentDocument,
   StudentFees,
@@ -145,7 +148,7 @@ import type {
   UpcomingExam,
 } from '@/types/dashboard'
 import type { ProgressRemarkRow, ProgressSubjectRow, ProgressTrendPoint, StudentProgress } from '@/types/progress'
-import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_DOMAIN, SCHOOL_ID, dateOffset, schoolEmail } from '@/data/seed'
+import { ACADEMIC_YEAR, DEMO_PASSWORD, SCHOOL_ID, dateOffset } from '@/data/seed'
 import { activeSchool } from '@/data/school'
 import { classLabel, classes, findClass } from '@/data/classes'
 import { findTeacher, teachers, teacherClasses } from '@/data/teachers'
@@ -978,75 +981,61 @@ function rollTaken(classId: string, rollNo: number, exceptStudentId?: string): b
 }
 
 /**
- * Links the student's primary guardian, creating the parent record when the name is new. Passing
- * `undefined` leaves the current link alone; passing a blank name unlinks it.
+ * Parents read model: the entity plus the children linked through `parent_students`, flattened for
+ * the admin table. The class label comes from the student's class; the relation and primary flag
+ * come from the join row.
  */
-function upsertGuardian(student: Student, guardian: Guardian | null | undefined): void {
-  // `undefined` means the caller sent no guardian at all — leave the existing link alone.
-  if (guardian === undefined) return
+function parentListItems(): ParentListItem[] {
+  return parents.map((parent) => ({
+    ...parent,
+    children: parentStudents
+      .filter((link) => link.parentId === parent.id)
+      .map((link) => {
+        const student = students.find((item) => item.id === link.studentId)
+        const classRoom = student ? classes.find((item) => item.id === student.classId) : undefined
 
-  const existingLink = parentStudents.find((link) => link.studentId === student.id && link.isPrimary)
-  const details = guardian?.name.trim() ? guardian : null
+        return {
+          id: link.studentId,
+          name: student ? `${student.firstName} ${student.lastName}`.trim() : 'Unknown student',
+          className: classRoom ? classLabel(classRoom) : 'Unassigned',
+          relation: link.relation,
+          isPrimary: link.isPrimary,
+        }
+      }),
+  }))
+}
 
-  if (!details) {
-    if (existingLink) existingLink.isPrimary = false
-    return
+/**
+ * Replaces a parent's links wholesale, the way the form submits them (a `PATCH` without `links`
+ * leaves them alone, so this is only called when the set is meant to change). A student may appear
+ * once; at most one parent is primary per student, so a primary link clears the others on the child.
+ */
+function setParentLinks(parentId: string, links: ParentStudentInput[]): void {
+  const seen = new Set<string>()
+
+  for (let index = parentStudents.length - 1; index >= 0; index -= 1) {
+    if (parentStudents[index].parentId === parentId) parentStudents.splice(index, 1)
   }
 
-  const name = details.name.trim()
-  const [firstName, ...rest] = name.split(' ')
-  const lastName = rest.join(' ')
+  for (const link of links) {
+    if (seen.has(link.studentId)) continue
+    seen.add(link.studentId)
 
-  let parent = existingLink ? parents.find((item) => item.id === existingLink.parentId) : undefined
-  if (!parent && details.email) parent = parents.find((item) => item.email === details.email)
+    const isPrimary = link.isPrimary === true
 
-  if (!parent) {
-    const index = parents.length + 1
-    parent = {
-      id: `par_${index}`,
-      schoolId: SCHOOL_ID,
-      userId: `usr_par_${index}`,
-      firstName,
-      lastName,
-      email: details.email,
-      address: details.address,
-      phone: details.phone,
-      occupation: null,
-      status: 'ACTIVE',
+    if (isPrimary) {
+      for (const other of parentStudents) {
+        if (other.studentId === link.studentId) other.isPrimary = false
+      }
     }
 
-    parents.push(parent)
-    users.push({
-      id: parent.userId,
-      email: details.email ?? schoolEmail(index, `parent.${SCHOOL_DOMAIN}`),
-      role: 'PARENT',
-      schoolId: SCHOOL_ID,
-      // The guardian's login goes out under the same invite rule as the student's.
-      isVerified: false,
-      profileId: parent.id,
-      firstName,
-      lastName,
-      classId: null,
-    })
-    invitedPasswords.set(parent.userId, invitePassword())
-  } else {
-    parent.firstName = firstName
-    parent.lastName = lastName
-    parent.email = details.email ?? parent.email
-    parent.phone = details.phone ?? parent.phone
-    parent.address = details.address ?? parent.address
-  }
-
-  if (existingLink) {
-    existingLink.parentId = parent.id
-  } else {
     parentStudents.push({
-      id: `psl_${parent.id}_${student.id}`,
+      id: `psl_${parentId}_${link.studentId}`,
       schoolId: SCHOOL_ID,
-      parentId: parent.id,
-      studentId: student.id,
-      relation: 'GUARDIAN',
-      isPrimary: true,
+      parentId,
+      studentId: link.studentId,
+      relation: link.relation ?? 'GUARDIAN',
+      isPrimary,
     })
   }
 }
@@ -3829,7 +3818,6 @@ const routes: Route[] = [
       const firstName = String(body.firstName ?? '').trim()
       const lastName = String(body.lastName ?? '').trim()
       const classId = body.classId ? String(body.classId) : ''
-      const guardian = (body.guardian as Guardian | null) ?? null
 
       if (!firstName || !lastName) {
         return fail(400, 'STUDENT_INVALID', 'First and last name are required', ['firstName', 'lastName'])
@@ -3849,18 +3837,6 @@ const routes: Route[] = [
       if (!body.dateOfBirth) return fail(400, 'STUDENT_INVALID', 'Date of birth is required', ['dateOfBirth'])
       if (!body.gender) return fail(400, 'STUDENT_INVALID', 'Gender is required', ['gender'])
       if (!body.bloodGroup) return fail(400, 'STUDENT_INVALID', 'Blood group is required', ['bloodGroup'])
-      if (!guardian?.name.trim()) {
-        return fail(400, 'STUDENT_INVALID', 'Guardian name is required', ['guardian.name'])
-      }
-      if (!guardian.email?.trim()) {
-        return fail(400, 'STUDENT_INVALID', 'Guardian email is required', ['guardian.email'])
-      }
-      if (!guardian.phone?.trim()) {
-        return fail(400, 'STUDENT_INVALID', 'Guardian phone is required', ['guardian.phone'])
-      }
-      if (!guardian.address?.trim()) {
-        return fail(400, 'STUDENT_INVALID', 'Guardian address is required', ['guardian.address'])
-      }
 
       // Roll numbers are unique per class; leaving it blank takes the next free slot.
       const nextRoll =
@@ -3909,7 +3885,6 @@ const routes: Route[] = [
         classId,
       })
       invitedPasswords.set(student.userId, password)
-      upsertGuardian(student, guardian)
 
       const row = studentListItems().find((item) => item.id === student.id)
       if (!row) return fail(404, 'STUDENT_NOT_FOUND', 'Student not found')
@@ -3947,8 +3922,6 @@ const routes: Route[] = [
 
         student.rollNo = rollNo
       }
-
-      if (body.guardian !== undefined) upsertGuardian(student, (body.guardian as Guardian | null) ?? null)
 
       // The login record mirrors the profile name, so keep the two in step.
       const user = users.find((item) => item.id === student.userId)
@@ -4002,6 +3975,165 @@ const routes: Route[] = [
       students.some((item) => item.id === params.id)
         ? ok<StudentDocument[]>([])
         : fail(404, 'STUDENT_NOT_FOUND', 'Student not found'),
+  },
+  {
+    method: 'GET',
+    path: '/parents',
+    handler: ({ params }) => {
+      const term = searchTerm(params)
+
+      const filtered = parentListItems()
+        // A soft-deleted parent keeps their row but leaves the list.
+        .filter((parent) => parent.status === 'ACTIVE')
+        .filter((parent) =>
+          matches(term, [
+            parent.firstName,
+            parent.lastName,
+            parent.email,
+            parent.phone,
+            ...parent.children.map((child) => child.name),
+          ]),
+        )
+        .sort((left, right) =>
+          `${left.firstName} ${left.lastName}`.localeCompare(`${right.firstName} ${right.lastName}`),
+        )
+
+      const { items, meta } = paginate(filtered, params)
+      return ok(items, meta)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/parents',
+    handler: ({ body }) => {
+      const firstName = String(body.firstName ?? '').trim()
+      const lastName = String(body.lastName ?? '').trim()
+      const email = String(body.email ?? '')
+        .trim()
+        .toLowerCase()
+
+      if (!firstName || !lastName) {
+        return fail(400, 'PARENT_INVALID', 'First and last name are required', ['firstName', 'lastName'])
+      }
+      // The parent's address is the login this record provisions.
+      if (!email.includes('@')) {
+        return fail(400, 'PARENT_INVALID', 'A valid parent email is required', ['email'])
+      }
+      if (users.some((item) => item.email.toLowerCase() === email)) {
+        return fail(409, 'PARENT_EMAIL_TAKEN', 'That email already has an account', ['email'])
+      }
+
+      const links = Array.isArray(body.links) ? (body.links as ParentStudentInput[]) : []
+      if (links.some((link) => !students.some((student) => student.id === link.studentId))) {
+        return fail(400, 'PARENT_INVALID', 'One of the linked students does not exist', ['links'])
+      }
+
+      const index = parents.length + 1
+      const parent: Parent = {
+        id: `par_${index}`,
+        schoolId: SCHOOL_ID,
+        userId: `usr_par_${index}`,
+        firstName,
+        lastName,
+        email,
+        phone: blankToNull(body.phone),
+        address: blankToNull(body.address),
+        occupation: blankToNull(body.occupation),
+        status: (body.status as RecordStatus | undefined) ?? 'ACTIVE',
+      }
+
+      const password = invitePassword()
+
+      parents.push(parent)
+      users.push({
+        id: parent.userId,
+        email,
+        role: 'PARENT',
+        schoolId: SCHOOL_ID,
+        // The guardian's login goes out under the same invite rule as the student's.
+        isVerified: false,
+        profileId: parent.id,
+        firstName,
+        lastName,
+        classId: null,
+      })
+      invitedPasswords.set(parent.userId, password)
+      setParentLinks(parent.id, links)
+
+      const row = parentListItems().find((item) => item.id === parent.id)
+      if (!row) return fail(404, 'PARENT_NOT_FOUND', 'Parent not found')
+
+      return created({ ...row, invite: { email, verificationRequired: true, mockOnlyPassword: password } })
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/parents/:id',
+    handler: ({ params, body }) => {
+      const parent = parents.find((item) => item.id === params.id)
+      if (!parent) return fail(404, 'PARENT_NOT_FOUND', 'Parent not found')
+
+      if (body.firstName !== undefined) parent.firstName = String(body.firstName).trim()
+      if (body.lastName !== undefined) parent.lastName = String(body.lastName).trim()
+      if (body.phone !== undefined) parent.phone = blankToNull(body.phone)
+      if (body.address !== undefined) parent.address = blankToNull(body.address)
+      if (body.occupation !== undefined) parent.occupation = blankToNull(body.occupation)
+      if (body.status !== undefined) parent.status = body.status as RecordStatus
+
+      // The login mirrors the profile's name and address, so keep the two in step.
+      const user = users.find((item) => item.id === parent.userId)
+      if (user) {
+        user.firstName = parent.firstName
+        user.lastName = parent.lastName
+
+        if (body.email !== undefined) {
+          const email = String(body.email).trim().toLowerCase()
+
+          if (!email.includes('@')) {
+            return fail(400, 'PARENT_INVALID', 'A valid parent email is required', ['email'])
+          }
+          if (users.some((item) => item.id !== user.id && item.email.toLowerCase() === email)) {
+            return fail(409, 'PARENT_EMAIL_TAKEN', 'That email already has an account', ['email'])
+          }
+
+          user.email = email
+          parent.email = email
+        }
+      }
+
+      // An absent `links` key leaves the linked set alone; a present one replaces it.
+      if (body.links !== undefined) {
+        const links = Array.isArray(body.links) ? (body.links as ParentStudentInput[]) : []
+
+        if (links.some((link) => !students.some((student) => student.id === link.studentId))) {
+          return fail(400, 'PARENT_INVALID', 'One of the linked students does not exist', ['links'])
+        }
+
+        setParentLinks(parent.id, links)
+      }
+
+      return ok(parentListItems().find((row) => row.id === parent.id))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/parents/:id',
+    handler: ({ params }) => {
+      const parent = parents.find((item) => item.id === params.id)
+      if (!parent) return fail(404, 'PARENT_NOT_FOUND', 'Parent not found')
+
+      // Soft delete: the row and its links survive for history, the list stops showing it.
+      parent.status = 'INACTIVE'
+      return ok({ deleted: true })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/parents/:id',
+    handler: ({ params }) => {
+      const row = parentListItems().find((parent) => parent.id === params.id)
+      return row ? ok(row) : fail(404, 'PARENT_NOT_FOUND', 'Parent not found')
+    },
   },
   {
     method: 'GET',

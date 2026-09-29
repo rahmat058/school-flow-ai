@@ -13,6 +13,7 @@ export const paths = {
   // private
   dashboard: '/',
   students: '/students',
+  parents: '/parents',
   teachers: '/teachers',
   subjects: '/subjects',
   /** Pattern for a student's profile; build links with `studentProfilePath()`. */

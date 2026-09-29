@@ -78,10 +78,10 @@ export interface Student {
   status: RecordStatus
 }
 
-/** A student's primary guardian, flattened for the roster read model and the enrolment form. */
+/** A student's primary guardian, flattened for the roster read model. */
 export interface Guardian {
   name: string
-  /** How the guardian is related — from `parent_students.relation`. Optional on the way in. */
+  /** How the guardian is related — from `parent_students.relation`. */
   relation?: ParentRelation | null
   email: string | null
   phone: string | null
@@ -110,12 +110,51 @@ export interface ParentStudentLink {
   isPrimary: boolean
 }
 
+/** One child the parent form links — the write shape of a `parent_students` row. */
+export interface ParentStudentInput {
+  studentId: string
+  relation: ParentRelation
+  /** At most one parent is primary per student; the server clears the others. */
+  isPrimary: boolean
+}
+
+/** What the parent create/update form sends. The login is provisioned like the student's. */
+export interface ParentInput {
+  firstName: string
+  lastName: string
+  /** The parent's sign-in address — the invite and its password go here. */
+  email: string
+  phone: string | null
+  address: string | null
+  occupation: string | null
+  status?: RecordStatus
+  /** The linked children; an empty list is allowed, a link may be added later. */
+  links: ParentStudentInput[]
+}
+
+/** One linked child, flattened for the parent list row. */
+export interface ParentChild {
+  id: string
+  name: string
+  className: string
+  relation: ParentRelation
+  isPrimary: boolean
+}
+
+/** Read model for the admin parents table — the entity plus its linked children. */
+export interface ParentListItem extends Parent {
+  children: ParentChild[]
+}
+
+/** The create response: the new row, plus the invite that was sent to the parent's login. */
+export type ParentCreated = ParentListItem & { invite?: AccountInvite }
+
 /** Read model for the admin students table — the entity plus its joined class, guardian and roll-ups. */
 export interface StudentListItem extends Student {
   className: string
   /** The student's login address (`users.email`), which the enrolment form collects. */
   email: string
-  /** The primary guardian, with the contact details the enrolment form collects. */
+  /** The primary guardian, with the contact details the parent module collects. */
   guardian: Guardian | null
   /** Share of register days the student was present or late, 0–100. */
   attendancePercentage: number
@@ -127,14 +166,13 @@ export interface StudentListItem extends Student {
 export interface StudentInput {
   firstName: string
   lastName: string
-  /** The student's own login address — one of the two accounts an enrolment creates. */
+  /** The student's own login address — the account an enrolment provisions. */
   email: string
   classId: string
   rollNo: number | null
   dateOfBirth: string | null
   gender: Gender | null
   bloodGroup: BloodGroup | null
-  guardian: Guardian | null
 }
 
 /** The invite that goes out with a new account: a login plus a verification link. */

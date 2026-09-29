@@ -3,7 +3,7 @@ import type { NoticePriority } from '@/types/communication'
 import type { ExamKind, ExamType } from '@/types/exams'
 import type { HomeworkStatus } from '@/types/homework'
 import type { MaterialType } from '@/types/materials'
-import type { BloodGroup, FeeStanding, Gender } from '@/types/people'
+import type { BloodGroup, FeeStanding, Gender, ParentRelation, RecordStatus } from '@/types/people'
 import type { ConcessionCategory, ConcessionType, FeeFrequency, InvoiceStatus, PaymentMethod } from '@/types/fees'
 import type { GradingScale, TermStructure } from '@/types/school'
 
@@ -56,6 +56,10 @@ export const BLOOD_GROUP_VALUES = [
 ] as const satisfies readonly BloodGroup[]
 
 export const GENDER_VALUES = ['FEMALE', 'MALE', 'OTHER'] as const satisfies readonly Gender[]
+
+export const PARENT_RELATION_VALUES = ['FATHER', 'MOTHER', 'GUARDIAN'] as const satisfies readonly ParentRelation[]
+
+export const RECORD_STATUS_VALUES = ['ACTIVE', 'INACTIVE'] as const satisfies readonly RecordStatus[]
 
 export const FEE_FREQUENCY_VALUES = [
   'MONTHLY',
@@ -116,6 +120,17 @@ const GENDER_LABELS: Record<Gender, string> = {
   FEMALE: 'Female',
   MALE: 'Male',
   OTHER: 'Other',
+}
+
+const PARENT_RELATION_LABELS: Record<ParentRelation, string> = {
+  FATHER: 'Father',
+  MOTHER: 'Mother',
+  GUARDIAN: 'Guardian',
+}
+
+const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
 }
 
 const FEE_FREQUENCY_LABELS: Record<FeeFrequency, string> = {
@@ -220,6 +235,16 @@ export const genderOptions: FieldOption[] = [
   { value: '', label: 'Not specified' },
   ...GENDER_VALUES.map((gender) => ({ value: gender, label: GENDER_LABELS[gender] })),
 ]
+
+export const parentRelationOptions: FieldOption[] = PARENT_RELATION_VALUES.map((value) => ({
+  value,
+  label: PARENT_RELATION_LABELS[value],
+}))
+
+export const recordStatusOptions: FieldOption[] = RECORD_STATUS_VALUES.map((value) => ({
+  value,
+  label: RECORD_STATUS_LABELS[value],
+}))
 
 export const feeFrequencyOptions: FieldOption[] = FEE_FREQUENCY_VALUES.map((value) => ({
   value,

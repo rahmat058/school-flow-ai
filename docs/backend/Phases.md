@@ -37,9 +37,9 @@
 
 ## Phase 2: Core Domain — PRD §4.3, §4.4
 
-- [ ] Users module: teacher / student / parent CRUD, credential emails, auto-generated admission + employee numbers
+- [ ] Users module: teacher / student / parent CRUD, credential emails, auto-generated admission + employee numbers — the mock already serves all three (`/teachers`, `/students`, `/parents`); the NestJS module is unbuilt
 - [ ] Student CSV bulk import (row-by-row validation, transaction per batch)
-- [ ] Parent ↔ student linking (`parent_students`): list linked children, link and unlink
+- [ ] Parent ↔ student linking (`parent_students`): list linked children, link and unlink — the mock links through the `/parents` `links` set, so the standalone link/unlink routes stay planned
 - [ ] Classes CRUD, class-teacher assignment, student roster + `assign-students`
 - [ ] Subjects CRUD and class/teacher assignment
 

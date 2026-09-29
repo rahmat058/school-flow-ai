@@ -23,6 +23,12 @@ export interface StudentListQuery {
   feeStanding?: FeeStanding | ''
 }
 
+export interface StudentOption {
+  value: string
+  label: string
+  classId: string
+}
+
 export const studentKeys = {
   all: ['students'] as const,
   list: (query: StudentListQuery) => [...studentKeys.all, 'list', query] as const,
@@ -31,6 +37,7 @@ export const studentKeys = {
   results: (id: string) => [...studentKeys.all, 'results', id] as const,
   fees: (id: string) => [...studentKeys.all, 'fees', id] as const,
   documents: (id: string) => [...studentKeys.all, 'documents', id] as const,
+  studentOptions: () => [...studentKeys.all, 'student-options'] as const,
 }
 
 export function useStudents(query: StudentListQuery) {
@@ -115,5 +122,22 @@ export function useStudentDocuments(id: string) {
     queryKey: studentKeys.documents(id),
     queryFn: async () => (await get<StudentDocument[]>(`/students/${id}/documents`)).data,
     enabled: id.length > 0,
+  })
+}
+
+/** Every student as a select/combobox option — the collect search, the report pickers and the parent linker. */
+export function useStudentOptions() {
+  return useQuery({
+    queryKey: studentKeys.studentOptions(),
+    queryFn: async (): Promise<StudentOption[]> => {
+      const { data } = await get<StudentListItem[]>('/students', { limit: 200 })
+
+      return data.map((student) => ({
+        value: student.id,
+        label: `${student.firstName} ${student.lastName} (${student.className})`,
+        classId: student.classId ?? '',
+      }))
+    },
+    staleTime: 5 * 60_000,
   })
 }

@@ -15,6 +15,7 @@ import {
   MyReportsPage,
   NotFoundPage,
   NoticesPage,
+  ParentsPage,
   PermissionsPage,
   ProgressPage,
   ReportsPage,
@@ -54,6 +55,7 @@ export const privateRoutes: RouteObject[] = [
           {
             element: <RoleGuard allow={['ADMIN']} />,
             children: [
+              { path: childPath(paths.parents), element: <ParentsPage /> },
               { path: childPath(paths.teachers), element: <TeachersPage /> },
               { path: childPath(paths.permissions), element: <PermissionsPage /> },
               { path: childPath(paths.subjects), element: <SubjectClassPage /> },

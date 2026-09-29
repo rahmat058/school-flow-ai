@@ -23,12 +23,12 @@ frontend/
 │   │   └── guards/           # ProtectedRoute, PublicOnlyRoute, RoleGuard, guardDecision
 │   ├── pages/                # Route-level screens
 │   │   ├── auth/             # Login, Signup, VerifyOtp, ForgotPassword, ResetPassword
-│   │   ├── admin/            # Students, StudentProfile, Teachers, Fees, FeeCollect
+│   │   ├── admin/            # Students, StudentProfile, Parents, Teachers, Fees, FeeCollect
 │   │   └── …                 # teacher/, student/, parent/ as those phases land
 │   ├── components/           # presentational only, and shared across features
 │   │   ├── layout/           # AppShell, Header, Sidebar
 │   │   └── ui/               # design-system primitives (Input, Select, Card, Modal, Tabs, Table, DataTable, Toast, …)
-│   ├── features/             # auth/, dashboard/, attendance/, students/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, progress/, timetable/, school/
+│   ├── features/             # auth/, dashboard/, attendance/, students/, parents/, teachers/, classes/, subjects/, notices/, chat/, ai/, permissions/, exams/, fees/, homework/, materials/, reports/, progress/, timetable/, school/
 │   │   ├── dashboard/        # the dashboard's role halves + the pieces they share — a feature like any other
 │   │   │   ├── admin/        # OverviewHeader, the three charts, PendingFeesCard, RecentActivityCard, SchoolCalendarCard, AdminDashboard
 │   │   │   ├── student/      # StudentDashboard, TodayTimetableCard, StudentFeesCard, StudentAttendanceCard, StudentNoticesCard

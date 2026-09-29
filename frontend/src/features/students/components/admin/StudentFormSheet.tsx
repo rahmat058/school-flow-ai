@@ -4,18 +4,16 @@ import type { SubmitHandler } from 'react-hook-form'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Select } from '@/components/ui/Select'
 import { Sheet } from '@/components/ui/Sheet'
 import { Spinner } from '@/components/ui/Spinner'
-import { Textarea } from '@/components/ui/Textarea'
 import { useToast } from '@/hooks/useToast'
 import { env } from '@/lib/env'
 import { bloodGroupOptions, genderOptions } from '@/lib/options'
-import { emailRules, phoneRules } from '@/lib/validation'
+import { emailRules } from '@/lib/validation'
 import { ApiError } from '@/services/apiClient'
 import { useClassOptions, useCreateStudent, useUpdateStudent } from '@/features/students/api'
-import type { BloodGroup, Gender, Guardian, StudentInput, StudentListItem } from '@/types/people'
+import type { BloodGroup, Gender, StudentInput, StudentListItem } from '@/types/people'
 
 interface StudentFormSheetProps {
   open: boolean
@@ -33,10 +31,6 @@ interface FormValues {
   dateOfBirth: string
   gender: string
   bloodGroup: string
-  guardianName: string
-  guardianEmail: string
-  guardianPhone: string
-  guardianAddress: string
 }
 
 /**
@@ -67,25 +61,11 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
       dateOfBirth: student?.dateOfBirth ?? '',
       gender: student?.gender ?? '',
       bloodGroup: student?.bloodGroup ?? '',
-      guardianName: student?.guardian?.name ?? '',
-      guardianEmail: student?.guardian?.email ?? '',
-      guardianPhone: student?.guardian?.phone ?? '',
-      guardianAddress: student?.guardian?.address ?? '',
     },
     mode: 'onTouched',
   })
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
-    const guardianName = values.guardianName.trim()
-    const guardian: Guardian | null = guardianName
-      ? {
-          name: guardianName,
-          email: values.guardianEmail.trim() || null,
-          phone: values.guardianPhone.trim() || null,
-          address: values.guardianAddress.trim() || null,
-        }
-      : null
-
     const input: StudentInput = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
@@ -95,7 +75,6 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
       dateOfBirth: values.dateOfBirth || null,
       gender: values.gender ? (values.gender as Gender) : null,
       bloodGroup: values.bloodGroup ? (values.bloodGroup as BloodGroup) : null,
-      guardian,
     }
 
     try {
@@ -140,7 +119,7 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
       description={
         editing
           ? `Update the record for ${student?.firstName} ${student?.lastName}.`
-          : 'Enrol a student and their guardian — the admission number and login are generated for you.'
+          : 'Enrol a student — the admission number and login are generated for you.'
       }
       footer={
         <>
@@ -247,53 +226,6 @@ export function StudentFormSheet({ open, onClose, student }: StudentFormSheetPro
                 error={errors.bloodGroup?.message}
               />
             )}
-          />
-        </div>
-
-        <div className="border-line space-y-4 border-t pt-5">
-          <div>
-            <h3 className="text-ink text-[14px] font-medium">Guardian</h3>
-            <p className="text-ink-muted mt-0.5 text-[12px]">The primary contact for this student.</p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Parent name"
-              placeholder="Rahim Khan"
-              error={errors.guardianName?.message}
-              {...register('guardianName', { required: 'Parent name is required' })}
-            />
-            <Controller
-              control={control}
-              name="guardianPhone"
-              rules={phoneRules}
-              render={({ field, fieldState }) => (
-                <PhoneInput
-                  label="Phone"
-                  placeholder="1712345678"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </div>
-
-          <Input
-            label="Email"
-            type="email"
-            placeholder="parent@example.com"
-            hint="The guardian's sign-in address — the invite and its password go here."
-            error={errors.guardianEmail?.message}
-            {...register('guardianEmail', emailRules)}
-          />
-          <Textarea
-            label="Address"
-            rows={2}
-            placeholder="House, road, area"
-            error={errors.guardianAddress?.message}
-            {...register('guardianAddress', { required: 'Address is required' })}
           />
         </div>
       </form>

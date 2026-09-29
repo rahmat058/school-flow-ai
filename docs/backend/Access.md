@@ -35,9 +35,9 @@ The sidebar is filtered by `navItemsForRole(role)` against each item's `roles`. 
 the same `href` (`/exams`): **Results** is the guardian's view of a child's published marks, while
 **Tests & exams** is the staff/student screen — a different page behind one path. Labels are exact.
 
-**ADMIN** (16 items) — Dashboard · Students · Teachers · Attendance · Fees · Homework · Tests &
-exams · Timetable · Study Materials · Notices · Communication · AI Assistant · Reports · Roles &
-permissions · Subject & Class · Settings.
+**ADMIN** (17 items) — Dashboard · Students · Parents · Teachers · Attendance · Fees · Homework ·
+Tests & exams · Timetable · Study Materials · Notices · Communication · AI Assistant · Reports ·
+Roles & permissions · Subject & Class · Settings.
 
 **TEACHER** (11 items) — Dashboard · Students · Attendance · Homework · Tests & exams · Timetable ·
 Study Materials · Notices · Communication · AI Assistant · Reports.
@@ -51,6 +51,7 @@ Timetable · Study Materials · Notices · Communication · AI Assistant.
 | ------------------- | ------------------ | ----------------------- |
 | Dashboard           | `/`                | EVERYONE                |
 | Students            | `/students`        | ADMIN, TEACHER          |
+| Parents             | `/parents`         | ADMIN                   |
 | Teachers            | `/teachers`        | ADMIN                   |
 | Attendance          | `/attendance`      | EVERYONE                |
 | Results             | `/exams`           | PARENT                  |
@@ -75,7 +76,7 @@ URL.
 
 ## 3. Route access
 
-The 109 routes in the mock's `routes` table, by domain. **Roles** is the scope the contract
+The 114 routes in the mock's `routes` table, by domain. **Roles** is the scope the contract
 (`PRD.md` §2 and §4) states; **Enforced?** says whether the mock actually applies it.
 
 - `standard` — the mock enforces the documented access level: a public route needs no token; a
@@ -153,6 +154,23 @@ session. It is the one `intended only` route whose gap is authentication rather 
 | GET    | `/students/:id/documents` | `ADMIN`, `TEACHER`, `PARENT` (own child) | —                      | intended only | —                                                   |
 
 `GET /students/:id` carries **no** ownership check: any valid token reads any student's profile.
+
+### Parents
+
+| Method | Path           | Roles   | 403 — code + condition | Enforced?     | Query params              |
+| ------ | -------------- | ------- | ---------------------- | ------------- | ------------------------- |
+| GET    | `/parents`     | `ADMIN` | —                      | intended only | `search`, `page`, `limit` |
+| POST   | `/parents`     | `ADMIN` | —                      | intended only | —                         |
+| GET    | `/parents/:id` | `ADMIN` | —                      | intended only | —                         |
+| PATCH  | `/parents/:id` | `ADMIN` | —                      | intended only | —                         |
+| DELETE | `/parents/:id` | `ADMIN` | —                      | intended only | —                         |
+
+A parent is the one write path for `parent_students`: the create and update bodies carry a **`links`**
+set (each entry a `studentId`, `relation`, `isPrimary`) that **replaces** the linked children, while a
+`PATCH` with **no** `links` key leaves them alone. At most one parent is primary per student, so a
+primary link clears the others on that child. Each row of `GET /parents` carries its linked children
+(id, name, class label, relation, primary). Errors: `400 PARENT_INVALID`, `409 PARENT_EMAIL_TAKEN`,
+`404 PARENT_NOT_FOUND`.
 
 ### Classes
 
@@ -319,11 +337,11 @@ the school, a student their class, a guardian their children's classes.
 
 ### Route-access totals
 
-- **Total routes: 109.**
+- **Total routes: 114.**
 - **Public (no token): 9** — `POST /auth/login`, `/registration/verify-email`, `/registration/resend-verification`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-invite`, `/schools/register`.
-- **Token required: 100.** Of these, **10 are role-gated** and **90 are token-only**.
+- **Token required: 105.** Of these, **10 are role-gated** and **95 are token-only**.
 - **Role-gated (the mock refuses the wrong role): 10** — `GET /dashboard/student`, `GET /dashboard/parent`, `GET /attendance/me`, `GET /attendance/monthly`, `GET /attendance`, `POST /attendance`, `GET /fees/me`, `POST /fees/me/payments`, `GET /exams/me`, `GET /progress/me`.
-- **`intended only`: 79** — 78 token-only routes that the contract scopes to a strict subset of roles, plus `/auth/logout` (which the contract gates on a session but the mock serves publicly).
+- **`intended only`: 84** — 83 token-only routes that the contract scopes to a strict subset of roles, plus `/auth/logout` (which the contract gates on a session but the mock serves publicly).
 - **`standard`: 30** — 8 public routes, the 10 role-gated routes, and 12 routes whose contract scope is all four roles, `authenticated` or `participant` (where the token or participation check is the whole of the documented rule).
 
 > Note — The contract says every route carries `JwtAuthGuard` + `RolesGuard` with `@Roles(...)` per
@@ -387,12 +405,22 @@ it, grouped by domain. Codes carried in the error envelope
 
 ### Students
 
-| Code                  | Status | Raised when                                                                         |
-| --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `STUDENT_INVALID`     | 400    | student create/edit fails a field check (names, email, class, roll, profile block). |
-| `STUDENT_EMAIL_TAKEN` | 409    | student create/edit where the email already has an account.                         |
-| `STUDENT_ROLL_TAKEN`  | 409    | student create/edit where the roll number is already used in that class.            |
-| `STUDENT_NOT_FOUND`   | 404    | a student id is unknown (profile, documents, attendance, results, collect, fees).   |
+| Code                  | Status | Raised when                                                                       |
+| --------------------- | ------ | --------------------------------------------------------------------------------- |
+| `STUDENT_INVALID`     | 400    | student create/edit fails a field check (names, email, class, roll).              |
+| `STUDENT_EMAIL_TAKEN` | 409    | student create/edit where the email already has an account.                       |
+| `STUDENT_ROLL_TAKEN`  | 409    | student create/edit where the roll number is already used in that class.          |
+| `STUDENT_NOT_FOUND`   | 404    | a student id is unknown (profile, documents, attendance, results, collect, fees). |
+
+### Parents
+
+| Code                 | Status | Raised when                                                                     |
+| -------------------- | ------ | ------------------------------------------------------------------------------- |
+| `PARENT_INVALID`     | 400    | parent create/edit fails a field check (names, email, or a `links` student id). |
+| `PARENT_EMAIL_TAKEN` | 409    | parent create/edit where the email already has an account.                      |
+| `PARENT_NOT_FOUND`   | 404    | a parent id is unknown (read, edit or delete).                                  |
+
+(`PARENT_FORBIDDEN`, the ownership code a guardian's own reads raise, is catalogued under Shared ownership below.)
 
 ### Subjects
 

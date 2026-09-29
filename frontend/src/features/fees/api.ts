@@ -24,7 +24,10 @@ import type {
   StudentLedger,
   StudentPaymentInput,
 } from '@/types/fees'
-import type { StudentListItem } from '@/types/people'
+import { useStudentOptions, type StudentOption } from '@/features/students/api'
+
+/** The student pickers moved to the students module (where the roster lives); re-exported for fees. */
+export { useStudentOptions, type StudentOption }
 
 export interface FeeCollectQuery {
   classId?: string
@@ -39,12 +42,6 @@ export interface FeeCollectStudentsQuery extends FeeCollectQuery {
 export interface PendingInvoiceQuery {
   page: number
   limit: number
-}
-
-export interface StudentOption {
-  value: string
-  label: string
-  classId: string
 }
 
 export const feeKeys = {
@@ -64,7 +61,6 @@ export const feeKeys = {
   defaulters: (classId: string) => [...feeKeys.all, 'defaulters', classId] as const,
   ledger: (studentId: string) => [...feeKeys.all, 'ledger', studentId] as const,
   concessions: () => [...feeKeys.all, 'concessions'] as const,
-  studentOptions: () => [...feeKeys.all, 'student-options'] as const,
 }
 
 /** Every write invalidates the fees domain, so the dashboard, tables and totals refresh together. */
@@ -253,21 +249,4 @@ export function useUpdateConcession() {
 
 export function useDeleteConcession() {
   return useFeeMutation(async (id: string) => (await remove<{ deleted: boolean }>(`/fees/concessions/${id}`)).data)
-}
-
-/** Every student as a select/combobox option, for the collect search and the report pickers. */
-export function useStudentOptions() {
-  return useQuery({
-    queryKey: feeKeys.studentOptions(),
-    queryFn: async (): Promise<StudentOption[]> => {
-      const { data } = await get<StudentListItem[]>('/students', { limit: 200 })
-
-      return data.map((student) => ({
-        value: student.id,
-        label: `${student.firstName} ${student.lastName} (${student.className})`,
-        classId: student.classId ?? '',
-      }))
-    },
-    staleTime: 5 * 60_000,
-  })
 }

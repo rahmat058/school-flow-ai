@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  UserRound,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -37,6 +38,7 @@ const STAFF_AND_STUDENTS: Role[] = ['ADMIN', 'TEACHER', 'STUDENT']
 export const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, roles: EVERYONE },
   { label: 'Students', href: '/students', icon: Users, roles: ['ADMIN', 'TEACHER'] },
+  { label: 'Parents', href: '/parents', icon: UserRound, roles: ['ADMIN'] },
   { label: 'Teachers', href: '/teachers', icon: GraduationCap, roles: ['ADMIN'] },
   { label: 'Attendance', href: '/attendance', icon: CalendarCheck, roles: EVERYONE },
   { label: 'Results', href: '/exams', icon: GraduationCap, roles: ['PARENT'] },
